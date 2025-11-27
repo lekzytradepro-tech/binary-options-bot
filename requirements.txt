@@ -7,5 +7,4 @@ requests==2.31.0
 
 # For Render health server
 flask==2.3.3
-
-# REMOVED: supervisor==4.2.5
+gunicorn==21.2.0
