@@ -20,6 +20,15 @@ class Config:
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     
+    # Admin IDs
+    ADMIN_IDS = []
+    admin_env = os.getenv("ADMIN_IDS", "")
+    if admin_env:
+        try:
+            ADMIN_IDS = [int(id.strip()) for id in admin_env.split(",")]
+        except ValueError:
+            logger.warning("Invalid ADMIN_IDS format")
+    
     # Feature flags
     ENABLE_AI = os.getenv("ENABLE_AI", "false").lower() == "true"
     ENABLE_PAYMENTS = os.getenv("ENABLE_PAYMENTS", "false").lower() == "true"
