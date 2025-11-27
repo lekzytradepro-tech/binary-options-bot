@@ -1,155 +1,76 @@
 import logging
-import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 logger = logging.getLogger(__name__)
 
-class BinaryOptionsBot:
-    def __init__(self):
-        self.application = None
+def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /start command"""
+    from src.core.database import db
     
-    async def setup(self):
-        from src.core.config import Config
-        from src.core.database import db
-        
-        # Create application
-        self.application = Application.builder().token(Config.TELEGRAM_TOKEN).build()
-        
-        # Add handlers
-        self.application.add_handler(CommandHandler("start", self.handle_start))
-        self.application.add_handler(CallbackQueryHandler(self.handle_button_click))
-        
-        # Initialize application
-        await self.application.initialize()
-        await self.application.start()
-        
-        logger.info("✅ Bot setup completed successfully")
+    user = update.effective_user
+    db.add_user(user.id, user.username, user.first_name)
     
-    async def handle_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        from src.core.database import db
-        
-        user = update.effective_user
-        db.add_user(user.id, user.username, user.first_name)
-        
-        # Send main menu with buttons
-        await self.show_main_menu(update, context)
+    # Show main menu
+    keyboard = [
+        [InlineKeyboardButton("🚀 Get Signals", callback_data="menu_signals")],
+        [InlineKeyboardButton("📊 Trading Strategies", callback_data="menu_strategies")],
+        [InlineKeyboardButton("💼 Account", callback_data="menu_account")],
+    ]
     
-    async def show_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show main navigation menu with buttons"""
-        keyboard = [
-            [InlineKeyboardButton("🚀 Get Signals", callback_data="menu_signals")],
-            [InlineKeyboardButton("📊 Trading Strategies", callback_data="menu_strategies")],
-            [InlineKeyboardButton("💼 Account", callback_data="menu_account")],
-            [InlineKeyboardButton("📚 Education", callback_data="menu_education")],
-            [InlineKeyboardButton("🛠️ Admin", callback_data="menu_admin")]
-        ]
-        
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        text = """
-🤖 **Binary Options AI Pro** - Professional Trading Platform
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    text = """
+🤖 **Binary Options AI Pro**
 
-*Navigate using buttons below:*
+*Professional Trading Platform*
 
-🎯 **Get Signals** - AI-powered trading signals
-📊 **Strategies** - Choose your trading style  
-💼 **Account** - Manage your subscription
-📚 **Education** - Learn trading strategies
-🛠️ **Admin** - System controls
+🎯 Get AI-powered trading signals
+📊 Multiple trading strategies  
+💼 Manage your account
 
-*No commands needed - just click buttons!*"""
-        
-        if update.callback_query:
-            await update.callback_query.edit_message_text(text, reply_markup=reply_markup, parse_mode="Markdown")
-        else:
-            await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+*Click buttons to navigate*"""
     
-    async def handle_button_click(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle all button clicks"""
-        query = update.callback_query
-        await query.answer()
-        
-        data = query.data
-        
-        if data == "menu_signals":
-            await self.show_signals_menu(update, context)
-        elif data == "menu_strategies":
-            await self.show_strategies_menu(update, context)
-        elif data == "menu_account":
-            await self.show_account_menu(update, context)
-        elif data == "menu_education":
-            await self.show_education_menu(update, context)
-        elif data == "menu_admin":
-            await self.show_admin_menu(update, context)
-        elif data == "back_main":
-            await self.show_main_menu(update, context)
-        else:
-            await query.edit_message_text("🔄 Feature coming soon!")
+    update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+    logger.info(f"User {user.id} started bot")
+
+def handle_button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle button clicks"""
+    query = update.callback_query
+    query.answer()
     
-    async def show_signals_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show signals menu"""
+    data = query.data
+    
+    if data == "menu_signals":
         keyboard = [
             [InlineKeyboardButton("⚡ Quick Signal", callback_data="signal_quick")],
             [InlineKeyboardButton("📈 Trend Analysis", callback_data="signal_trend")],
-            [InlineKeyboardButton("🎯 Pattern Scanner", callback_data="signal_pattern")],
             [InlineKeyboardButton("🔙 Back", callback_data="back_main")]
         ]
-        
-        text = """
-📊 **Trading Signals Menu**
-
-Choose your signal type:
-
-⚡ **Quick Signal** - Fast 1-5 minute signals
-📈 **Trend Analysis** - Detailed trend-based signals  
-🎯 **Pattern Scanner** - AI pattern recognition
-
-*Professional AI analysis in seconds*"""
-        
-        await update.callback_query.edit_message_text(
-            text, 
+        query.edit_message_text(
+            "📊 **Trading Signals** - Choose signal type",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
-    
-    async def show_strategies_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show strategies menu"""
+    elif data == "menu_strategies":
         keyboard = [
             [InlineKeyboardButton("🚀 Trend Spotter", callback_data="strategy_trend")],
             [InlineKeyboardButton("⚡ Scalper Pro", callback_data="strategy_scalper")],
-            [InlineKeyboardButton("📊 Volume Analysis", callback_data="strategy_volume")],
             [InlineKeyboardButton("🔙 Back", callback_data="back_main")]
         ]
-        
-        text = """
-🎯 **Trading Strategies**
-
-Choose your trading style:
-
-🚀 **Trend Spotter** - Follow market trends
-⚡ **Scalper Pro** - Quick 1-3 minute trades
-📊 **Volume Analysis** - Volume-based signals
-
-*Each strategy uses different AI engines*"""
-        
-        await update.callback_query.edit_message_text(
-            text,
+        query.edit_message_text(
+            "🎯 **Trading Strategies** - Choose your style",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
-    
-    async def show_account_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show account management menu"""
+    elif data == "menu_account":
         from src.core.database import db
-        
         user = update.effective_user
         user_data = db.get_user(user.id)
         
         keyboard = [
             [InlineKeyboardButton("💎 Upgrade Plan", callback_data="account_upgrade")],
             [InlineKeyboardButton("📊 Usage Stats", callback_data="account_stats")],
-            [InlineKeyboardButton("🆓 Free Trial", callback_data="account_trial")],
             [InlineKeyboardButton("🔙 Back", callback_data="back_main")]
         ]
         
@@ -158,117 +79,54 @@ Choose your trading style:
 
 👤 **User:** {user.first_name}
 🆔 **ID:** {user.id}
-📅 **Member since:** {user_data['created_at'] if user_data else 'Recently'}
+📅 **Status:** ✅ Active
 
-**Plan:** 🆓 Free Trial
-**Signals today:** 0/3
-**Status:** ✅ Active
-
-*Upgrade for unlimited signals*"""
+**Plan:** 🆓 Free Trial"""
         
-        await update.callback_query.edit_message_text(
+        query.edit_message_text(
             text,
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
-    
-    async def show_education_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show education menu"""
+    elif data == "back_main":
         keyboard = [
-            [InlineKeyboardButton("📚 Trading Basics", callback_data="edu_basics")],
-            [InlineKeyboardButton("🎯 Risk Management", callback_data="edu_risk")],
-            [InlineKeyboardButton("🤖 AI Strategies", callback_data="edu_ai")],
-            [InlineKeyboardButton("🔙 Back", callback_data="back_main")]
+            [InlineKeyboardButton("🚀 Get Signals", callback_data="menu_signals")],
+            [InlineKeyboardButton("📊 Trading Strategies", callback_data="menu_strategies")],
+            [InlineKeyboardButton("💼 Account", callback_data="menu_account")],
         ]
-        
-        text = """
-📚 **Trading Education Center**
-
-Learn professional trading:
-
-📚 **Trading Basics** - Fundamental concepts
-🎯 **Risk Management** - Protect your capital
-🤖 **AI Strategies** - How our AI works
-
-*Knowledge is power in trading*"""
-        
-        await update.callback_query.edit_message_text(
-            text,
+        query.edit_message_text(
+            "🤖 **Binary Options AI Pro** - Main Menu",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
-    
-    async def show_admin_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show admin menu (only for admins)"""
-        from src.core.config import Config
-        
-        user = update.effective_user
-        
-        if user.id not in Config.ADMIN_IDS:
-            await update.callback_query.edit_message_text("❌ Admin access required")
-            return
-        
-        keyboard = [
-            [InlineKeyboardButton("📊 System Stats", callback_data="admin_stats")],
-            [InlineKeyboardButton("👥 User Management", callback_data="admin_users")],
-            [InlineKeyboardButton("🔧 Bot Controls", callback_data="admin_controls")],
-            [InlineKeyboardButton("🔙 Back", callback_data="back_main")]
-        ]
-        
-        text = """
-🛠️ **Admin Panel**
+    else:
+        query.edit_message_text("🔄 Feature coming soon!")
 
-System administration tools:
-
-📊 **System Stats** - Bot performance metrics
-👥 **User Management** - Manage users and plans  
-🔧 **Bot Controls** - System configuration
-
-*Restricted access*"""
-        
-        await update.callback_query.edit_message_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown"
-        )
-    
-    async def run_polling(self):
-        """Run bot with polling - for development"""
-        await self.application.run_polling()
-    
-    async def cleanup(self):
-        """Cleanup bot resources"""
-        if self.application:
-            await self.application.stop()
-            await self.application.shutdown()
-
-# Render-compatible main function
-async def main():
-    """Main async function for Render"""
-    bot = BinaryOptionsBot()
-    try:
-        await bot.setup()
-        logger.info("🤖 Bot started successfully - waiting for messages...")
-        
-        # Keep the bot running
-        await asyncio.Future()  # Run forever
-        
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
-    except Exception as e:
-        logger.error(f"Bot error: {e}")
-    finally:
-        await bot.cleanup()
-
-# Development entry point
 def run_bot():
-    """Run bot for development"""
+    """Run the bot - SIMPLE & RELIABLE"""
+    from src.core.config import Config
+    
     try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
+        # Create application
+        application = Application.builder().token(Config.TELEGRAM_TOKEN).build()
+        
+        # Add handlers
+        application.add_handler(CommandHandler("start", handle_start))
+        application.add_handler(CommandHandler("help", handle_start))
+        application.add_handler(CallbackQueryHandler(handle_button_click))
+        
+        logger.info("✅ Bot setup completed")
+        logger.info("🤖 Starting bot polling...")
+        
+        # Start polling
+        application.run_polling(
+            drop_pending_updates=True,
+            allowed_updates=['message', 'callback_query']
+        )
+        
     except Exception as e:
-        logger.error(f"Failed to run bot: {e}")
+        logger.error(f"❌ Bot failed: {e}")
+        raise
 
 if __name__ == "__main__":
     run_bot()
