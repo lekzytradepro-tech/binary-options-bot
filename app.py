@@ -18,9 +18,10 @@ app = Flask(__name__)
 # Global application instance
 application = None
 bot_initialized = False
+first_request = True
 
-def initialize_bot():
-    """Initialize the Telegram bot application with proper setup"""
+async def initialize_bot_async():
+    """Initialize the Telegram bot application asynchronously"""
     global application, bot_initialized
     
     try:
@@ -63,8 +64,8 @@ def initialize_bot():
         application.add_handler(CallbackQueryHandler(handle_button_click))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_unknown))
         
-        # Initialize the application
-        application.initialize()
+        # Initialize the application properly with await
+        await application.initialize()
         
         bot_initialized = True
         logger.info("✅ Telegram Bot Application initialized successfully")
@@ -77,11 +78,35 @@ def initialize_bot():
         bot_initialized = False
         return False
 
-# Initialize bot when module loads
-if os.getenv("TELEGRAM_BOT_TOKEN"):
-    initialize_bot()
-else:
-    logger.warning("⚠️ TELEGRAM_BOT_TOKEN not set, bot will not function")
+def initialize_bot_sync():
+    """Initialize bot synchronously for use in Flask context"""
+    try:
+        # Create new event loop for synchronous context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(initialize_bot_async())
+        loop.close()
+        return result
+    except Exception as e:
+        logger.error(f"❌ Sync initialization failed: {e}")
+        return False
+
+@app.before_request
+def before_first_request():
+    """Initialize bot on first request (Flask 2.3+ compatible)"""
+    global first_request, bot_initialized
+    
+    if first_request:
+        first_request = False
+        logger.info("🚀 First request - initializing bot...")
+        
+        if os.getenv("TELEGRAM_BOT_TOKEN"):
+            if initialize_bot_sync():
+                logger.info("✅ Bot initialized successfully on first request")
+            else:
+                logger.error("❌ Bot initialization failed on first request")
+        else:
+            logger.warning("⚠️ TELEGRAM_BOT_TOKEN not set, bot disabled")
 
 @app.route('/')
 def home():
@@ -146,7 +171,7 @@ def webhook():
         if not bot_initialized or not application:
             logger.error("❌ Bot not initialized, cannot process update")
             # Try to reinitialize
-            if initialize_bot():
+            if initialize_bot_sync():
                 logger.info("✅ Bot reinitialized successfully")
             else:
                 return jsonify({"error": "Bot not initialized"}), 503
@@ -210,7 +235,7 @@ async def process_update_async(update_data):
 def initialize_bot_endpoint():
     """Endpoint to manually initialize the bot"""
     try:
-        success = initialize_bot()
+        success = initialize_bot_sync()
         status = "initialized" if success else "failed"
         return jsonify({
             "status": status,
@@ -256,28 +281,16 @@ def debug():
     except Exception as e:
         return jsonify({"error": str(e), "bot_initialized": bot_initialized}), 500
 
-# Health check and initialization on startup
-@app.before_first_request
-def startup():
-    """Initialize bot on startup"""
-    logger.info("🚀 Starting Binary Options AI Pro...")
-    if os.getenv("TELEGRAM_BOT_TOKEN"):
-        if initialize_bot():
-            logger.info("✅ Bot initialized successfully on startup")
-        else:
-            logger.error("❌ Bot initialization failed on startup")
-    else:
-        logger.warning("⚠️ TELEGRAM_BOT_TOKEN not set, bot disabled")
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     
     # Initialize bot before starting Flask app
     if os.getenv("TELEGRAM_BOT_TOKEN"):
-        if initialize_bot():
-            logger.info("✅ Bot ready for incoming requests")
+        logger.info("🚀 Starting bot initialization...")
+        if initialize_bot_sync():
+            logger.info("✅ Bot initialized successfully before Flask start")
         else:
-            logger.error("❌ Bot initialization failed - check TELEGRAM_BOT_TOKEN")
+            logger.error("❌ Bot initialization failed before Flask start")
     
     logger.info(f"🚀 Starting Binary Options AI Pro on port {port}")
     logger.info("🎯 8 AI Engines | 15 Assets | Real TwelveData")
