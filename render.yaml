@@ -11,6 +11,8 @@ services:
         fromSecret: telegram_bot_token
       - key: ENVIRONMENT
         value: production
+      - key: DATABASE_URL
+        value: sqlite:///opt/render/project/src/data/bot.db
     disk:
       name: data
       mountPath: /opt/render/project/src/data
