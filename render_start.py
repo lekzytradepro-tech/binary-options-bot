@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Render Web Service - Runs both web server and Telegram bot
+Render Web Service - Proper async handling
 """
 
 import os
@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create Flask app for Render health checks
+# Create Flask app
 app = Flask(__name__)
 
 @app.route('/')
@@ -40,32 +40,35 @@ def health():
 def status():
     return {'status': 'running', 'bot': 'active'}, 200
 
-def run_flask():
-    """Run Flask app in a separate thread"""
-    logger.info("Starting web server on port 8000...")
-    app.run(host='0.0.0.0', port=8000, debug=False, use_reloader=False)
-
-async def run_bot():
-    """Run the Telegram bot"""
-    from src.bot.main import main
-    await main()
+def run_bot_in_thread():
+    """Run bot in separate thread with its own event loop"""
+    def start_bot():
+        try:
+            # Create new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            from src.bot.main import main
+            loop.run_until_complete(main())
+        except Exception as e:
+            logger.error(f"Bot thread error: {e}")
+    
+    bot_thread = threading.Thread(target=start_bot, daemon=True)
+    bot_thread.start()
+    logger.info("Bot started in background thread")
+    return bot_thread
 
 def main():
-    """Main function - starts both web server and bot"""
+    """Main function - starts bot in background, returns Flask app"""
     logger.info("Starting Binary Options Bot as Web Service...")
     
-    # Start Flask web server in background thread
-    web_thread = threading.Thread(target=run_flask, daemon=True)
-    web_thread.start()
+    # Start bot in background thread
+    run_bot_in_thread()
     
-    # Start Telegram bot in main thread
-    try:
-        asyncio.run(run_bot())
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
-    except Exception as e:
-        logger.error(f"Bot error: {e}")
-        raise
+    # Return Flask app for Gunicorn
+    return app
 
 if __name__ == "__main__":
-    main()
+    # For local development without Gunicorn
+    flask_app = main()
+    flask_app.run(host='0.0.0.0', port=8000, debug=False)
