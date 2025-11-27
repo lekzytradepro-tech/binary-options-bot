@@ -6,6 +6,13 @@ from src.core.config import Config
 
 logger = logging.getLogger(__name__)
 
+# Store menu functions locally to avoid circular imports
+_menu_functions = {}
+
+def _register_menu_function(name, func):
+    """Register menu function to avoid circular imports"""
+    _menu_functions[name] = func
+
 async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command for binary options"""
     user = update.effective_user
@@ -13,7 +20,7 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Add user to database
     db.add_user(user.id, user.username, user.first_name)
     
-    # Show binary options main menu
+    # Show binary options main menu - import locally to avoid circular imports
     from src.bot.menus import show_binary_main_menu
     await show_binary_main_menu(update, context)
     
