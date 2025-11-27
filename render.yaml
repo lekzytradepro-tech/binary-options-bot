@@ -9,9 +9,5 @@ services:
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         fromSecret: telegram_bot_token
-      - key: WEBHOOK_URL
-        value: https://binary-options-bot-4c74.onrender.com/webhook
-      - key: ENVIRONMENT
-        value: production
       - key: PORT
-        value: 10000
+        value: 8000
