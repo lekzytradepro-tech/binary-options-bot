@@ -1,9 +1,12 @@
-# Existing
+# Core
 python-telegram-bot==20.7
 python-dotenv==1.0.0
 pandas==2.0.3
 numpy==1.24.3
 requests==2.31.0
 
-# New for production
+# For Render health server
+flask==2.3.3
+
+# For Docker/supervisor (optional)
 supervisor==4.2.5
