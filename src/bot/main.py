@@ -15,43 +15,19 @@ async def start(update, context):
     user = update.effective_user
     db.add_user(user.id, user.username, user.first_name)
     
-    welcome_text = """
-🤖 Welcome to Binary Options AI Pro!
-
-I'm your AI-powered trading assistant.
-
-🚀 Getting Started:
-• Use /help to see commands
-• More features coming soon!
-
-Stay tuned for AI signals!"""
-    
+    welcome_text = "🤖 Welcome to Binary Options AI Pro!"
     await update.message.reply_text(welcome_text)
     logger.info(f"New user: {user.id}")
 
 async def help(update, context):
     """Handle /help command"""
-    help_text = """
-📖 Available Commands:
-
-/start - Start the bot
-/help - Show this message
-
-💡 More features coming soon!"""
-    
-    await update.message.reply_text(help_text)
+    await update.message.reply_text("📖 Use /start to begin")
 
 async def main():
-    """Main async function"""
+    """Main async function - SIMPLIFIED"""
     from src.core.config import Config
     
-    # Start health server for Render port binding
-    if Config.ENVIRONMENT == "production":
-        from src.api.health_server import start_health_server
-        start_health_server(port=8000)
-        logger.info("Health server started for Render")
-    
-    # Create and run bot application
+    # Create bot application
     application = Application.builder().token(Config.TELEGRAM_TOKEN).build()
     
     # Add handlers
