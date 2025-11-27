@@ -8,6 +8,9 @@ import time
 import random
 from datetime import datetime, timedelta
 
+# 🆕 NEW: Account management imports
+from utils.account_helpers import initialize_user, check_signal_access, record_signal, get_user_account_info
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -63,7 +66,7 @@ TRADING_STRATEGIES = {
 }
 
 class OTCTradingBot:
-    """OTC Binary Trading Bot with Full Features"""
+    """OTC Binary Trading Bot with Full Features + Account Management"""
     
     def __init__(self):
         self.token = TELEGRAM_TOKEN
@@ -150,6 +153,10 @@ class OTCTradingBot:
             chat_id = message['chat']['id']
             text = message.get('text', '').strip()
             
+            # 🆕 NEW: Initialize user in account system
+            user_info = message.get('from', {})
+            initialize_user(str(chat_id), user_info.get('username'), user_info.get('first_name'))
+            
             if text == '/start':
                 self._handle_start(chat_id, message)
             elif text == '/help':
@@ -166,6 +173,8 @@ class OTCTradingBot:
                 self._handle_status(chat_id)
             elif text == '/quickstart':
                 self._handle_quickstart(chat_id)
+            elif text == '/account':
+                self._handle_account(chat_id)
             else:
                 self._handle_unknown(chat_id)
                 
@@ -249,6 +258,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 /assets - View 15 trading assets
 /strategies - 8 trading strategies
 /aiengines - AI analysis engines
+/account - Your account status & limits
 
 **FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
@@ -326,6 +336,46 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 *Start with /signals now!*"""
         
         self.send_message(chat_id, quickstart_text, parse_mode="Markdown")
+
+    def _handle_account(self, chat_id):
+        """Handle /account command - 🆕 NEW"""
+        try:
+            account_info = get_user_account_info(str(chat_id))
+            
+            text = f"""
+{account_info['color']} **YOUR TRADING ACCOUNT**
+
+**ACCOUNT TIER:** {account_info['tier_name']}
+**SIGNALS TODAY:** {account_info['signals_used_today']}/{account_info['signals_daily_limit']}
+**TOTAL SIGNALS:** {account_info['total_signals']}
+
+**FEATURES:**
+• Assets: {len(account_info['assets_available'])} available
+• AI Engines: Full access
+• Strategies: All 8 strategies
+• Support: Priority access
+
+"""
+            
+            if account_info['tier'] == 'free_trial':
+                text += f"""
+🎁 **FREE TRIAL ACTIVE**
+You have {account_info['signals_daily_limit']} signals per day
+Upgrade for unlimited signals & all assets"""
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": "🎯 GENERATE SIGNALS", "callback_data": "menu_signals"}],
+                    [{"text": "💎 UPGRADE ACCOUNT", "callback_data": "account_upgrade"}],
+                    [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+                ]
+            }
+            
+            self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
+            
+        except Exception as e:
+            logger.error(f"Account handler error: {e}")
+            self.send_message(chat_id, "❌ Error loading account info. Please try again.")
     
     def _handle_unknown(self, chat_id):
         """Handle unknown commands"""
@@ -367,6 +417,12 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 
             elif data == "menu_education":
                 self._show_education_menu(chat_id, message_id)
+
+            elif data == "account_upgrade":
+                self._show_upgrade_options(chat_id, message_id)
+                
+            elif data == "account_stats":
+                self._handle_account(chat_id)  # Redirect to account command
                 
             elif data.startswith("asset_"):
                 asset = data.replace("asset_", "")
@@ -394,7 +450,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 engine = data.replace("aiengine_", "")
                 self._show_ai_engine_detail(chat_id, message_id, engine)
 
-            # EDUCATION HANDLERS - ADD THESE
+            # EDUCATION HANDLERS
             elif data == "edu_basics":
                 self._show_edu_basics(chat_id, message_id)
             elif data == "edu_risk":
@@ -426,18 +482,21 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     
     def _show_main_menu(self, chat_id, message_id=None):
         """Show main OTC trading menu"""
+        # 🆕 NEW: Get user account info for personalized menu
+        account_info = get_user_account_info(str(chat_id))
+        
         keyboard = {
             "inline_keyboard": [
                 [{"text": "🎯 GET OTC BINARY SIGNALS", "callback_data": "menu_signals"}],
                 [{"text": "📊 15 TRADING ASSETS", "callback_data": "menu_assets"}],
                 [{"text": "🤖 8 AI TRADING ENGINES", "callback_data": "menu_aiengines"}],
                 [{"text": "🚀 8 TRADING STRATEGIES", "callback_data": "menu_strategies"}],
-                [{"text": "💼 ACCOUNT MANAGEMENT", "callback_data": "menu_account"}],
+                [{"text": f"{account_info['color']} MY ACCOUNT", "callback_data": "menu_account"}],
                 [{"text": "📚 OTC TRADING EDUCATION", "callback_data": "menu_education"}]
             ]
         }
         
-        text = """
+        text = f"""
 🏦 **OTC BINARY TRADING PRO** 🤖
 
 *Professional Over-The-Counter Binary Options Platform*
@@ -448,8 +507,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 ⚡ **MULTIPLE EXPIRIES** - 1min to 60min timeframes
 💰 **SMART PAYOUTS** - Volatility-based returns
 
-💎 **ACCOUNT TYPE:** PREMIUM OTC ACCESS
-📈 **SIGNALS TODAY:** UNLIMITED
+{account_info['color']} **ACCOUNT TYPE:** {account_info['tier_name']}
+📈 **SIGNALS TODAY:** {account_info['signals_used_today']}/{account_info['signals_daily_limit']}
 🕒 **PLATFORM STATUS:** LIVE TRADING
 
 *Select your trading tool below*"""
@@ -467,6 +526,36 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     
     def _show_signals_menu(self, chat_id, message_id=None):
         """Show signals menu with all assets"""
+        # 🆕 NEW: Check signal access first
+        can_signal, message = check_signal_access(str(chat_id))
+        
+        if not can_signal:
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": "💎 UPGRADE ACCOUNT", "callback_data": "account_upgrade"}],
+                    [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+                ]
+            }
+            
+            text = f"""
+❌ **SIGNAL LIMIT REACHED**
+
+{message}
+
+💎 **UPGRADE YOUR ACCOUNT FOR:**
+• More daily signals
+• Access to all 15 assets
+• Priority signal delivery
+• Advanced AI analysis
+
+*Continue your trading journey with premium access*"""
+            
+            if message_id:
+                self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+            else:
+                self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
+            return
+
         keyboard = {
             "inline_keyboard": [
                 [{"text": "⚡ QUICK SIGNAL (EUR/USD 5min)", "callback_data": "signal_EUR/USD_5"}],
@@ -481,7 +570,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             ]
         }
         
-        text = """
+        account_info = get_user_account_info(str(chat_id))
+        
+        text = f"""
 🎯 **OTC BINARY SIGNALS - ALL ASSETS**
 
 *Generate AI-powered signals for any OTC instrument:*
@@ -489,6 +580,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 **QUICK SIGNALS:**
 • EUR/USD 5min - Fast execution
 • Any asset 15min - Detailed analysis
+
+**SIGNALS TODAY:** {account_info['signals_used_today']}/{account_info['signals_daily_limit']}
 
 **POPULAR OTC ASSETS:**
 • Forex Majors (EUR/USD, GBP/USD, USD/JPY)
@@ -873,45 +966,83 @@ Measures market momentum and acceleration using neural networks to detect early 
     
     def _show_account_menu(self, chat_id, message_id):
         """Show account management"""
+        account_info = get_user_account_info(str(chat_id))
+        
         keyboard = {
             "inline_keyboard": [
-                [{"text": "💎 UPGRADE TO VIP", "callback_data": "account_upgrade"}],
+                [{"text": "💎 UPGRADE TO PREMIUM", "callback_data": "account_upgrade"}],
                 [{"text": "📊 TRADING STATISTICS", "callback_data": "account_stats"}],
                 [{"text": "🆓 ACCOUNT FEATURES", "callback_data": "account_features"}],
-                [{"text": "🔧 TRADING SETTINGS", "callback_data": "account_settings"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
         
-        text = """
+        text = f"""
 💼 **OTC TRADING ACCOUNT**
 
-*Premium OTC Binary Trading Access*
-
-**ACCOUNT TYPE:** 🏦 PREMIUM OTC TRADER
-**SIGNALS:** 📈 UNLIMITED DAILY
-**ASSETS:** 💰 ALL 15 INSTRUMENTS
-**AI ENGINES:** 🤖 8 ADVANCED SYSTEMS
-**STRATEGIES:** 🚀 8 PROFESSIONAL
+{account_info['color']} **ACCOUNT TIER:** {account_info['tier_name']}
+📈 **SIGNALS TODAY:** {account_info['signals_used_today']}/{account_info['signals_daily_limit']}
+💰 **TOTAL SIGNALS:** {account_info['total_signals']}
 
 **FEATURES INCLUDED:**
 ✓ Real-time OTC signals
-✓ All 15 trading assets
+✓ {len(account_info['assets_available'])} trading assets
 ✓ 8 AI analysis engines
 ✓ 8 trading strategies
 ✓ Advanced risk management
 ✓ Priority signal delivery
 
-💎 **VIP UPGRADE INCLUDES:**
+💎 **PREMIUM UPGRADE INCLUDES:**
+• Unlimited daily signals
+• All 15 trading assets
 • Custom strategy development
-• Dedicated support
-• Advanced analytics
-• Early signal access"""
+• Dedicated support"""
         
         self.edit_message_text(
             chat_id, message_id,
             text, parse_mode="Markdown", reply_markup=keyboard
         )
+
+    def _show_upgrade_options(self, chat_id, message_id):
+        """Show upgrade options - 🆕 NEW"""
+        text = """
+💎 **UPGRADE YOUR TRADING ACCOUNT**
+
+**FREE TRIAL** 🆓
+• 10 signals per day
+• 5 popular assets
+• Basic AI engines
+• 14-day trial
+
+**BASIC PLAN** 💚 - $19/month
+• 50 signals per day
+• All 15 assets
+• All 8 AI engines
+• Standard support
+
+**PRO TRADER** 💎 - $49/month
+• Unlimited signals
+• All 15 assets
+• All AI engines + analytics
+• Priority support
+
+**ENTERPRISE** 👑 - $149/month
+• Unlimited everything
+• API access
+• White label options
+• Dedicated account manager
+
+*Contact @YourSupport for upgrades*"""
+
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📞 CONTACT SUPPORT", "url": "https://t.me/YourSupport"}],
+                [{"text": "🔙 BACK TO ACCOUNT", "callback_data": "menu_account"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
     
     def _show_education_menu(self, chat_id, message_id):
         """Show education menu"""
@@ -950,8 +1081,7 @@ Measures market momentum and acceleration using neural networks to detect early 
             text, parse_mode="Markdown", reply_markup=keyboard
         )
 
-    # ADD THESE EDUCATION METHODS:
-
+    # EDUCATION METHODS (keep your existing ones)
     def _show_edu_basics(self, chat_id, message_id):
         """Show OTC basics education"""
         text = """
@@ -1156,7 +1286,25 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
     def _generate_signal(self, chat_id, message_id, asset, expiry):
         """Generate detailed OTC trading signal"""
         try:
-            # Simulate AI analysis with realistic data
+            # 🆕 NEW: Check signal access first
+            can_signal, message = check_signal_access(str(chat_id))
+            if not can_signal:
+                keyboard = {
+                    "inline_keyboard": [
+                        [{"text": "💎 UPGRADE ACCOUNT", "callback_data": "account_upgrade"}],
+                        [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+                    ]
+                }
+                
+                self.edit_message_text(
+                    chat_id, message_id,
+                    f"❌ **SIGNAL LIMIT REACHED**\n\n{message}\n\n💎 Upgrade for unlimited signals.",
+                    parse_mode="Markdown",
+                    reply_markup=keyboard
+                )
+                return
+
+            # ✅ YOUR EXISTING SIGNAL GENERATION CODE
             direction = "CALL" if random.random() > 0.5 else "PUT"
             confidence = random.randint(75, 92)
             current_time = datetime.now()
@@ -1262,6 +1410,9 @@ Entry: Within 30 seconds of {expected_entry} UTC
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
             
+            # 🆕 NEW: Record signal usage after successful generation
+            record_signal(str(chat_id), asset, expiry)
+            
         except Exception as e:
             logger.error(f"❌ Signal generation error: {e}")
             self.edit_message_text(
@@ -1296,8 +1447,8 @@ def home():
     return jsonify({
         "status": "running",
         "service": "otc-binary-trading-pro", 
-        "version": "3.0.0",
-        "features": ["15_assets", "8_ai_engines", "8_strategies", "otc_signals"],
+        "version": "4.0.0",
+        "features": ["15_assets", "8_ai_engines", "8_strategies", "otc_signals", "account_management"],
         "queue_size": update_queue.qsize()
     })
 
@@ -1376,11 +1527,35 @@ def debug():
         "bot_ready": True
     })
 
+# 🆕 NEW: Admin dashboard endpoints
+@app.route('/admin/stats')
+def admin_stats():
+    """Admin statistics endpoint"""
+    from admin.dashboard import AdminDashboard
+    dashboard = AdminDashboard()
+    return jsonify(dashboard.get_system_stats())
+
+@app.route('/admin/upgrade-user', methods=['POST'])
+def admin_upgrade_user():
+    """Admin manual user upgrade endpoint"""
+    from admin.dashboard import AdminDashboard
+    dashboard = AdminDashboard()
+    
+    data = request.json
+    telegram_id = data.get('telegram_id')
+    new_tier = data.get('tier')
+    duration_days = data.get('duration_days', 30)
+    
+    success, message = dashboard.upgrade_user(telegram_id, new_tier, duration_days)
+    
+    return jsonify({"success": success, "message": message})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     
-    logger.info(f"🚀 Starting OTC Binary Trading Pro on port {port}")
+    logger.info(f"🚀 Starting OTC Binary Trading Pro v4.0 on port {port}")
     logger.info(f"📊 OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | Strategies: {len(TRADING_STRATEGIES)}")
+    logger.info("💎 Account Management System: ACTIVE")
     logger.info("🏦 Professional OTC Binary Options Platform Ready")
     
     app.run(host='0.0.0.0', port=port, debug=False)
