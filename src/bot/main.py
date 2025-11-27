@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from telegram.ext import Application, CommandHandler
 
 logger = logging.getLogger(__name__)
@@ -8,9 +9,11 @@ class BinaryOptionsBot:
         self.application = None
     
     async def setup(self):
+        """Setup bot application"""
         from src.core.config import Config
         from src.core.database import db
         
+        # Create application
         self.application = Application.builder().token(Config.TELEGRAM_TOKEN).build()
         
         # Add core handlers
@@ -18,8 +21,10 @@ class BinaryOptionsBot:
         self.application.add_handler(CommandHandler("help", self.handle_help))
         
         logger.info("Bot setup completed")
+        return self.application
     
     async def handle_start(self, update, context):
+        """Handle /start command"""
         from src.core.database import db
         
         user = update.effective_user
@@ -40,6 +45,7 @@ Stay tuned for AI signals!"""
         logger.info(f"New user: {user.id}")
     
     async def handle_help(self, update, context):
+        """Handle /help command"""
         help_text = """
 📖 Available Commands:
 
@@ -51,14 +57,28 @@ Stay tuned for AI signals!"""
         await update.message.reply_text(help_text)
     
     async def run(self):
-        await self.setup()
-        logger.info("Starting bot polling...")
-        await self.application.run_polling()
+        """Run the bot with proper shutdown handling"""
+        app = await self.setup()
+        
+        try:
+            logger.info("Starting bot polling...")
+            await app.initialize()
+            await app.start()
+            await app.updater.start_polling()
+            
+            # Keep the bot running
+            await asyncio.Event().wait()
+            
+        except KeyboardInterrupt:
+            logger.info("Bot stopping...")
+        finally:
+            # Proper shutdown
+            if app.updater:
+                await app.updater.stop()
+            await app.stop()
+            await app.shutdown()
 
+# Fixed main function
 async def main():
     bot = BinaryOptionsBot()
     await bot.run()
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
