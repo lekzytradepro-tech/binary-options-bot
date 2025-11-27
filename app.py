@@ -7,6 +7,8 @@ import queue
 import time
 import random
 from datetime import datetime, timedelta
+# Add at the top (with other imports)
+from utils.account_helpers import initialize_user, check_signal_access, record_signal
 
 # Configure logging
 logging.basicConfig(
@@ -149,6 +151,9 @@ class OTCTradingBot:
         try:
             chat_id = message['chat']['id']
             text = message.get('text', '').strip()
+
+            # In your _process_message method, add this line after user extraction:
+initialize_user(telegram_id, username, first_name)  # 🆕 NEW
             
             if text == '/start':
                 self._handle_start(chat_id, message)
@@ -1155,6 +1160,13 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
     
     def _generate_signal(self, chat_id, message_id, asset, expiry):
         """Generate detailed OTC trading signal"""
+
+        # 🆕 ADD THESE LINES AT THE VERY START of the method:
+    can_signal, message = check_signal_access(chat_id)
+    if not can_signal:
+        self.edit_message_text(chat_id, message_id, f"❌ {message}", parse_mode="Markdown")
+        return
+        
         try:
             # Simulate AI analysis with realistic data
             direction = "CALL" if random.random() > 0.5 else "PUT"
@@ -1269,6 +1281,9 @@ Entry: Within 30 seconds of {expected_entry} UTC
                 "❌ **SIGNAL GENERATION ERROR**\n\nPlease try again or contact support.",
                 parse_mode="Markdown"
             )
+
+# 🆕 ADD THIS LINE AT THE VERY END (before the final except):
+    record_signal(chat_id, asset, expiry)
 
 # Create OTC trading bot instance
 otc_bot = OTCTradingBot()
