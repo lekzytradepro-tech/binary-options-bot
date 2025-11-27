@@ -2,7 +2,9 @@ from flask import Flask, request, jsonify
 import os
 import logging
 import asyncio
+from src.bot.handlers import handle_button_click
 
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -11,10 +13,10 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     return jsonify({
-        "status": "running", 
-        "service": "binary-options-bot",
-        "version": "2.0.0", 
-        "message": "AI Trading Bot with 15 AI Engines 🚀"
+        "status": "running",
+        "service": "binary-options-bot", 
+        "version": "2.0.0",
+        "features": ["binary_signals", "ai_analysis", "real_data", "multiple_assets"]
     })
 
 @app.route('/health')
@@ -23,7 +25,7 @@ def health():
 
 @app.route('/set_webhook')
 def set_webhook():
-    """Set webhook for Telegram"""
+    """Set webhook for binary options bot"""
     import requests
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     webhook_url = "https://binary-options-bot-4c74.onrender.com/webhook"
@@ -42,153 +44,66 @@ def set_webhook():
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    """Telegram webhook endpoint"""
+    """Binary options webhook endpoint"""
     try:
         if not request.is_json:
             return jsonify({"error": "Invalid content type"}), 400
             
         update_data = request.get_json()
-        logger.info(f"📨 Received update: {update_data.get('update_id', 'unknown')}")
+        logger.info(f"📨 Binary update: {update_data.get('update_id', 'unknown')}")
         
-        # Process using simple bot logic
-        result = process_telegram_update_simple(update_data)
+        # Process using new binary bot handlers
+        if 'message' in update_data:
+            message = update_data['message']
+            text = message.get('text', '')
+            chat_id = message['chat']['id']
+            
+            if text == '/start':
+                from src.bot.handlers import handle_start
+                asyncio.run(handle_start(message, None))
+            elif text == '/help':
+                from src.bot.handlers import handle_help  
+                asyncio.run(handle_help(message, None))
+            elif text == '/signals':
+                from src.bot.handlers import handle_signals
+                asyncio.run(handle_signals(message, None))
+            elif text == '/assets':
+                from src.bot.handlers import handle_assets
+                asyncio.run(handle_assets(message, None))
+            else:
+                from src.bot.handlers import handle_unknown
+                asyncio.run(handle_unknown(message, None))
+                
+        elif 'callback_query' in update_data:
+            asyncio.run(handle_button_click(update_data['callback_query'], None))
         
-        return jsonify({"status": "processed", "result": result})
+        return jsonify({"status": "processed"})
         
     except Exception as e:
         logger.error(f"❌ Webhook error: {e}")
         return jsonify({"error": str(e)}), 500
 
-def process_telegram_update_simple(update_data):
-    """Simple bot logic that works reliably"""
-    import requests
-    import json
-    
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    
-    if 'message' in update_data:
-        message = update_data['message']
-        chat_id = message['chat']['id']
-        text = message.get('text', '')
-        
-        if text == '/start':
-            # Send welcome message with buttons
-            keyboard = {
-                "inline_keyboard": [
-                    [{"text": "🚀 Get AI Signals", "callback_data": "signals"}],
-                    [{"text": "📊 Trading Strategies", "callback_data": "strategies"}],
-                    [{"text": "💼 Account Dashboard", "callback_data": "account"}],
-                ]
-            }
-            
-            response_text = """🤖 *Binary Options AI Pro* 🚀
-
-*Welcome to your AI trading assistant!*
-
-🎯 *Powered by 15 AI Engines:*
-• Quantum AI Fusion
-• Adaptive Momentum  
-• Trend Analysis
-• Neural Wave Pattern
-• And 11 more advanced engines!
-
-💎 *Account Status:* FREE TRIAL
-📊 *AI Signals Today:* 0/3 used
-
-*Tap buttons below to explore features!*"""
-            
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            payload = {
-                "chat_id": chat_id,
-                "text": response_text,
-                "reply_markup": keyboard,
-                "parse_mode": "Markdown"
-            }
-            
-            response = requests.post(url, json=payload)
-            return f"sent_start_to_{chat_id}"
-            
-        elif text == '/help':
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            payload = {
-                "chat_id": chat_id,
-                "text": "📖 *Help*\n\n/start - Start bot with AI features\n/help - Show this message\n\n*15 AI engines ready for signals!*",
-                "parse_mode": "Markdown"
-            }
-            requests.post(url, json=payload)
-            return f"sent_help_to_{chat_id}"
-    
-    elif 'callback_query' in update_data:
-        callback = update_data['callback_query']
-        chat_id = callback['message']['chat']['id']
-        data = callback['data']
-        
-        # Answer callback first
-        url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
-        requests.post(url, json={"callback_query_id": callback['id']})
-        
-        # Handle button clicks
-        if data == 'signals':
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            payload = {
-                "chat_id": chat_id,
-                "text": "📊 *AI Trading Signals*\n\n🚀 **15 AI Engines Analyzing...**\n\n• Quantum AI: Scanning patterns\n• Trend Analysis: Evaluating momentum\n• Neural Wave: Pattern detection\n\n*Real signals coming soon!*",
-                "parse_mode": "Markdown"
-            }
-            requests.post(url, json=payload)
-            
-        elif data == 'strategies':
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            payload = {
-                "chat_id": chat_id,
-                "text": "🎯 *Trading Strategies*\n\n🤖 **7 AI-Powered Strategies:**\n\n• Trend Spotter Pro\n• Adaptive Filter\n• Pattern Sniper\n• Volume Spike Detector\n• SmartTrend Predictor\n• AI Scalper\n• Quantum Pulse\n\n*All strategies use multiple AI engines!*",
-                "parse_mode": "Markdown"
-            }
-            requests.post(url, json=payload)
-            
-        elif data == 'account':
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            payload = {
-                "chat_id": chat_id,
-                "text": "💼 *Account Dashboard*\n\n👤 **AI Trader Profile**\n🆔 **Status:** FREE TRIAL ACTIVE\n📊 **Signals Used:** 0/3 today\n🤖 **AI Access:** 15 Engines\n🎯 **Strategies:** 7 Available\n\n💎 *Upgrade for unlimited AI power!*",
-                "parse_mode": "Markdown"
-            }
-            requests.post(url, json=payload)
-    
-    return "processed"
-
 @app.route('/test')
 def test():
-    """Test all components"""
+    """Test binary options features"""
     try:
-        # Test bot token
-        import requests
-        token = os.getenv("TELEGRAM_BOT_TOKEN")
+        from src.core.config import Config
+        from src.api.twelvedata_client import TwelveDataClient
         
-        if not token:
-            return jsonify({"error": "Token not set"}), 500
-            
-        url = f"https://api.telegram.org/bot{token}/getMe"
-        response = requests.get(url)
+        return jsonify({
+            "status": "binary_bot_ready",
+            "ai_engines": Config.BINARY_AI_ENGINES,
+            "trading_assets": Config.BINARY_PAIRS,
+            "binary_expiries": Config.BINARY_EXPIRIES,
+            "payout_rates": Config.PAYOUT_RATES,
+            "twelvedata_keys": len(Config.TWELVEDATA_KEYS)
+        })
         
-        if response.status_code == 200:
-            bot_info = response.json()
-            return jsonify({
-                "status": "all_systems_go",
-                "bot": f"✅ {bot_info['result']['first_name']} (@{bot_info['result']['username']})",
-                "ai_engines": "✅ 15 AI Engines Ready",
-                "strategies": "✅ 7 Trading Strategies", 
-                "features": "✅ Database & User Management",
-                "webhook": "✅ Ready for Telegram"
-            })
-        else:
-            return jsonify({"error": "Bot token invalid"}), 500
-            
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
-    print(f"🚀 Starting Binary Options AI Pro on port {port}")
-    print("🤖 15 AI Engines | 7 Strategies | Professional Trading")
+    logger.info(f"🚀 Starting Binary Options AI Pro on port {port}")
+    logger.info("🎯 8 AI Engines | 15 Assets | Real TwelveData")
     app.run(host='0.0.0.0', port=port, debug=False)
