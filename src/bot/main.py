@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -12,13 +13,18 @@ class BinaryOptionsBot:
         from src.core.config import Config
         from src.core.database import db
         
+        # Create application
         self.application = Application.builder().token(Config.TELEGRAM_TOKEN).build()
         
         # Add handlers
         self.application.add_handler(CommandHandler("start", self.handle_start))
         self.application.add_handler(CallbackQueryHandler(self.handle_button_click))
         
-        logger.info("Bot setup completed")
+        # Initialize application
+        await self.application.initialize()
+        await self.application.start()
+        
+        logger.info("✅ Bot setup completed successfully")
     
     async def handle_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         from src.core.database import db
@@ -226,24 +232,43 @@ System administration tools:
             parse_mode="Markdown"
         )
     
-    async def run(self):
-        await self.setup()
-        logger.info("Starting bot polling...")
+    async def run_polling(self):
+        """Run bot with polling - for development"""
         await self.application.run_polling()
+    
+    async def cleanup(self):
+        """Cleanup bot resources"""
+        if self.application:
+            await self.application.stop()
+            await self.application.shutdown()
 
-def main():
+# Render-compatible main function
+async def main():
+    """Main async function for Render"""
     bot = BinaryOptionsBot()
-    
-    import asyncio
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
     try:
-        loop.run_until_complete(bot.run())
+        await bot.setup()
+        logger.info("🤖 Bot started successfully - waiting for messages...")
+        
+        # Keep the bot running
+        await asyncio.Future()  # Run forever
+        
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Bot error: {e}")
     finally:
-        loop.close()
+        await bot.cleanup()
+
+# Development entry point
+def run_bot():
+    """Run bot for development"""
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Failed to run bot: {e}")
 
 if __name__ == "__main__":
-    main()
+    run_bot()
