@@ -1,43 +1,41 @@
-#!/usr/bin/env python3
-"""
-Health server for Render port binding
-Render requires an open port, so we run a simple health check server
-"""
-
-from flask import Flask
-import threading
+from flask import Flask, jsonify
 import logging
 
 logger = logging.getLogger(__name__)
 
 def create_health_app():
+    """Create Flask app for health checks"""
     app = Flask(__name__)
-    
-    @app.route('/')
-    def home():
-        return '🤖 Binary Options Bot is running!'
     
     @app.route('/health')
     def health():
-        return 'OK', 200
+        return jsonify({
+            "status": "healthy",
+            "service": "binary-options-bot",
+            "timestamp": "2024-01-01T00:00:00Z"
+        })
     
-    @app.route('/status')
-    def status():
-        return {'status': 'running', 'service': 'binary-options-bot'}, 200
+    @app.route('/')
+    def home():
+        return jsonify({
+            "message": "Binary Options AI Pro Bot",
+            "status": "running"
+        })
     
     return app
 
+# Start health server in background
 def start_health_server(port=8000):
-    """Start health server in a separate thread"""
+    """Start health server in background thread"""
+    import threading
+    
     app = create_health_app()
     
     def run_server():
-        logger.info(f"Starting health server on port {port}")
         app.run(host='0.0.0.0', port=port, debug=False)
     
-    # Start in background thread
-    server_thread = threading.Thread(target=run_server, daemon=True)
-    server_thread.start()
-    logger.info("Health server started")
+    thread = threading.Thread(target=run_server, daemon=True)
+    thread.start()
+    logger.info(f"Health server started on port {port}")
     
-    return server_thread
+    return thread
