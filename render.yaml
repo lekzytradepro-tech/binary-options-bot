@@ -13,6 +13,8 @@ services:
         value: production
       - key: DATABASE_URL
         value: sqlite:///opt/render/project/src/data/bot.db
+      - key: PORT
+        value: 8000
     disk:
       name: data
       mountPath: /opt/render/project/src/data
