@@ -1,0 +1,7 @@
+# Core dependencies
+python-telegram-bot==20.7
+python-dotenv==1.0.0
+
+# Web server for health checks (needed for Docker/Render)
+flask==2.3.3
+gunicorn==21.2.0
