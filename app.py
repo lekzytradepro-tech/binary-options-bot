@@ -393,6 +393,18 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             elif data.startswith("aiengine_"):
                 engine = data.replace("aiengine_", "")
                 self._show_ai_engine_detail(chat_id, message_id, engine)
+
+            # EDUCATION HANDLERS - ADD THESE
+            elif data == "edu_basics":
+                self._show_edu_basics(chat_id, message_id)
+            elif data == "edu_risk":
+                self._show_edu_risk(chat_id, message_id)
+            elif data == "edu_bot_usage":
+                self._show_edu_bot_usage(chat_id, message_id)
+            elif data == "edu_technical":
+                self._show_edu_technical(chat_id, message_id)
+            elif data == "edu_psychology":
+                self._show_edu_psychology(chat_id, message_id)
                 
             else:
                 self.edit_message_text(
@@ -937,6 +949,209 @@ Measures market momentum and acceleration using neural networks to detect early 
             chat_id, message_id,
             text, parse_mode="Markdown", reply_markup=keyboard
         )
+
+    # ADD THESE EDUCATION METHODS:
+
+    def _show_edu_basics(self, chat_id, message_id):
+        """Show OTC basics education"""
+        text = """
+📚 **OTC BINARY OPTIONS BASICS**
+
+*Understanding OTC Trading:*
+
+**What are OTC Binary Options?**
+Over-The-Counter binary options are contracts where you predict if an asset's price will be above or below a certain level at expiration.
+
+**CALL vs PUT:**
+• 📈 CALL - You predict price will INCREASE
+• 📉 PUT - You predict price will DECREASE
+
+**Key OTC Characteristics:**
+• Broker-generated prices (not real market)
+• Mean-reversion behavior
+• Short, predictable patterns
+• Synthetic liquidity
+
+**Expiry Times:**
+• 1-5 minutes: Quick OTC scalping
+• 15-30 minutes: Pattern completion
+• 60 minutes: Session-based trading
+
+*OTC trading requires understanding these unique market dynamics*"""
+
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "🎯 RISK MANAGEMENT", "callback_data": "edu_risk"}],
+                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+            ]
+        }
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+    def _show_edu_risk(self, chat_id, message_id):
+        """Show risk management education"""
+        text = """
+🎯 **OTC RISK MANAGEMENT**
+
+*Essential Risk Rules for OTC Trading:*
+
+**💰 POSITION SIZING:**
+• Risk only 1-2% of account per trade
+• Start with demo account first
+• Use consistent position sizes
+
+**⏰ TRADE MANAGEMENT:**
+• Trade during active sessions only
+• Avoid high volatility spikes
+• Set mental stop losses
+
+**📊 RISK CONTROLS:**
+• Maximum 3-5 trades per day
+• Stop trading after 2 consecutive losses
+• Take breaks between sessions
+
+**🛡 OTC-SPECIFIC RISKS:**
+• Broker price manipulation
+• Synthetic liquidity gaps
+• Pattern breakdowns during news
+
+*Proper risk management is the key to OTC success*"""
+
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "🤖 USING THE BOT", "callback_data": "edu_bot_usage"}],
+                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+            ]
+        }
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+    def _show_edu_bot_usage(self, chat_id, message_id):
+        """Show bot usage guide"""
+        text = """
+🤖 **HOW TO USE THIS OTC BOT**
+
+*Step-by-Step Trading Process:*
+
+**1. 🎯 GET SIGNALS**
+• Use /signals or main menu
+• Select your preferred asset
+• Choose expiry time (1-60min)
+
+**2. 📊 ANALYZE SIGNAL**
+• Check confidence level (75%+ recommended)
+• Review technical analysis details
+• Understand signal reasons
+
+**3. ⚡ EXECUTE TRADE**
+• Enter within 30 seconds of expected entry
+• Use recommended position size
+• Set mental stop loss
+
+**4. 📈 MANAGE TRADE**
+• Monitor until expiry
+• Close early if pattern breaks
+• Review performance
+
+**BOT FEATURES:**
+• 15 OTC-optimized assets
+• 8 AI analysis engines
+• Real-time market analysis
+• Professional risk management
+
+*Master the bot, master OTC trading*"""
+
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📊 TECHNICAL ANALYSIS", "callback_data": "edu_technical"}],
+                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+            ]
+        }
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+    def _show_edu_technical(self, chat_id, message_id):
+        """Show technical analysis education"""
+        text = """
+📊 **OTC TECHNICAL ANALYSIS**
+
+*AI-Powered Market Analysis:*
+
+**TREND ANALYSIS:**
+• Multiple timeframe confirmation
+• Trend strength measurement
+• Momentum acceleration
+
+**PATTERN RECOGNITION:**
+• M/W formations
+• Triple tops/bottoms
+• Bollinger Band rejections
+• Support/Resistance bounces
+
+**VOLATILITY ASSESSMENT:**
+• Volatility compression/expansion
+• Session-based volatility patterns
+• News impact anticipation
+
+**AI ENGINES USED:**
+• QuantumTrend AI - Trend analysis
+• NeuralMomentum AI - Momentum detection
+• PatternRecognition AI - Chart patterns
+• VolatilityMatrix AI - Volatility assessment
+
+*Technical analysis is key to OTC success*"""
+
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "💡 TRADING PSYCHOLOGY", "callback_data": "edu_psychology"}],
+                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+            ]
+        }
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+    def _show_edu_psychology(self, chat_id, message_id):
+        """Show trading psychology education"""
+        text = """
+💡 **OTC TRADING PSYCHOLOGY**
+
+*Master Your Mindset for Success:*
+
+**EMOTIONAL CONTROL:**
+• Trade without emotion
+• Accept losses as part of trading
+• Avoid revenge trading
+
+**DISCIPLINE:**
+• Follow your trading plan
+• Stick to risk management rules
+• Don't chase losses
+
+**PATIENCE:**
+• Wait for high-probability setups
+• Don't overtrade
+• Take breaks when needed
+
+**MINDSET SHIFTS:**
+• Focus on process, not profits
+• Learn from every trade
+• Continuous improvement mindset
+
+**OTC-SPECIFIC PSYCHOLOGY:**
+• Understand it's not real market prices
+• Trust the patterns, not emotions
+• Accept broker manipulation as reality
+
+*Psychology is 80% of trading success*"""
+
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📚 OTC BASICS", "callback_data": "edu_basics"}],
+                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+            ]
+        }
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
     
     def _generate_signal(self, chat_id, message_id, asset, expiry):
         """Generate detailed OTC trading signal"""
