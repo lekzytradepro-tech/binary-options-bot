@@ -6,12 +6,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     supervisor \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Copy requirements
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
@@ -21,7 +20,7 @@ COPY . .
 # Copy supervisor config
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Create necessary directories
+# Create directories
 RUN mkdir -p /app/data /app/logs
 
 # Create non-root user
@@ -31,5 +30,5 @@ USER botuser
 
 EXPOSE 8000
 
-# Use supervisor to manage processes instead of direct python command
+# Use supervisor for production
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
