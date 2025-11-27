@@ -8,5 +8,4 @@ requests==2.31.0
 # For Render health server
 flask==2.3.3
 
-# For Docker/supervisor (optional)
-supervisor==4.2.5
+# REMOVED: supervisor==4.2.5
