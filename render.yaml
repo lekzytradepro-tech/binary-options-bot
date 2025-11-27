@@ -5,15 +5,13 @@ services:
     region: frankfurt
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: python app.py
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         fromSecret: telegram_bot_token
+      - key: WEBHOOK_URL
+        value: https://binary-options-bot-4c74.onrender.com/webhook
       - key: ENVIRONMENT
         value: production
       - key: PORT
         value: 10000
-    disk:
-      name: data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
