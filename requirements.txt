@@ -1,8 +1,13 @@
+# 📄 requirements.txt - UPDATED
+flask==2.3.3
 python-telegram-bot==20.7
-python-dotenv==1.0.0
-flask==2.3.0
 requests==2.31.0
-twelvedata>=0.3.0
-pandas==2.0.3
+pandas==2.1.0
 numpy==1.24.3
+python-dotenv==1.0.0
+stripe==7.0.0
+cryptography==41.0.7
 sqlalchemy==2.0.23
+apscheduler==3.10.4
+twelvedata==1.0.0
+websocket-client==1.6.3
