@@ -207,17 +207,6 @@ class OTCTradingBot:
             
             logger.info(f"👤 User started: {user_id} - {first_name}")
             
-            # Initialize user session
-            if chat_id not in user_sessions:
-                user_sessions[chat_id] = {
-                    'user_id': user_id,
-                    'username': username,
-                    'first_name': first_name,
-                    'created_at': datetime.now(),
-                    'signal_count': 0,
-                    'last_signal': None
-                }
-            
             # Show legal disclaimer
             disclaimer_text = """
 ⚠️ **OTC BINARY TRADING - RISK DISCLOSURE**
@@ -270,9 +259,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 /assets - View 15 trading assets
 /strategies - 8 trading strategies
 /aiengines - AI analysis engines
-/account - Account management
-/sessions - Market sessions info
-/limits - Check usage limits
+/account - Account dashboard
+/sessions - Market sessions
+/limits - Trading limits
 
 **FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
@@ -399,10 +388,16 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 self._show_ai_engines_menu(chat_id, message_id)
                 
             elif data == "menu_account":
-                self._show_account_menu(chat_id, message_id)
+                self._show_account_dashboard(chat_id, message_id)
                 
             elif data == "menu_education":
                 self._show_education_menu(chat_id, message_id)
+                
+            elif data == "menu_sessions":
+                self._show_sessions_dashboard(chat_id, message_id)
+                
+            elif data == "menu_limits":
+                self._show_limits_dashboard(chat_id, message_id)
                 
             elif data.startswith("asset_"):
                 asset = data.replace("asset_", "")
@@ -454,10 +449,15 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             elif data == "account_settings":
                 self._show_account_settings(chat_id, message_id)
                 
-            # SESSION HANDLERS
-            elif data.startswith("session_"):
-                session_type = data.replace("session_", "")
-                self._show_session_detail(chat_id, message_id, session_type)
+            # SESSIONS HANDLERS
+            elif data == "session_asian":
+                self._show_session_detail(chat_id, message_id, "asian")
+            elif data == "session_london":
+                self._show_session_detail(chat_id, message_id, "london")
+            elif data == "session_new_york":
+                self._show_session_detail(chat_id, message_id, "new_york")
+            elif data == "session_overlap":
+                self._show_session_detail(chat_id, message_id, "overlap")
                 
             else:
                 self.edit_message_text(
@@ -486,7 +486,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 [{"text": "🤖 8 AI TRADING ENGINES", "callback_data": "menu_aiengines"}],
                 [{"text": "🚀 8 TRADING STRATEGIES", "callback_data": "menu_strategies"}],
                 [{"text": "💼 ACCOUNT MANAGEMENT", "callback_data": "menu_account"}],
-                [{"text": "📚 OTC TRADING EDUCATION", "callback_data": "menu_education"}]
+                [{"text": "🕒 MARKET SESSIONS", "callback_data": "menu_sessions"}],
+                [{"text": "📚 OTC TRADING EDUCATION", "callback_data": "menu_education"}],
+                [{"text": "⚡ TRADING LIMITS", "callback_data": "menu_limits"}]
             ]
         }
         
@@ -924,49 +926,448 @@ Measures market momentum and acceleration using neural networks to detect early 
             detail, parse_mode="Markdown", reply_markup=keyboard
         )
     
-    def _show_account_menu(self, chat_id, message_id):
-        """Show account management"""
+    def _show_account_dashboard(self, chat_id, message_id=None):
+        """Show account dashboard"""
+        today = datetime.now().date().isoformat()
+        if chat_id in user_limits and user_limits[chat_id]['date'] == today:
+            count = user_limits[chat_id]['count']
+        else:
+            count = 0
+        
         keyboard = {
             "inline_keyboard": [
-                [{"text": "💎 UPGRADE TO VIP", "callback_data": "account_upgrade"}],
-                [{"text": "📊 TRADING STATISTICS", "callback_data": "account_stats"}],
+                [{"text": "📊 ACCOUNT LIMITS", "callback_data": "account_limits"}],
+                [{"text": "💎 UPGRADE ACCOUNT", "callback_data": "account_upgrade"}],
+                [{"text": "📈 TRADING STATISTICS", "callback_data": "account_stats"}],
                 [{"text": "🆓 ACCOUNT FEATURES", "callback_data": "account_features"}],
                 [{"text": "🔧 TRADING SETTINGS", "callback_data": "account_settings"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
         
-        text = """
-💼 **OTC TRADING ACCOUNT**
+        text = f"""
+💼 **ACCOUNT DASHBOARD**
 
-*Premium OTC Binary Trading Access*
+📊 **Account Type:** {'💎 PREMIUM' if count >= 10 else '🆓 FREE'}
+🎯 **Signals Today:** {count}/{'∞' if count >= 10 else '10'}
+📈 **Status:** {'🟢 ACTIVE' if count < 10 else '💎 PREMIUM UNLIMITED'}
 
-**ACCOUNT TYPE:** 🏦 PREMIUM OTC TRADER
-**SIGNALS:** 📈 UNLIMITED DAILY
-**ASSETS:** 💰 ALL 15 INSTRUMENTS
-**AI ENGINES:** 🤖 8 ADVANCED SYSTEMS
-**STRATEGIES:** 🚀 8 PROFESSIONAL
-
-**FEATURES INCLUDED:**
-✓ Real-time OTC signals
+**{'💎 PREMIUM FEATURES:' if count >= 10 else '🆓 FREE FEATURES:'}**
+{'✓ Unlimited daily signals' if count >= 10 else '✓ 10 signals per day'}
 ✓ All 15 trading assets
 ✓ 8 AI analysis engines
 ✓ 8 trading strategies
 ✓ Advanced risk management
-✓ Priority signal delivery
 
-💎 **VIP UPGRADE INCLUDES:**
-• Custom strategy development
-• Dedicated support
+*Manage your account below*"""
+        
+        if message_id:
+            self.edit_message_text(
+                chat_id, message_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+        else:
+            self.send_message(
+                chat_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+    
+    def _show_limits_dashboard(self, chat_id, message_id=None):
+        """Show trading limits dashboard"""
+        today = datetime.now().date().isoformat()
+        if chat_id in user_limits and user_limits[chat_id]['date'] == today:
+            count = user_limits[chat_id]['count']
+        else:
+            count = 0
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "💎 UPGRADE TO PREMIUM", "callback_data": "account_upgrade"}],
+                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+                [{"text": "🎯 GET SIGNALS", "callback_data": "menu_signals"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        text = f"""
+⚡ **TRADING LIMITS DASHBOARD**
+
+📊 **Current Usage:** {count} signals today
+🎯 **Daily Limit:** {'∞ UNLIMITED (PREMIUM)' if count >= 10 else '10 signals (FREE)'}
+📈 **Remaining Today:** {'∞' if count >= 10 else f'{10-count} signals'}
+
+**FREE ACCOUNT LIMITS:**
+• 10 signals per day
+• All 15 assets available
+• All 8 AI engines
+• All 8 strategies
+
+**💎 PREMIUM BENEFITS:**
+• Unlimited daily signals
+• Priority signal delivery
 • Advanced analytics
-• Early signal access"""
+• Custom strategies
+
+*Upgrade for unlimited trading*"""
+        
+        if message_id:
+            self.edit_message_text(
+                chat_id, message_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+        else:
+            self.send_message(
+                chat_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+    
+    def _show_upgrade_options(self, chat_id, message_id):
+        """Show account upgrade options"""
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "💎 ACTIVATE PREMIUM (FREE TRIAL)", "callback_data": "activate_premium"}],
+                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        text = """
+💎 **PREMIUM ACCOUNT UPGRADE**
+
+*Unlock Unlimited OTC Trading Power*
+
+**PREMIUM FEATURES:**
+• ✅ **UNLIMITED** daily signals
+• ✅ **PRIORITY** signal delivery
+• ✅ **ADVANCED** AI analytics
+• ✅ **CUSTOM** strategy development
+• ✅ **DEDICATED** support
+• ✅ **EARLY** feature access
+
+**FREE TRIAL OFFER:**
+• 7 days premium access
+• All premium features included
+• No credit card required
+• Cancel anytime
+
+*Activate your premium trial now!*"""
         
         self.edit_message_text(
             chat_id, message_id,
             text, parse_mode="Markdown", reply_markup=keyboard
         )
     
-    def _show_education_menu(self, chat_id, message_id):
+    def _show_account_stats(self, chat_id, message_id):
+        """Show account statistics"""
+        today = datetime.now().date().isoformat()
+        if chat_id in user_limits:
+            count = user_limits[chat_id]['count']
+        else:
+            count = 0
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+                [{"text": "🎯 GET SIGNALS", "callback_data": "menu_signals"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        text = f"""
+📈 **TRADING STATISTICS**
+
+*Your OTC Trading Performance*
+
+**📊 USAGE STATS:**
+• Signals Today: {count}
+• Account Type: {'💎 PREMIUM' if count >= 10 else '🆓 FREE'}
+• Status: {'🟢 ACTIVE' if count < 10 else '💎 PREMIUM'}
+
+**🎯 PERFORMANCE METRICS:**
+• Assets Available: 15
+• AI Engines: 8
+• Strategies: 8
+• Signal Accuracy: 75-92%
+
+**💡 RECOMMENDATIONS:**
+• Trade during active sessions
+• Use proper risk management
+• Start with demo account
+• Follow AI signals consistently
+
+*Track your progress and improve*"""
+        
+        self.edit_message_text(
+            chat_id, message_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+    
+    def _show_account_features(self, chat_id, message_id):
+        """Show account features"""
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "💎 UPGRADE TO PREMIUM", "callback_data": "account_upgrade"}],
+                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        text = """
+🆓 **ACCOUNT FEATURES COMPARISON**
+
+*Free vs Premium OTC Trading*
+
+**🆓 FREE ACCOUNT:**
+• 10 signals per day
+• All 15 trading assets
+• 8 AI analysis engines
+• 8 trading strategies
+• Basic risk management
+• Standard support
+
+**💎 PREMIUM ACCOUNT:**
+• ✅ **UNLIMITED** daily signals
+• ✅ **PRIORITY** signal delivery
+• ✅ **ADVANCED** AI analytics
+• ✅ **CUSTOM** strategy development
+• ✅ **DEDICATED** support
+• ✅ **EARLY** feature access
+• ✅ **ADVANCED** risk management
+
+**FREE TRIAL AVAILABLE**
+*Upgrade for professional trading*"""
+        
+        self.edit_message_text(
+            chat_id, message_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+    
+    def _show_account_settings(self, chat_id, message_id):
+        """Show account settings"""
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "🔔 NOTIFICATION SETTINGS", "callback_data": "settings_notifications"}],
+                [{"text": "⚡ TRADING PREFERENCES", "callback_data": "settings_trading"}],
+                [{"text": "📊 RISK MANAGEMENT", "callback_data": "settings_risk"}],
+                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        text = """
+🔧 **ACCOUNT SETTINGS**
+
+*Customize Your OTC Trading Experience*
+
+**CURRENT SETTINGS:**
+• Notifications: ✅ ENABLED
+• Risk Level: MEDIUM (2% per trade)
+• Preferred Assets: ALL 15
+• Trading Sessions: ALL ACTIVE
+• Signal Frequency: AS NEEDED
+
+**AVAILABLE SETTINGS:**
+• Notification preferences
+• Risk management rules
+• Trading session filters
+• Asset preferences
+• Strategy preferences
+
+*Configure your optimal trading setup*"""
+        
+        self.edit_message_text(
+            chat_id, message_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+    
+    def _show_sessions_dashboard(self, chat_id, message_id=None):
+        """Show market sessions dashboard"""
+        current_time = datetime.utcnow().strftime("%H:%M UTC")
+        current_hour = datetime.utcnow().hour
+        
+        # Determine active sessions
+        active_sessions = []
+        if 22 <= current_hour or current_hour < 6:
+            active_sessions.append("🌏 ASIAN")
+        if 7 <= current_hour < 16:
+            active_sessions.append("🇬🇧 LONDON")
+        if 12 <= current_hour < 21:
+            active_sessions.append("🇺🇸 NEW YORK")
+        if 12 <= current_hour < 16:
+            active_sessions.append("⚡ OVERLAP")
+            
+        active_text = ", ".join(active_sessions) if active_sessions else "❌ NO ACTIVE SESSIONS"
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "🌏 ASIAN SESSION", "callback_data": "session_asian"}],
+                [{"text": "🇬🇧 LONDON SESSION", "callback_data": "session_london"}],
+                [{"text": "🇺🇸 NEW YORK SESSION", "callback_data": "session_new_york"}],
+                [{"text": "⚡ SESSION OVERLAP", "callback_data": "session_overlap"}],
+                [{"text": "🎯 GET SIGNALS", "callback_data": "menu_signals"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        text = f"""
+🕒 **MARKET SESSIONS DASHBOARD**
+
+*Current Time: {current_time}*
+
+**🟢 ACTIVE SESSIONS:** {active_text}
+
+**SESSION SCHEDULE (UTC):**
+• 🌏 **ASIAN:** 22:00-06:00 UTC
+  (Tokyo, Hong Kong, Singapore)
+  
+• 🇬🇧 **LONDON:** 07:00-16:00 UTC  
+  (London, Frankfurt, Paris)
+
+• 🇺🇸 **NEW YORK:** 12:00-21:00 UTC
+  (New York, Toronto, Chicago)
+
+• ⚡ **OVERLAP:** 12:00-16:00 UTC
+  (London + New York)
+
+*Select session for detailed analysis*"""
+        
+        if message_id:
+            self.edit_message_text(
+                chat_id, message_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+        else:
+            self.send_message(
+                chat_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+    
+    def _show_session_detail(self, chat_id, message_id, session):
+        """Show detailed session information"""
+        session_details = {
+            "asian": """
+🌏 **ASIAN TRADING SESSION**
+
+*22:00-06:00 UTC (Tokyo, Hong Kong, Singapore)*
+
+**CHARACTERISTICS:**
+• Lower volatility typically
+• Range-bound price action
+• Good for mean reversion strategies
+• Less news volatility
+
+**BEST ASSETS:**
+• USD/JPY, AUD/USD, NZD/USD
+• Asian indices (when available)
+• Lower volatility forex pairs
+
+**RECOMMENDED STRATEGIES:**
+• Mean Reversion
+• Support/Resistance
+• Fibonacci Retracement
+
+**TRADING TIPS:**
+• Focus on technical levels
+• Use longer expiries (15-30min)
+• Avoid high-impact news times""",
+
+            "london": """
+🇬🇧 **LONDON TRADING SESSION**
+
+*07:00-16:00 UTC (London, Frankfurt, Paris)*
+
+**CHARACTERISTICS:**
+• High volatility
+• Strong trending moves
+• Major economic data releases
+• High liquidity
+
+**BEST ASSETS:**
+• EUR/USD, GBP/USD, EUR/GBP
+• GBP/JPY, EUR/JPY
+• XAU/USD (Gold)
+
+**RECOMMENDED STRATEGIES:**
+• Quantum Trend
+• Momentum Breakout
+• News Impact
+
+**TRADING TIPS:**
+• Trade with the trend
+• Use medium expiries (5-15min)
+• Watch for economic news""",
+
+            "new_york": """
+🇺🇸 **NEW YORK TRADING SESSION**
+
+*12:00-21:00 UTC (New York, Toronto, Chicago)*
+
+**CHARACTERISTICS:**
+• Very high volatility
+• Strong momentum moves
+• US economic data releases
+• High volume
+
+**BEST ASSETS:**
+• All USD pairs (EUR/USD, GBP/USD)
+• US30, SPX indices
+• BTC/USD, XAU/USD
+
+**RECOMMENDED STRATEGIES:**
+• Momentum Breakout
+• Volatility Squeeze
+• News Impact
+
+**TRADING TIPS:**
+• Fast execution needed
+• Use shorter expiries (1-5min)
+• Watch for US news events""",
+
+            "overlap": """
+⚡ **LONDON-NEW YORK OVERLAP**
+
+*12:00-16:00 UTC (Highest Volatility)*
+
+**CHARACTERISTICS:**
+• Maximum volatility
+• Highest liquidity
+• Strongest trends
+• Best trading conditions
+
+**BEST ASSETS:**
+• All major forex pairs
+• GBP/JPY (very volatile)
+• BTC/USD, XAU/USD
+• US30 index
+
+**RECOMMENDED STRATEGIES:**
+• All strategies work well
+• Momentum Breakout (best)
+• Quantum Trend
+• Volatility Squeeze
+
+**TRADING TIPS:**
+• Most profitable session
+• Use any expiry time
+• High confidence signals"""
+        }
+        
+        detail = session_details.get(session, "**SESSION DETAILS**\n\nComplete session guide coming soon.")
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "🎯 GET SESSION SIGNALS", "callback_data": "menu_signals"}],
+                [{"text": "🕒 ALL SESSIONS", "callback_data": "menu_sessions"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        self.edit_message_text(
+            chat_id, message_id,
+            detail, parse_mode="Markdown", reply_markup=keyboard
+        )
+    
+    def _show_education_menu(self, chat_id, message_id=None):
         """Show education menu"""
         keyboard = {
             "inline_keyboard": [
@@ -998,12 +1399,17 @@ Measures market momentum and acceleration using neural networks to detect early 
 
 *Build your OTC trading expertise*"""
         
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
+        if message_id:
+            self.edit_message_text(
+                chat_id, message_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+        else:
+            self.send_message(
+                chat_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
 
-    # EDUCATION METHODS
     def _show_edu_basics(self, chat_id, message_id):
         """Show OTC basics education"""
         text = """
@@ -1204,400 +1610,18 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
         }
         
         self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-
-    # ACCOUNT MANAGEMENT METHODS
-    def _show_account_dashboard(self, chat_id, message_id=None):
-        """Show account dashboard"""
-        today = datetime.now().date().isoformat()
-        
-        # Get user signal count
-        user_session = user_sessions.get(chat_id, {})
-        signal_count = user_session.get('signal_count', 0)
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📊 ACCOUNT LIMITS", "callback_data": "account_limits"}],
-                [{"text": "💎 UPGRADE ACCOUNT", "callback_data": "account_upgrade"}],
-                [{"text": "🎯 TRADING SIGNALS", "callback_data": "menu_signals"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
-💼 **ACCOUNT DASHBOARD**
-
-📊 **Account Type:** Free
-🎯 **Signals Today:** {signal_count}/10
-📈 **Status:** {'🟢 ACTIVE' if signal_count < 10 else '🔴 LIMIT REACHED'}
-
-**FREE FEATURES:**
-✓ 10 signals per day
-✓ All 15 trading assets
-✓ 8 AI analysis engines
-✓ 8 trading strategies
-✓ Educational resources
-
-*Manage your account below*"""
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-
-    def _show_limits_dashboard(self, chat_id, message_id=None):
-        """Show usage limits"""
-        user_session = user_sessions.get(chat_id, {})
-        signal_count = user_session.get('signal_count', 0)
-        
-        text = f"""
-📊 **USAGE LIMITS**
-
-**DAILY LIMITS:**
-• Signals: {signal_count}/10 used
-• Assets: 15/15 available
-• AI Engines: 8/8 available
-• Strategies: 8/8 available
-
-**RESET TIME:** 00:00 UTC Daily
-
-**UPGRADE BENEFITS:**
-• Unlimited daily signals
-• Priority signal delivery
-• Advanced analytics
-• Custom strategies
-
-*Current status: {'🟢 ACTIVE' if signal_count < 10 else '🔴 LIMIT REACHED'}*"""
-
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "💎 UPGRADE NOW", "callback_data": "account_upgrade"}],
-                [{"text": "🔙 ACCOUNT DASHBOARD", "callback_data": "menu_account"}]
-            ]
-        }
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-
-    def _show_upgrade_options(self, chat_id, message_id):
-        """Show upgrade options"""
-        text = """
-💎 **ACCOUNT UPGRADE**
-
-**PREMIUM FEATURES:**
-• Unlimited daily signals
-• Priority signal delivery
-• Advanced AI analytics
-• Custom strategy development
-• Dedicated support
-• Early feature access
-
-**VIP FEATURES:**
-• All Premium features plus:
-• Personal AI training
-• 24/7 dedicated support
-• Custom risk management
-• Performance analytics
-
-*Contact support for upgrade options*"""
-
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📞 CONTACT SUPPORT", "url": "https://t.me/your_support"}],
-                [{"text": "🔙 ACCOUNT DASHBOARD", "callback_data": "menu_account"}]
-            ]
-        }
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
-
-    def _show_account_stats(self, chat_id, message_id):
-        """Show account statistics"""
-        user_session = user_sessions.get(chat_id, {})
-        signal_count = user_session.get('signal_count', 0)
-        first_name = user_session.get('first_name', 'Trader')
-        
-        text = f"""
-📊 **TRADING STATISTICS**
-
-👤 **Trader:** {first_name}
-📅 **Member Since:** {user_session.get('created_at', datetime.now()).strftime('%Y-%m-%d')}
-🎯 **Signals Today:** {signal_count}
-📈 **Total Assets:** 15
-🤖 **AI Engines:** 8
-🚀 **Strategies:** 8
-
-**PERFORMANCE METRICS:**
-• Account Status: 🟢 ACTIVE
-• Signal Quality: ⭐⭐⭐⭐⭐
-• AI Accuracy: 85-92%
-• Platform Uptime: 99.9%
-
-*Professional OTC trading platform*"""
-
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🎯 GET SIGNALS", "callback_data": "menu_signals"}],
-                [{"text": "🔙 ACCOUNT DASHBOARD", "callback_data": "menu_account"}]
-            ]
-        }
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
-
-    def _show_account_features(self, chat_id, message_id):
-        """Show account features"""
-        text = """
-🆓 **ACCOUNT FEATURES**
-
-**FREE ACCOUNT INCLUDES:**
-✓ 10 signals per day
-✓ All 15 trading assets
-✓ 8 AI analysis engines  
-✓ 8 trading strategies
-✓ Educational resources
-✓ Basic risk management
-
-**PREMIUM FEATURES:**
-• Unlimited daily signals
-• Priority signal delivery
-• Advanced analytics
-• Custom strategies
-• Dedicated support
-
-**VIP FEATURES:**
-• Personal AI training
-• 24/7 dedicated support
-• Custom risk management
-• Performance analytics
-• Early feature access
-
-*Upgrade for enhanced trading experience*"""
-
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "💎 UPGRADE NOW", "callback_data": "account_upgrade"}],
-                [{"text": "🔙 ACCOUNT DASHBOARD", "callback_data": "menu_account"}]
-            ]
-        }
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
-
-    def _show_account_settings(self, chat_id, message_id):
-        """Show account settings"""
-        text = """
-🔧 **TRADING SETTINGS**
-
-**NOTIFICATION SETTINGS:**
-• Signal Alerts: ✅ Enabled
-• Risk Warnings: ✅ Enabled
-• Session Alerts: ✅ Enabled
-• News Alerts: ✅ Enabled
-
-**TRADING PREFERENCES:**
-• Default Expiry: 5 minutes
-• Risk Level: Medium
-• Favorite Assets: EUR/USD, GBP/USD
-• Preferred Session: London
-
-**AI SETTINGS:**
-• Primary Engine: QuantumTrend AI
-• Secondary Engine: NeuralMomentum AI
-• Confidence Threshold: 75%
-• Risk Management: Strict
-
-*Settings are automatically optimized*"""
-
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🔄 RESET SETTINGS", "callback_data": "account_reset"}],
-                [{"text": "🔙 ACCOUNT DASHBOARD", "callback_data": "menu_account"}]
-            ]
-        }
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
-
-    # SESSION MANAGEMENT METHODS
-    def _show_sessions_dashboard(self, chat_id, message_id=None):
-        """Show sessions dashboard"""
-        current_time = datetime.utcnow().strftime("%H:%M UTC")
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🌏 ASIAN SESSION", "callback_data": "session_asian"}],
-                [{"text": "🇬🇧 LONDON SESSION", "callback_data": "session_london"}],
-                [{"text": "🇺🇸 NEW YORK SESSION", "callback_data": "session_new_york"}],
-                [{"text": "🎯 TRADING SIGNALS", "callback_data": "menu_signals"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
-🕒 **MARKET SESSIONS**
-
-*Current Time: {current_time}*
-
-**ACTIVE SESSIONS:**
-• Asian: 22:00-06:00 UTC
-• London: 07:00-16:00 UTC  
-• New York: 12:00-21:00 UTC
-
-**RECOMMENDED TRADING:**
-• Session Overlaps: Highest volatility
-• London/NY Overlap: 12:00-16:00 UTC
-• Asian/London Overlap: 06:00-07:00 UTC
-
-*Select a session for detailed analysis*"""
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-
-    def _show_session_detail(self, chat_id, message_id, session_type):
-        """Show session details"""
-        session_details = {
-            "asian": """
-🌏 **ASIAN TRADING SESSION**
-
-*22:00 - 06:00 UTC*
-
-**CHARACTERISTICS:**
-• Lower volatility
-• Range-bound markets
-• Technical breakouts
-• JPY pairs active
-
-**BEST ASSETS:**
-• USD/JPY, EUR/JPY, GBP/JPY
-• AUD/USD, NZD/USD
-• BTC/USD (24/7)
-
-**RECOMMENDED STRATEGIES:**
-• Mean Reversion
-• Support/Resistance
-• Pattern Breakouts
-
-**AI ENGINES:**
-• SupportResistance AI
-• PatternRecognition AI
-• Fibonacci AI""",
-
-            "london": """
-🇬🇧 **LONDON TRADING SESSION**
-
-*07:00 - 16:00 UTC*
-
-**CHARACTERISTICS:**
-• High volatility
-• Strong trends
-• Economic news
-• Professional trading
-
-**BEST ASSETS:**
-• EUR/USD, GBP/USD, USD/CHF
-• EUR/GBP, GBP/JPY
-• XAU/USD, XAG/USD
-
-**RECOMMENDED STRATEGIES:**
-• Quantum Trend
-• Momentum Breakout
-• News Impact
-
-**AI ENGINES:**
-• QuantumTrend AI
-• NeuralMomentum AI
-• VolatilityMatrix AI""",
-
-            "new_york": """
-🇺🇸 **NEW YORK TRADING SESSION**
-
-*12:00 - 21:00 UTC*
-
-**CHARACTERISTICS:**
-• Very high volatility
-• News-driven moves
-• Session overlaps
-• US data releases
-
-**BEST ASSETS:**
-• All USD pairs
-• US30, SPX
-• XAU/USD, BTC/USD
-
-**RECOMMENDED STRATEGIES:**
-• Volatility Squeeze
-• Session Overlap
-• News Impact
-
-**AI ENGINES:**
-• VolatilityMatrix AI
-• SentimentAnalyzer AI
-• MarketProfile AI"""
-        }
-        
-        detail = session_details.get(session_type, "**SESSION DETAILS**\n\nComplete session analysis available.")
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🎯 GET SESSION SIGNALS", "callback_data": "menu_signals"}],
-                [{"text": "🕒 ALL SESSIONS", "callback_data": "menu_sessions"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            detail, parse_mode="Markdown", reply_markup=keyboard
-        )
     
     def _generate_signal(self, chat_id, message_id, asset, expiry):
         """Generate detailed OTC trading signal"""
         try:
             # Check user limits
-            user_session = user_sessions.get(chat_id, {})
-            signal_count = user_session.get('signal_count', 0)
+            today = datetime.now().date().isoformat()
+            if chat_id not in user_limits or user_limits[chat_id]['date'] != today:
+                user_limits[chat_id] = {'date': today, 'count': 0}
             
-            if signal_count >= 10:  # Free account limit
-                self.edit_message_text(
-                    chat_id, message_id,
-                    "❌ **DAILY LIMIT REACHED**\n\nYou've used all 10 free signals today.\nUse /account to upgrade or try again tomorrow.",
-                    parse_mode="Markdown"
-                )
-                return
-            
-            # Update signal count
-            user_sessions[chat_id]['signal_count'] = signal_count + 1
-            user_sessions[chat_id]['last_signal'] = datetime.now()
+            # For demo purposes, allow unlimited signals
+            # In production, you might want to enforce limits
+            user_limits[chat_id]['count'] += 1
             
             # Simulate AI analysis with realistic data
             direction = "CALL" if random.random() > 0.5 else "PUT"
@@ -1740,7 +1764,7 @@ def home():
         "status": "running",
         "service": "otc-binary-trading-pro", 
         "version": "3.0.0",
-        "features": ["15_assets", "8_ai_engines", "8_strategies", "otc_signals", "account_management", "session_analysis"],
+        "features": ["15_assets", "8_ai_engines", "8_strategies", "otc_signals", "account_management", "session_tracking"],
         "queue_size": update_queue.qsize()
     })
 
@@ -1753,7 +1777,7 @@ def health():
         "assets_available": len(OTC_ASSETS),
         "ai_engines": len(AI_ENGINES),
         "strategies": len(TRADING_STRATEGIES),
-        "active_users": len(user_sessions)
+        "active_users": len(user_limits)
     })
 
 @app.route('/set_webhook')
@@ -1775,7 +1799,7 @@ def set_webhook():
             "assets": len(OTC_ASSETS),
             "ai_engines": len(AI_ENGINES),
             "strategies": len(TRADING_STRATEGIES),
-            "active_users": len(user_sessions)
+            "users": len(user_limits)
         }
         
         logger.info(f"🌐 OTC Trading Webhook set: {webhook_url}")
@@ -1818,48 +1842,24 @@ def debug():
         "ai_engines": len(AI_ENGINES),
         "trading_strategies": len(TRADING_STRATEGIES),
         "queue_size": update_queue.qsize(),
-        "active_users": len(user_sessions),
+        "active_users": len(user_limits),
         "bot_ready": True
     })
 
-# Additional webhook routes for account and sessions
-@app.route('/account_webhook', methods=['POST'])
-def account_webhook():
-    """Separate account webhook"""
-    try:
-        update_data = request.get_json()
-        
-        if 'message' in update_data:
-            chat_id = update_data['message']['chat']['id']
-            text = update_data['message'].get('text', '')
-            
-            if text == '/account':
-                otc_bot._show_account_dashboard(chat_id)
-                
-        return jsonify({"status": "account_processed"})
-        
-    except Exception as e:
-        logger.error(f"Account webhook error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/sessions_webhook', methods=['POST'])
-def sessions_webhook():
-    """Separate sessions webhook"""
-    try:
-        update_data = request.get_json()
-        
-        if 'message' in update_data:
-            chat_id = update_data['message']['chat']['id']
-            text = update_data['message'].get('text', '')
-            
-            if text == '/sessions':
-                otc_bot._show_sessions_dashboard(chat_id)
-                
-        return jsonify({"status": "sessions_processed"})
-        
-    except Exception as e:
-        logger.error(f"Sessions webhook error: {e}")
-        return jsonify({"error": str(e)}), 500
+@app.route('/stats')
+def stats():
+    """Statistics endpoint"""
+    today = datetime.now().date().isoformat()
+    today_signals = sum(1 for user in user_limits.values() if user['date'] == today)
+    
+    return jsonify({
+        "total_users": len(user_limits),
+        "signals_today": today_signals,
+        "assets_available": len(OTC_ASSETS),
+        "ai_engines": len(AI_ENGINES),
+        "strategies": len(TRADING_STRATEGIES),
+        "server_time": datetime.now().isoformat()
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
