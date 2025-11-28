@@ -21,66 +21,71 @@ app = Flask(__name__)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 update_queue = queue.Queue()
 
+# User management
+user_limits = {}
+user_sessions = {}
+
 # User tier management
 user_tiers = {}
 ADMIN_IDS = [6307001401]  # Your Telegram ID
+ADMIN_USERNAME = "@LekzyDevX"  # Your admin username
 
 # Default tiers configuration
 USER_TIERS = {
     'free_trial': {
-        'name': 'Free Trial',
+        'name': 'FREE TRIAL',
         'signals_daily': 10,
         'duration_days': 14,
         'price': 0,
-        'features': ['10 signals/day', 'All assets', 'All AI engines', 'All strategies']
+        'features': ['10 signals/day', 'All 15 assets', '8 AI engines', 'All strategies']
     },
     'basic': {
-        'name': 'Basic', 
+        'name': 'BASIC', 
         'signals_daily': 50,
         'duration_days': 30,
         'price': 19,
         'features': ['50 signals/day', 'Priority signals', 'Advanced AI', 'All features']
     },
     'pro': {
-        'name': 'Pro',
+        'name': 'PRO',
         'signals_daily': 9999,  # Unlimited
         'duration_days': 30,
         'price': 49,
         'features': ['Unlimited signals', 'All features', 'Dedicated support', 'Priority access']
     },
     'admin': {
-        'name': 'Admin',
+        'name': 'ADMIN',
         'signals_daily': 9999,
         'duration_days': 9999,
         'price': 0,
-        'features': ['Full system access', 'User management', 'All features', 'Admin tools']
+        'features': ['Full system access', 'User management', 'All features', 'Admin privileges']
     }
 }
 
-# Enhanced OTC Binary Trading Configuration with Optimized Pairs
+# OTC Binary Trading Configuration
 OTC_ASSETS = {
-    "EUR/USD": {"type": "Forex", "volatility": "High", "session": "London/NY", "popularity": "Very High"},
-    "GBP/USD": {"type": "Forex", "volatility": "High", "session": "London/NY", "popularity": "High"},
-    "USD/JPY": {"type": "Forex", "volatility": "Medium", "session": "Asian/London", "popularity": "High"},
-    "USD/CHF": {"type": "Forex", "volatility": "Medium", "session": "London/NY", "popularity": "Medium"},
-    "AUD/USD": {"type": "Forex", "volatility": "High", "session": "Asian/London", "popularity": "High"},
-    "USD/CAD": {"type": "Forex", "volatility": "Medium", "session": "London/NY", "popularity": "High"},
-    "NZD/USD": {"type": "Forex", "volatility": "High", "session": "Asian/London", "popularity": "Medium"},
-    "EUR/GBP": {"type": "Forex", "volatility": "Medium", "session": "London", "popularity": "Medium"},
-    "GBP/JPY": {"type": "Forex", "volatility": "Very High", "session": "London", "popularity": "High"},
-    "EUR/JPY": {"type": "Forex", "volatility": "High", "session": "London", "popularity": "High"},
-    "AUD/JPY": {"type": "Forex", "volatility": "High", "session": "Asian/London", "popularity": "Medium"},
-    "CAD/JPY": {"type": "Forex", "volatility": "Medium", "session": "London/NY", "popularity": "Medium"},
-    "BTC/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7", "popularity": "Very High"},
-    "ETH/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7", "popularity": "High"},
-    "XRP/USD": {"type": "Crypto", "volatility": "High", "session": "24/7", "popularity": "Medium"},
-    "XAU/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY", "popularity": "High"},
-    "XAG/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY", "popularity": "Medium"},
-    "US30": {"type": "Index", "volatility": "High", "session": "NY", "popularity": "High"},
-    "SPX500": {"type": "Index", "volatility": "Medium", "session": "NY", "popularity": "Medium"},
-    "NAS100": {"type": "Index", "volatility": "High", "session": "NY", "popularity": "Medium"},
-    "UK100": {"type": "Index", "volatility": "Medium", "session": "London", "popularity": "Medium"},
-    "GER30": {"type": "Index", "volatility": "Medium", "session": "London", "popularity": "Medium"}
+    "EUR/USD": {"type": "Forex", "volatility": "High", "session": "London/NY"},
+    "GBP/USD": {"type": "Forex", "volatility": "High", "session": "London/NY"},
+    "USD/JPY": {"type": "Forex", "volatility": "Medium", "session": "Asian/London"},
+    "USD/CHF": {"type": "Forex", "volatility": "Medium", "session": "London/NY"},
+    "AUD/USD": {"type": "Forex", "volatility": "High", "session": "Asian/London"},
+    "USD/CAD": {"type": "Forex", "volatility": "Medium", "session": "London/NY"},
+    "NZD/USD": {"type": "Forex", "volatility": "High", "session": "Asian/London"},
+    "EUR/GBP": {"type": "Forex", "volatility": "Medium", "session": "London"},
+    "GBP/JPY": {"type": "Forex", "volatility": "Very High", "session": "London"},
+    "EUR/JPY": {"type": "Forex", "volatility": "High", "session": "London"},
+    "USD/CNH": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
+    "USD/SGD": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
+    "BTC/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7"},
+    "ETH/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7"},
+    "XRP/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
+    "ADA/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
+    "XAU/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
+    "XAG/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
+    "OIL/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
+    "US30": {"type": "Index", "volatility": "High", "session": "NY"},
+    "SPX500": {"type": "Index", "volatility": "Medium", "session": "NY"},
+    "NAS100": {"type": "Index", "volatility": "High", "session": "NY"}
 }
 
 AI_ENGINES = {
@@ -105,11 +110,7 @@ TRADING_STRATEGIES = {
     "Fibonacci Retracement": "Trades from golden ratio levels"
 }
 
-# User management
-user_limits = {}
-user_sessions = {}
-
-# Tier management functions
+# Tier Management Functions
 def get_user_tier(chat_id):
     """Get user's current tier"""
     if chat_id in user_tiers:
@@ -134,10 +135,10 @@ def can_generate_signal(chat_id):
     tier = get_user_tier(chat_id)
     
     if tier == 'free_trial_expired':
-        return False, "❌ Free trial expired. Contact @LekzyDevX to upgrade."
+        return False, "Free trial expired. Contact admin to upgrade."
     
-    if tier == 'admin' or chat_id in ADMIN_IDS:
-        return True, "👑 Admin: Unlimited access"
+    if tier == 'admin' or tier == 'pro':
+        return True, "Unlimited access"
     
     tier_info = USER_TIERS.get(tier, USER_TIERS['free_trial'])
     
@@ -153,10 +154,10 @@ def can_generate_signal(chat_id):
         user_data['count'] = 0
     
     if user_data.get('count', 0) >= tier_info['signals_daily']:
-        return False, f"❌ Daily limit reached ({tier_info['signals_daily']} signals). Contact @LekzyDevX to upgrade."
+        return False, f"Daily limit reached ({tier_info['signals_daily']} signals)"
     
     user_data['count'] = user_data.get('count', 0) + 1
-    return True, f"✅ {tier_info['name']}: {user_data['count']}/{tier_info['signals_daily']} signals today"
+    return True, f"{tier_info['name']}: {user_data['count']}/{tier_info['signals_daily']} signals"
 
 def get_user_stats(chat_id):
     """Get user statistics"""
@@ -298,10 +299,8 @@ class OTCTradingBot:
                 self._handle_sessions(chat_id)
             elif text == '/limits':
                 self._handle_limits(chat_id)
-            elif text == '/admin':
+            elif text == '/admin' and chat_id in ADMIN_IDS:
                 self._handle_admin_panel(chat_id)
-            elif text == '/contact':
-                self._handle_contact_admin(chat_id)
             else:
                 self._handle_unknown(chat_id)
                 
@@ -349,7 +348,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • You may lose your entire investment
 
 **OTC Trading Features:**
-• 22 optimized assets (Forex, Crypto, Commodities, Indices)
+• 22 major assets (Forex, Crypto, Commodities, Indices)
 • 8 AI engines for analysis
 • Multiple trading strategies
 • Real-time market analysis
@@ -388,10 +387,6 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 /account - Account dashboard
 /sessions - Market sessions
 /limits - Trading limits
-/contact - Contact admin
-
-**ADMIN COMMANDS:**
-/admin - Admin panel (Admins only)
 
 **FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
@@ -481,14 +476,6 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     def _handle_limits(self, chat_id):
         """Handle /limits command"""
         self._show_limits_dashboard(chat_id)
-    
-    def _handle_contact_admin(self, chat_id):
-        """Handle /contact command"""
-        self._handle_contact_admin(chat_id)
-    
-    def _handle_admin_panel(self, chat_id):
-        """Handle /admin command"""
-        self._handle_admin_panel(chat_id)
     
     def _handle_unknown(self, chat_id):
         """Handle unknown commands"""
@@ -608,8 +595,6 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 self._show_admin_users(chat_id, message_id)
             elif data == "admin_settings":
                 self._show_admin_settings(chat_id, message_id)
-            elif data == "activate_premium":
-                self._activate_premium_trial(chat_id, message_id)
                 
             else:
                 self.edit_message_text(
@@ -633,34 +618,50 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         """Show main OTC trading menu"""
         stats = get_user_stats(chat_id)
         
+        # Create optimized button layout
         keyboard_rows = [
             [{"text": "🎯 GET OTC SIGNALS", "callback_data": "menu_signals"}],
-            [{"text": "📊 22 TRADING ASSETS", "callback_data": "menu_assets"}],
-            [{"text": "🤖 AI ENGINES", "callback_data": "menu_aiengines"}, {"text": "🚀 STRATEGIES", "callback_data": "menu_strategies"}],
-            [{"text": "💼 ACCOUNT", "callback_data": "menu_account"}, {"text": "🕒 SESSIONS", "callback_data": "menu_sessions"}],
+            [
+                {"text": "📊 22 ASSETS", "callback_data": "menu_assets"},
+                {"text": "🤖 8 AI ENGINES", "callback_data": "menu_aiengines"}
+            ],
+            [
+                {"text": "🚀 8 STRATEGIES", "callback_data": "menu_strategies"},
+                {"text": "💼 ACCOUNT", "callback_data": "menu_account"}
+            ],
+            [
+                {"text": "🕒 SESSIONS", "callback_data": "menu_sessions"},
+                {"text": "📚 EDUCATION", "callback_data": "menu_education"}
+            ],
             [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}]
         ]
         
-        # Add admin button for admins
+        # Add admin panel for admins
         if stats['is_admin']:
             keyboard_rows.append([{"text": "👑 ADMIN PANEL", "callback_data": "admin_panel"}])
         
         keyboard = {"inline_keyboard": keyboard_rows}
+        
+        # Format account status
+        if stats['daily_limit'] == 9999:
+            signals_text = "UNLIMITED"
+        else:
+            signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
         
         text = f"""
 🏦 **OTC BINARY TRADING PRO** 🤖
 
 *Professional Over-The-Counter Binary Options Platform*
 
-💎 **ACCOUNT:** {stats['tier_name'].upper()}
-📈 **SIGNALS TODAY:** {stats['signals_today']}/{stats['daily_limit']}
-🕒 **STATUS:** 🟢 LIVE TRADING
+🎯 **LIVE OTC SIGNALS** - Real-time binary options
+📊 **22 TRADING ASSETS** - Forex, Crypto, Commodities, Indices
+🤖 **8 AI ENGINES** - Quantum analysis technology
+⚡ **MULTIPLE EXPIRIES** - 1min to 60min timeframes
+💰 **SMART PAYOUTS** - Volatility-based returns
 
-**FEATURES:**
-• 22 optimized OTC assets
-• 8 AI analysis engines  
-• Multiple trading strategies
-• Real-time market analysis
+💎 **ACCOUNT TYPE:** {stats['tier_name']}
+📈 **SIGNALS TODAY:** {signals_text}
+🕒 **PLATFORM STATUS:** LIVE TRADING
 
 *Select your trading tool below*"""
         
@@ -679,29 +680,38 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         """Show signals menu with all assets"""
         keyboard = {
             "inline_keyboard": [
-                [{"text": "⚡ QUICK EUR/USD 5min", "callback_data": "signal_EUR/USD_5"}],
-                [{"text": "💎 POPULAR PAIRS", "callback_data": "menu_assets"}],
-                [{"text": "💱 EUR/USD", "callback_data": "asset_EUR/USD"}, {"text": "💱 GBP/USD", "callback_data": "asset_GBP/USD"}],
-                [{"text": "💱 USD/JPY", "callback_data": "asset_USD/JPY"}, {"text": "₿ BTC/USD", "callback_data": "asset_BTC/USD"}],
-                [{"text": "🟡 XAU/USD", "callback_data": "asset_XAU/USD"}, {"text": "📈 US30", "callback_data": "asset_US30"}],
+                [{"text": "⚡ QUICK SIGNAL (EUR/USD 5min)", "callback_data": "signal_EUR/USD_5"}],
+                [{"text": "📈 STANDARD SIGNAL (15min ANY ASSET)", "callback_data": "menu_assets"}],
+                [
+                    {"text": "💱 EUR/USD", "callback_data": "asset_EUR/USD"},
+                    {"text": "💱 GBP/USD", "callback_data": "asset_GBP/USD"}
+                ],
+                [
+                    {"text": "💱 USD/JPY", "callback_data": "asset_USD/JPY"},
+                    {"text": "₿ BTC/USD", "callback_data": "asset_BTC/USD"}
+                ],
+                [
+                    {"text": "🟡 XAU/USD", "callback_data": "asset_XAU/USD"},
+                    {"text": "📈 US30", "callback_data": "asset_US30"}
+                ],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
         
         text = """
-🎯 **OTC BINARY SIGNALS - OPTIMIZED ASSETS**
+🎯 **OTC BINARY SIGNALS - ALL ASSETS**
 
 *Generate AI-powered signals for any OTC instrument:*
 
 **QUICK SIGNALS:**
 • EUR/USD 5min - Fast execution
-• Popular pairs - High accuracy
+• Any asset 15min - Detailed analysis
 
-**TOP OTC ASSETS:**
+**POPULAR OTC ASSETS:**
 • Forex Majors (EUR/USD, GBP/USD, USD/JPY)
 • Cryptocurrencies (BTC/USD, ETH/USD)  
 • Commodities (XAU/USD, XAG/USD)
-• Indices (US30, SPX500)
+• Indices (US30, SPX500, NAS100)
 
 *Select asset or quick signal*"""
         
@@ -717,39 +727,67 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             )
     
     def _show_assets_menu(self, chat_id, message_id=None):
-        """Show all 22 trading assets with optimized layout"""
+        """Show all 22 trading assets"""
         keyboard = {
             "inline_keyboard": [
-                [{"text": "💱 EUR/USD", "callback_data": "asset_EUR/USD"}, {"text": "💱 GBP/USD", "callback_data": "asset_GBP/USD"}, {"text": "💱 USD/JPY", "callback_data": "asset_USD/JPY"}],
-                [{"text": "💱 USD/CHF", "callback_data": "asset_USD/CHF"}, {"text": "💱 AUD/USD", "callback_data": "asset_AUD/USD"}, {"text": "💱 USD/CAD", "callback_data": "asset_USD/CAD"}],
-                [{"text": "💱 NZD/USD", "callback_data": "asset_NZD/USD"}, {"text": "💱 EUR/GBP", "callback_data": "asset_EUR/GBP"}, {"text": "💱 GBP/JPY", "callback_data": "asset_GBP/JPY"}],
-                [{"text": "💱 EUR/JPY", "callback_data": "asset_EUR/JPY"}, {"text": "💱 AUD/JPY", "callback_data": "asset_AUD/JPY"}, {"text": "💱 CAD/JPY", "callback_data": "asset_CAD/JPY"}],
-                [{"text": "₿ BTC/USD", "callback_data": "asset_BTC/USD"}, {"text": "₿ ETH/USD", "callback_data": "asset_ETH/USD"}, {"text": "₿ XRP/USD", "callback_data": "asset_XRP/USD"}],
-                [{"text": "🟡 XAU/USD", "callback_data": "asset_XAU/USD"}, {"text": "🟡 XAG/USD", "callback_data": "asset_XAG/USD"}],
-                [{"text": "📈 US30", "callback_data": "asset_US30"}, {"text": "📈 SPX500", "callback_data": "asset_SPX500"}, {"text": "📈 NAS100", "callback_data": "asset_NAS100"}],
-                [{"text": "📈 UK100", "callback_data": "asset_UK100"}, {"text": "📈 GER30", "callback_data": "asset_GER30"}],
+                [
+                    {"text": "💱 EUR/USD", "callback_data": "asset_EUR/USD"},
+                    {"text": "💱 GBP/USD", "callback_data": "asset_GBP/USD"},
+                    {"text": "💱 USD/JPY", "callback_data": "asset_USD/JPY"}
+                ],
+                [
+                    {"text": "💱 USD/CHF", "callback_data": "asset_USD/CHF"},
+                    {"text": "💱 AUD/USD", "callback_data": "asset_AUD/USD"},
+                    {"text": "💱 USD/CAD", "callback_data": "asset_USD/CAD"}
+                ],
+                [
+                    {"text": "💱 NZD/USD", "callback_data": "asset_NZD/USD"},
+                    {"text": "💱 EUR/GBP", "callback_data": "asset_EUR/GBP"},
+                    {"text": "💱 USD/CNH", "callback_data": "asset_USD/CNH"}
+                ],
+                [
+                    {"text": "💱 USD/SGD", "callback_data": "asset_USD/SGD"},
+                    {"text": "💱 GBP/JPY", "callback_data": "asset_GBP/JPY"},
+                    {"text": "💱 EUR/JPY", "callback_data": "asset_EUR/JPY"}
+                ],
+                [
+                    {"text": "₿ BTC/USD", "callback_data": "asset_BTC/USD"},
+                    {"text": "₿ ETH/USD", "callback_data": "asset_ETH/USD"},
+                    {"text": "₿ XRP/USD", "callback_data": "asset_XRP/USD"}
+                ],
+                [
+                    {"text": "₿ ADA/USD", "callback_data": "asset_ADA/USD"},
+                    {"text": "🟡 XAU/USD", "callback_data": "asset_XAU/USD"},
+                    {"text": "🟡 XAG/USD", "callback_data": "asset_XAG/USD"}
+                ],
+                [
+                    {"text": "🛢 OIL/USD", "callback_data": "asset_OIL/USD"},
+                    {"text": "📈 US30", "callback_data": "asset_US30"},
+                    {"text": "📈 SPX500", "callback_data": "asset_SPX500"}
+                ],
+                [{"text": "📈 NAS100", "callback_data": "asset_NAS100"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
         
         text = """
-📊 **OTC TRADING ASSETS - 22 OPTIMIZED INSTRUMENTS**
+📊 **OTC TRADING ASSETS - ALL 22 INSTRUMENTS**
 
 *Trade these OTC binary options:*
 
-💱 **FOREX MAJORS & CROSSES (11 PAIRS)**
+💱 **FOREX MAJORS & MINORS (12 PAIRS)**
 • EUR/USD, GBP/USD, USD/JPY, USD/CHF
 • AUD/USD, USD/CAD, NZD/USD, EUR/GBP
-• GBP/JPY, EUR/JPY, AUD/JPY, CAD/JPY
+• USD/CNH, USD/SGD, GBP/JPY, EUR/JPY
 
-₿ **CRYPTOCURRENCIES (3 PAIRS)**
-• BTC/USD, ETH/USD, XRP/USD
+₿ **CRYPTOCURRENCIES (4 PAIRS)**
+• BTC/USD, ETH/USD, XRP/USD, ADA/USD
 
-🟡 **COMMODITIES (2 PAIRS)**
-• XAU/USD (Gold), XAG/USD (Silver)
+🟡 **COMMODITIES (3 PAIRS)**
+• XAU/USD (Gold), XAG/USD (Silver), OIL/USD (Oil)
 
-📈 **INDICES (5 INDICES)**
-• US30, SPX500, NAS100, UK100, GER30
+📈 **INDICES (3 INDICES)**
+• US30 (Dow Jones), SPX500 (S&P 500), NAS100 (Nasdaq)
 
 *Click any asset to generate signal*"""
         
@@ -772,9 +810,16 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         
         keyboard = {
             "inline_keyboard": [
-                [{"text": "⚡ 1 MIN", "callback_data": f"expiry_{asset}_1"}, {"text": "⚡ 2 MIN", "callback_data": f"expiry_{asset}_2"}],
-                [{"text": "⚡ 5 MIN", "callback_data": f"expiry_{asset}_5"}, {"text": "📈 15 MIN", "callback_data": f"expiry_{asset}_15"}],
-                [{"text": "📈 30 MIN", "callback_data": f"expiry_{asset}_30"}, {"text": "📈 60 MIN", "callback_data": f"expiry_{asset}_60"}],
+                [
+                    {"text": "⚡ 1 MIN", "callback_data": f"expiry_{asset}_1"},
+                    {"text": "⚡ 2 MIN", "callback_data": f"expiry_{asset}_2"},
+                    {"text": "⚡ 5 MIN", "callback_data": f"expiry_{asset}_5"}
+                ],
+                [
+                    {"text": "📈 15 MIN", "callback_data": f"expiry_{asset}_15"},
+                    {"text": "📈 30 MIN", "callback_data": f"expiry_{asset}_30"},
+                    {"text": "📈 60 MIN", "callback_data": f"expiry_{asset}_60"}
+                ],
                 [{"text": "🔙 BACK TO ASSETS", "callback_data": "menu_assets"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
@@ -787,7 +832,6 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **Type:** {asset_type}
 • **Volatility:** {volatility}
 • **Session:** {asset_info.get('session', 'Multiple')}
-• **Popularity:** {asset_info.get('popularity', 'Medium')}
 
 *Choose Expiry Time:*
 
@@ -809,10 +853,22 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         """Show all trading strategies"""
         keyboard = {
             "inline_keyboard": [
-                [{"text": "🚀 QUANTUM TREND", "callback_data": "strategy_quantum_trend"}, {"text": "⚡ MOMENTUM", "callback_data": "strategy_momentum_breakout"}],
-                [{"text": "🔄 MEAN REVERSION", "callback_data": "strategy_mean_reversion"}, {"text": "📊 VOLATILITY", "callback_data": "strategy_volatility_squeeze"}],
-                [{"text": "⏰ SESSION OVERLAP", "callback_data": "strategy_session_overlap"}, {"text": "📰 NEWS IMPACT", "callback_data": "strategy_news_impact"}],
-                [{"text": "🎯 SUPPORT/RESISTANCE", "callback_data": "strategy_support_resistance"}, {"text": "📐 FIBONACCI", "callback_data": "strategy_fibonacci"}],
+                [
+                    {"text": "🚀 QUANTUM TREND", "callback_data": "strategy_quantum_trend"},
+                    {"text": "⚡ MOMENTUM", "callback_data": "strategy_momentum_breakout"}
+                ],
+                [
+                    {"text": "🔄 MEAN REVERSION", "callback_data": "strategy_mean_reversion"},
+                    {"text": "📊 VOLATILITY", "callback_data": "strategy_volatility_squeeze"}
+                ],
+                [
+                    {"text": "⏰ SESSION", "callback_data": "strategy_session_overlap"},
+                    {"text": "📰 NEWS", "callback_data": "strategy_news_impact"}
+                ],
+                [
+                    {"text": "🎯 S/R", "callback_data": "strategy_support_resistance"},
+                    {"text": "📐 FIBONACCI", "callback_data": "strategy_fibonacci"}
+                ],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
@@ -955,10 +1011,22 @@ Capitalizes on price returning to mean after overextended moves. Works best in r
         """Show all AI engines"""
         keyboard = {
             "inline_keyboard": [
-                [{"text": "🤖 QUANTUMTREND", "callback_data": "aiengine_quantumtrend"}, {"text": "🧠 NEURALMOMENTUM", "callback_data": "aiengine_neuralmomentum"}],
-                [{"text": "📊 VOLATILITYMATRIX", "callback_data": "aiengine_volatilitymatrix"}, {"text": "🔍 PATTERNRECOGNITION", "callback_data": "aiengine_patternrecognition"}],
-                [{"text": "😊 SENTIMENTANALYZER", "callback_data": "aiengine_sentimentanalyzer"}, {"text": "🎯 SUPPORTRESISTANCE", "callback_data": "aiengine_supportresistance"}],
-                [{"text": "📐 FIBONACCI", "callback_data": "aiengine_fibonacci"}, {"text": "📈 MARKETPROFILE", "callback_data": "aiengine_marketprofile"}],
+                [
+                    {"text": "🤖 QUANTUMTREND", "callback_data": "aiengine_quantumtrend"},
+                    {"text": "🧠 NEURALMOMENTUM", "callback_data": "aiengine_neuralmomentum"}
+                ],
+                [
+                    {"text": "📊 VOLATILITYMATRIX", "callback_data": "aiengine_volatilitymatrix"},
+                    {"text": "🔍 PATTERNRECOGNITION", "callback_data": "aiengine_patternrecognition"}
+                ],
+                [
+                    {"text": "😊 SENTIMENT", "callback_data": "aiengine_sentimentanalyzer"},
+                    {"text": "🎯 S/R AI", "callback_data": "aiengine_supportresistance"}
+                ],
+                [
+                    {"text": "📐 FIBONACCI", "callback_data": "aiengine_fibonacci"},
+                    {"text": "📈 MARKETPROFILE", "callback_data": "aiengine_marketprofile"}
+                ],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
@@ -1070,23 +1138,35 @@ Measures market momentum and acceleration using neural networks to detect early 
         """Show account dashboard"""
         stats = get_user_stats(chat_id)
         
+        # Format signals text
+        if stats['daily_limit'] == 9999:
+            signals_text = f"UNLIMITED"
+            status_emoji = "💎"
+        else:
+            signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
+            status_emoji = "🟢" if stats['signals_today'] < stats['daily_limit'] else "🔴"
+        
         keyboard = {
             "inline_keyboard": [
-                [{"text": "📊 ACCOUNT LIMITS", "callback_data": "account_limits"}, {"text": "💎 UPGRADE", "callback_data": "account_upgrade"}],
-                [{"text": "📈 TRADING STATS", "callback_data": "account_stats"}, {"text": "🆓 FEATURES", "callback_data": "account_features"}],
-                [{"text": "🔧 SETTINGS", "callback_data": "account_settings"}, {"text": "📞 CONTACT", "callback_data": "contact_admin"}],
+                [
+                    {"text": "📊 ACCOUNT LIMITS", "callback_data": "account_limits"},
+                    {"text": "💎 UPGRADE PLAN", "callback_data": "account_upgrade"}
+                ],
+                [
+                    {"text": "📈 TRADING STATS", "callback_data": "account_stats"},
+                    {"text": "🆓 PLAN FEATURES", "callback_data": "account_features"}
+                ],
+                [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
         
-        status_icon = "🟢" if stats['signals_today'] < stats['daily_limit'] else "🔴"
-        
         text = f"""
 💼 **ACCOUNT DASHBOARD**
 
-📊 **Account Type:** {stats['tier_name']}
-🎯 **Signals Today:** {stats['signals_today']}/{stats['daily_limit']} {status_icon}
-👑 **Status:** {'ADMIN' if stats['is_admin'] else 'USER'}
+📊 **Account Plan:** {stats['tier_name']}
+🎯 **Signals Today:** {signals_text}
+📈 **Status:** {status_emoji} ACTIVE
 
 **FEATURES INCLUDED:**
 """
@@ -1116,24 +1196,32 @@ Measures market momentum and acceleration using neural networks to detect early 
                 [{"text": "💎 UPGRADE TO PREMIUM", "callback_data": "account_upgrade"}],
                 [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
                 [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+                [{"text": "🎯 GET SIGNALS", "callback_data": "menu_signals"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
+        
+        if stats['daily_limit'] == 9999:
+            signals_text = "∞ UNLIMITED"
+            remaining_text = "∞"
+        else:
+            signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
+            remaining_text = f"{stats['daily_limit'] - stats['signals_today']}"
         
         text = f"""
 ⚡ **TRADING LIMITS DASHBOARD**
 
 📊 **Current Usage:** {stats['signals_today']} signals today
-🎯 **Daily Limit:** {'∞ UNLIMITED (PREMIUM)' if stats['daily_limit'] >= 9999 else f"{stats['daily_limit']} signals ({stats['tier_name']})"}
-📈 **Remaining Today:** {'∞' if stats['daily_limit'] >= 9999 else f"{stats['daily_limit'] - stats['signals_today']} signals"}
+🎯 **Daily Limit:** {signals_text}
+📈 **Remaining Today:** {remaining_text} signals
 
-**{stats['tier_name'].upper()} FEATURES:**
+**YOUR PLAN: {stats['tier_name']}**
 """
         
         for feature in stats['features']:
             text += f"• {feature}\n"
         
-        text += "\n*Contact @LekzyDevX for upgrades*"
+        text += "\n*Contact admin for plan upgrades*"
         
         if message_id:
             self.edit_message_text(
@@ -1150,9 +1238,9 @@ Measures market momentum and acceleration using neural networks to detect early 
         """Show account upgrade options"""
         keyboard = {
             "inline_keyboard": [
-                [{"text": "🆓 FREE TRIAL (14 DAYS)", "callback_data": "activate_premium"}],
-                [{"text": "💎 BASIC - $19/MONTH", "callback_data": "contact_admin"}, {"text": "🚀 PRO - $49/MONTH", "callback_data": "contact_admin"}],
-                [{"text": "📞 CONTACT @LekzyDevX", "callback_data": "contact_admin"}],
+                [{"text": "💎 BASIC PLAN - $19/month", "callback_data": "upgrade_basic"}],
+                [{"text": "🚀 PRO PLAN - $49/month", "callback_data": "upgrade_pro"}],
+                [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
                 [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
@@ -1163,62 +1251,23 @@ Measures market momentum and acceleration using neural networks to detect early 
 
 *Unlock Unlimited OTC Trading Power*
 
-**🆓 FREE TRIAL (14 Days):**
-• 10 signals per day
-• All 22 assets
-• All 8 AI engines
-• All strategies
+**BASIC PLAN - $19/month:**
+• ✅ **50** daily signals
+• ✅ **PRIORITY** signal delivery
+• ✅ **ADVANCED** AI analytics
+• ✅ **ALL** 22 assets
+• ✅ **ALL** 8 strategies
 
-**💎 BASIC ($19/month):**
-• 50 signals per day
-• Priority signals
-• Advanced analytics
-• All features
+**PRO PLAN - $49/month:**
+• ✅ **UNLIMITED** daily signals
+• ✅ **ULTRA FAST** signal delivery
+• ✅ **PREMIUM** AI analytics
+• ✅ **CUSTOM** strategy requests
+• ✅ **DEDICATED** support
+• ✅ **EARLY** feature access
 
-**🚀 PRO ($49/month):**
-• Unlimited signals
-• Dedicated support
-• Custom strategies
-• Early access
-
-**CONTACT @LekzyDevX FOR UPGRADES**
-
-*Message with your preferred plan*"""
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
-    
-    def _activate_premium_trial(self, chat_id, message_id):
-        """Activate premium trial"""
-        upgrade_user_tier(chat_id, 'free_trial', 14)
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🎯 GET SIGNALS", "callback_data": "menu_signals"}],
-                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = """
-🎉 **FREE TRIAL ACTIVATED!**
-
-**Your 14-Day Free Trial Features:**
-• 10 signals per day
-• All 22 trading assets
-• All 8 AI engines
-• All trading strategies
-• Full platform access
-
-**Start trading now:**
-1. Use /signals to get OTC signals
-2. Choose from 22 optimized assets
-3. Select expiry time (1-60 minutes)
-4. Follow AI analysis
-
-*Happy trading! 🚀*"""
+**CONTACT ADMIN:** @LekzyDevX
+*Message for upgrade instructions*"""
         
         self.edit_message_text(
             chat_id, message_id,
@@ -1243,11 +1292,11 @@ Measures market momentum and acceleration using neural networks to detect early 
 *Your OTC Trading Performance*
 
 **📊 ACCOUNT INFO:**
-• Tier: {stats['tier_name']}
-• Signals Today: {stats['signals_today']}/{stats['daily_limit']}
-• Status: {'🟢 ACTIVE' if stats['signals_today'] < stats['daily_limit'] else '🔴 LIMIT REACHED'}
+• Plan: {stats['tier_name']}
+• Signals Today: {stats['signals_today']}/{stats['daily_limit'] if stats['daily_limit'] != 9999 else 'UNLIMITED'}
+• Status: {'🟢 ACTIVE' if stats['signals_today'] < stats['daily_limit'] else '💎 PREMIUM'}
 
-**🎯 PLATFORM ACCESS:**
+**🎯 PERFORMANCE METRICS:**
 • Assets Available: 22
 • AI Engines: 8
 • Strategies: 8
@@ -1272,16 +1321,17 @@ Measures market momentum and acceleration using neural networks to detect early 
         
         keyboard = {
             "inline_keyboard": [
-                [{"text": "💎 UPGRADE TO PREMIUM", "callback_data": "account_upgrade"}],
+                [{"text": "💎 UPGRADE PLAN", "callback_data": "account_upgrade"}],
+                [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
                 [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
         
         text = f"""
-🆓 **ACCOUNT FEATURES - {stats['tier_name'].upper()}**
+🆓 **ACCOUNT FEATURES - {stats['tier_name']} PLAN**
 
-*Your Current Plan Includes:*
+*Your current plan includes:*
 
 """
         
@@ -1289,12 +1339,14 @@ Measures market momentum and acceleration using neural networks to detect early 
             text += f"✓ {feature}\n"
         
         text += """
-        
-**💎 PREMIUM UPGRADES:**
-• Basic: 50 signals/day - $19/month
-• Pro: Unlimited signals - $49/month
 
-*Contact @LekzyDevX for upgrades*"""
+**UPGRADE BENEFITS:**
+• More daily signals
+• Priority signal delivery
+• Advanced AI analytics
+• Dedicated support
+
+*Contact admin for upgrade options*"""
         
         self.edit_message_text(
             chat_id, message_id,
@@ -1305,8 +1357,14 @@ Measures market momentum and acceleration using neural networks to detect early 
         """Show account settings"""
         keyboard = {
             "inline_keyboard": [
-                [{"text": "🔔 NOTIFICATIONS", "callback_data": "settings_notifications"}, {"text": "⚡ TRADING", "callback_data": "settings_trading"}],
-                [{"text": "📊 RISK MANAGEMENT", "callback_data": "settings_risk"}],
+                [
+                    {"text": "🔔 NOTIFICATIONS", "callback_data": "settings_notifications"},
+                    {"text": "⚡ TRADING PREFS", "callback_data": "settings_trading"}
+                ],
+                [
+                    {"text": "📊 RISK MANAGEMENT", "callback_data": "settings_risk"},
+                    {"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}
+                ],
                 [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
@@ -1331,7 +1389,7 @@ Measures market momentum and acceleration using neural networks to detect early 
 • Asset preferences
 • Strategy preferences
 
-*Configure your optimal trading setup*"""
+*Contact admin for custom settings*"""
         
         self.edit_message_text(
             chat_id, message_id,
@@ -1358,8 +1416,14 @@ Measures market momentum and acceleration using neural networks to detect early 
         
         keyboard = {
             "inline_keyboard": [
-                [{"text": "🌏 ASIAN SESSION", "callback_data": "session_asian"}, {"text": "🇬🇧 LONDON", "callback_data": "session_london"}],
-                [{"text": "🇺🇸 NEW YORK", "callback_data": "session_new_york"}, {"text": "⚡ OVERLAP", "callback_data": "session_overlap"}],
+                [
+                    {"text": "🌏 ASIAN", "callback_data": "session_asian"},
+                    {"text": "🇬🇧 LONDON", "callback_data": "session_london"}
+                ],
+                [
+                    {"text": "🇺🇸 NEW YORK", "callback_data": "session_new_york"},
+                    {"text": "⚡ OVERLAP", "callback_data": "session_overlap"}
+                ],
                 [{"text": "🎯 GET SIGNALS", "callback_data": "menu_signals"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
@@ -1414,8 +1478,8 @@ Measures market momentum and acceleration using neural networks to detect early 
 
 **BEST ASSETS:**
 • USD/JPY, AUD/USD, NZD/USD
-• Asian indices (when available)
-• Lower volatility forex pairs
+• USD/CNH, USD/SGD
+• Asian pairs and crosses
 
 **RECOMMENDED STRATEGIES:**
 • Mean Reversion
@@ -1466,7 +1530,7 @@ Measures market momentum and acceleration using neural networks to detect early 
 
 **BEST ASSETS:**
 • All USD pairs (EUR/USD, GBP/USD)
-• US30, SPX indices
+• US30, SPX500, NAS100 indices
 • BTC/USD, XAU/USD
 
 **RECOMMENDED STRATEGIES:**
@@ -1494,7 +1558,7 @@ Measures market momentum and acceleration using neural networks to detect early 
 • All major forex pairs
 • GBP/JPY (very volatile)
 • BTC/USD, XAU/USD
-• US30 index
+• US30, SPX500 indices
 
 **RECOMMENDED STRATEGIES:**
 • All strategies work well
@@ -1527,8 +1591,14 @@ Measures market momentum and acceleration using neural networks to detect early 
         """Show education menu"""
         keyboard = {
             "inline_keyboard": [
-                [{"text": "📚 OTC BASICS", "callback_data": "edu_basics"}, {"text": "🎯 RISK MGMT", "callback_data": "edu_risk"}],
-                [{"text": "🤖 BOT USAGE", "callback_data": "edu_bot_usage"}, {"text": "📊 TECHNICAL", "callback_data": "edu_technical"}],
+                [
+                    {"text": "📚 OTC BASICS", "callback_data": "edu_basics"},
+                    {"text": "🎯 RISK MANAGEMENT", "callback_data": "edu_risk"}
+                ],
+                [
+                    {"text": "🤖 BOT USAGE", "callback_data": "edu_bot_usage"},
+                    {"text": "📊 TECHNICAL", "callback_data": "edu_technical"}
+                ],
                 [{"text": "💡 PSYCHOLOGY", "callback_data": "edu_psychology"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
@@ -1764,16 +1834,215 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
         }
         
         self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+    # NEW ADMIN FEATURES
+    def _handle_contact_admin(self, chat_id, message_id=None):
+        """Show admin contact information"""
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📞 CONTACT ADMIN", "url": f"https://t.me/{ADMIN_USERNAME.replace('@', '')}"}],
+                [{"text": "💎 VIEW UPGRADES", "callback_data": "account_upgrade"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        text = f"""
+👑 **CONTACT ADMINISTRATOR**
+
+*For account upgrades, support, and inquiries:*
+
+**📞 Direct Contact:** {ADMIN_USERNAME}
+**💎 Upgrade Requests:** Message with 'UPGRADE'
+**🆘 Support:** Available 24/7
+
+**Common Questions:**
+• How to upgrade my account?
+• My signals are not working
+• I want to reset my trial
+• Payment issues
+
+*We're here to help you succeed!*"""
+        
+        if message_id:
+            self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+        else:
+            self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+    def _handle_admin_panel(self, chat_id, message_id=None):
+        """Admin panel for user management"""
+        # Check if user is admin
+        if chat_id not in ADMIN_IDS:
+            self.send_message(chat_id, "❌ Admin access required.", parse_mode="Markdown")
+            return
+        
+        # Get system stats
+        total_users = len(user_tiers)
+        free_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'free_trial'])
+        paid_users = total_users - free_users
+        active_today = len([uid for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat()])
+        
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "📊 USER STATS", "callback_data": "admin_stats"},
+                    {"text": "👤 MANAGE USERS", "callback_data": "admin_users"}
+                ],
+                [{"text": "⚙️ SYSTEM SETTINGS", "callback_data": "admin_settings"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        text = f"""
+👑 **ADMIN PANEL**
+
+*System Administration & User Management*
+
+**📊 SYSTEM STATS:**
+• Total Users: {total_users}
+• Free Trials: {free_users}
+• Paid Users: {paid_users}
+• Active Today: {active_today}
+
+**🛠 ADMIN TOOLS:**
+• User statistics & analytics
+• Manual user upgrades
+• System configuration
+• Performance monitoring
+
+*Select an option below*"""
+        
+        if message_id:
+            self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+        else:
+            self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+    def _show_admin_stats(self, chat_id, message_id):
+        """Show admin statistics"""
+        total_users = len(user_tiers)
+        free_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'free_trial'])
+        basic_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'basic'])
+        pro_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'pro'])
+        active_today = len([uid for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat()])
+        
+        # Calculate total signals today
+        total_signals_today = sum(user_tiers[uid].get('count', 0) for uid in user_tiers 
+                                if user_tiers[uid].get('date') == datetime.now().date().isoformat())
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "👤 MANAGE USERS", "callback_data": "admin_users"}],
+                [{"text": "🔙 ADMIN PANEL", "callback_data": "admin_panel"}]
+            ]
+        }
+        
+        text = f"""
+📊 **ADMIN STATISTICS**
+
+*Complete System Overview*
+
+**👥 USER STATISTICS:**
+• Total Users: {total_users}
+• Free Trials: {free_users}
+• Basic Plans: {basic_users}
+• Pro Plans: {pro_users}
+• Active Today: {active_today}
+
+**📈 USAGE STATISTICS:**
+• Signals Today: {total_signals_today}
+• System Uptime: 100%
+• Bot Status: 🟢 OPERATIONAL
+
+**🤖 BOT FEATURES:**
+• Assets Available: {len(OTC_ASSETS)}
+• AI Engines: {len(AI_ENGINES)}
+• Strategies: {len(TRADING_STRATEGIES)}
+• Education Modules: 5
+
+*System running optimally*"""
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+    def _show_admin_users(self, chat_id, message_id):
+        """Show user management"""
+        total_users = len(user_tiers)
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📊 USER STATS", "callback_data": "admin_stats"}],
+                [{"text": "🔙 ADMIN PANEL", "callback_data": "admin_panel"}]
+            ]
+        }
+        
+        text = f"""
+👤 **USER MANAGEMENT**
+
+*User Administration Tools*
+
+**USER STATS:**
+• Total Registered: {total_users}
+• Active Sessions: {len(user_sessions)}
+
+**MANAGEMENT TOOLS:**
+• User upgrade/downgrade
+• Signal limit adjustments
+• Account resets
+• Performance monitoring
+
+**QUICK ACTIONS:**
+• Reset user limits
+• Upgrade user plans
+• View user activity
+• Export user data
+
+*Use direct database commands for user management*"""
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+    def _show_admin_settings(self, chat_id, message_id):
+        """Show admin settings"""
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📊 USER STATS", "callback_data": "admin_stats"}],
+                [{"text": "🔙 ADMIN PANEL", "callback_data": "admin_panel"}]
+            ]
+        }
+        
+        text = """
+⚙️ **ADMIN SETTINGS**
+
+*System Configuration*
+
+**CURRENT SETTINGS:**
+• Signal Generation: ✅ ENABLED
+• User Registration: ✅ OPEN
+• Free Trial: ✅ AVAILABLE
+• System Logs: ✅ ACTIVE
+
+**CONFIGURATION OPTIONS:**
+• Signal frequency limits
+• User tier settings
+• Asset availability
+• AI engine parameters
+
+**MAINTENANCE:**
+• System restart
+• Database backup
+• Cache clearance
+• Performance optimization
+
+*Contact developer for system modifications*"""
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
     
     def _generate_signal(self, chat_id, message_id, asset, expiry):
         """Generate detailed OTC trading signal"""
         try:
-            # Check user limits with tier system
+            # Check user limits using tier system
             can_signal, message = can_generate_signal(chat_id)
             if not can_signal:
                 self.edit_message_text(chat_id, message_id, f"❌ {message}", parse_mode="Markdown")
                 return
-
+            
             # Simulate AI analysis with realistic data
             direction = "CALL" if random.random() > 0.5 else "PUT"
             confidence = random.randint(75, 92)
@@ -1824,8 +2093,11 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             
             keyboard = {
                 "inline_keyboard": [
-                    [{"text": "🔄 NEW SIGNAL", "callback_data": f"signal_{asset}_{expiry}"}],
-                    [{"text": "📊 DIFFERENT ASSET", "callback_data": "menu_assets"}, {"text": "⏰ DIFFERENT EXPIRY", "callback_data": f"asset_{asset}"}],
+                    [{"text": "🔄 NEW SIGNAL (SAME)", "callback_data": f"signal_{asset}_{expiry}"}],
+                    [
+                        {"text": "📊 DIFFERENT ASSET", "callback_data": "menu_assets"},
+                        {"text": "⏰ DIFFERENT EXPIRY", "callback_data": f"asset_{asset}"}
+                    ],
                     [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
                 ]
             }
@@ -1887,201 +2159,6 @@ Entry: Within 30 seconds of {expected_entry} UTC
                 parse_mode="Markdown"
             )
 
-    # NEW ADMIN FEATURES
-    def _handle_contact_admin(self, chat_id, message_id=None):
-        """Show admin contact information"""
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📞 CONTACT @LekzyDevX", "url": "https://t.me/LekzyDevX"}],
-                [{"text": "💎 VIEW UPGRADES", "callback_data": "account_upgrade"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = """
-👑 **CONTACT ADMINISTRATOR**
-
-*For account upgrades, support, and inquiries:*
-
-**📞 Direct Contact:** @LekzyDevX
-**💎 Upgrade Requests:** Message with 'UPGRADE'
-**🆘 Support:** Available 24/7
-
-**Common Questions:**
-• How to upgrade my account?
-• My signals are not working
-• I want to reset my trial
-• Payment issues
-
-*We're here to help you succeed!*"""
-        
-        if message_id:
-            self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-        else:
-            self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
-
-    def _handle_admin_panel(self, chat_id, message_id=None):
-        """Admin panel for user management"""
-        # Check if user is admin
-        if chat_id not in ADMIN_IDS:
-            self.send_message(chat_id, "❌ Admin access required.", parse_mode="Markdown")
-            return
-        
-        # Get system stats
-        total_users = len(user_tiers)
-        free_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'free_trial'])
-        paid_users = total_users - free_users
-        active_today = len([uid for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat()])
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📊 USER STATISTICS", "callback_data": "admin_stats"}, {"text": "👤 MANAGE USERS", "callback_data": "admin_users"}],
-                [{"text": "⚙️ SYSTEM SETTINGS", "callback_data": "admin_settings"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
-👑 **ADMIN PANEL**
-
-*System Administration & User Management*
-
-**📊 SYSTEM STATS:**
-• Total Users: {total_users}
-• Free Trials: {free_users}
-• Paid Users: {paid_users}
-• Active Today: {active_today}
-• Signals Today: {sum(user_tiers[uid].get('count', 0) for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat())}
-
-**🛠 ADMIN TOOLS:**
-• User statistics & analytics
-• Manual user upgrades
-• System configuration
-• Performance monitoring
-
-*Select an option below*"""
-        
-        if message_id:
-            self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-        else:
-            self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
-
-    def _show_admin_stats(self, chat_id, message_id):
-        """Show admin statistics"""
-        total_users = len(user_tiers)
-        free_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'free_trial'])
-        basic_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'basic'])
-        pro_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'pro'])
-        admin_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'admin'])
-        
-        active_today = len([uid for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat()])
-        signals_today = sum(user_tiers[uid].get('count', 0) for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat())
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "👤 MANAGE USERS", "callback_data": "admin_users"}],
-                [{"text": "🔙 ADMIN PANEL", "callback_data": "admin_panel"}]
-            ]
-        }
-        
-        text = f"""
-📊 **ADMIN STATISTICS**
-
-*Comprehensive System Overview*
-
-**👥 USER DISTRIBUTION:**
-• Total Users: {total_users}
-• Free Trials: {free_users}
-• Basic Tier: {basic_users}
-• Pro Tier: {pro_users}
-• Admin Users: {admin_users}
-
-**📈 DAILY ACTIVITY:**
-• Active Today: {active_today}
-• Signals Today: {signals_today}
-• Conversion Rate: {round((basic_users + pro_users) / total_users * 100, 1) if total_users > 0 else 0}%
-
-**🤖 BOT PERFORMANCE:**
-• Assets Available: {len(OTC_ASSETS)}
-• AI Engines: {len(AI_ENGINES)}
-• Strategies: {len(TRADING_STRATEGIES)}
-• Uptime: 99.9%
-
-*System operating optimally*"""
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-
-    def _show_admin_users(self, chat_id, message_id):
-        """Show user management"""
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📊 STATISTICS", "callback_data": "admin_stats"}],
-                [{"text": "🔙 ADMIN PANEL", "callback_data": "admin_panel"}]
-            ]
-        }
-        
-        # Get recent users (last 5)
-        recent_users = list(user_tiers.items())[-5:] if user_tiers else []
-        
-        text = """
-👤 **USER MANAGEMENT**
-
-*Recent User Activity:*
-
-"""
-        
-        if recent_users:
-            for user_id, data in recent_users:
-                text += f"• User {user_id}: {data.get('tier', 'free_trial')} - {data.get('count', 0)} signals today\n"
-        else:
-            text += "• No users yet\n"
-        
-        text += f"""
-**QUICK ACTIONS:**
-• Use /admin for full statistics
-• Contact users directly via Telegram
-• Monitor signal usage patterns
-
-*User management tools coming soon*"""
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-
-    def _show_admin_settings(self, chat_id, message_id):
-        """Show admin settings"""
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📊 STATISTICS", "callback_data": "admin_stats"}],
-                [{"text": "🔙 ADMIN PANEL", "callback_data": "admin_panel"}]
-            ]
-        }
-        
-        text = """
-⚙️ **ADMIN SETTINGS**
-
-*System Configuration*
-
-**CURRENT SETTINGS:**
-• User Tier System: ✅ ENABLED
-• Signal Limits: ✅ ACTIVE
-• Free Trial: 14 days
-• Basic Tier: $19/month
-• Pro Tier: $49/month
-
-**SYSTEM INFO:**
-• Bot Version: 3.1.0
-• Flask Server: Running
-• Database: In-Memory
-• Webhook: Ready
-
-**MAINTENANCE:**
-• Last Restart: Recently
-• Performance: Optimal
-• Errors: 0
-
-*System configuration tools coming soon*"""
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-
 # Create OTC trading bot instance
 otc_bot = OTCTradingBot()
 
@@ -2109,9 +2186,9 @@ def home():
         "status": "running",
         "service": "otc-binary-trading-pro", 
         "version": "3.1.0",
-        "features": ["22_assets", "8_ai_engines", "8_strategies", "user_tiers", "admin_panel", "contact_system"],
-        "users_total": len(user_tiers),
-        "queue_size": update_queue.qsize()
+        "features": ["22_assets", "8_ai_engines", "8_strategies", "otc_signals", "user_tiers", "admin_panel"],
+        "queue_size": update_queue.qsize(),
+        "total_users": len(user_tiers)
     })
 
 @app.route('/health')
@@ -2145,8 +2222,7 @@ def set_webhook():
             "assets": len(OTC_ASSETS),
             "ai_engines": len(AI_ENGINES),
             "strategies": len(TRADING_STRATEGIES),
-            "users": len(user_tiers),
-            "admin_contact": "@LekzyDevX"
+            "users": len(user_tiers)
         }
         
         logger.info(f"🌐 OTC Trading Webhook set: {webhook_url}")
@@ -2191,15 +2267,14 @@ def debug():
         "queue_size": update_queue.qsize(),
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
-        "bot_ready": True,
-        "admin_contact": "@LekzyDevX"
+        "bot_ready": True
     })
 
 @app.route('/stats')
 def stats():
     """Statistics endpoint"""
     today = datetime.now().date().isoformat()
-    today_signals = sum(user_tiers[uid].get('count', 0) for uid in user_tiers if user_tiers[uid].get('date') == today)
+    today_signals = sum(1 for user in user_tiers.values() if user.get('date') == today)
     
     return jsonify({
         "total_users": len(user_tiers),
@@ -2207,25 +2282,7 @@ def stats():
         "assets_available": len(OTC_ASSETS),
         "ai_engines": len(AI_ENGINES),
         "strategies": len(TRADING_STRATEGIES),
-        "server_time": datetime.now().isoformat(),
-        "admin_contact": "@LekzyDevX"
-    })
-
-@app.route('/admin/stats')
-def admin_stats():
-    """Admin statistics endpoint"""
-    total_users = len(user_tiers)
-    free_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'free_trial'])
-    basic_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'basic'])
-    pro_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'pro'])
-    
-    return jsonify({
-        "total_users": total_users,
-        "free_trial_users": free_users,
-        "basic_users": basic_users,
-        "pro_users": pro_users,
-        "conversion_rate": round((basic_users + pro_users) / total_users * 100, 1) if total_users > 0 else 0,
-        "admin_contact": "@LekzyDevX"
+        "server_time": datetime.now().isoformat()
     })
 
 if __name__ == '__main__':
@@ -2233,7 +2290,6 @@ if __name__ == '__main__':
     
     logger.info(f"🚀 Starting OTC Binary Trading Pro on port {port}")
     logger.info(f"📊 OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | Strategies: {len(TRADING_STRATEGIES)}")
-    logger.info(f"👑 Admin Contact: @LekzyDevX")
     logger.info("🏦 Professional OTC Binary Options Platform Ready")
     
     app.run(host='0.0.0.0', port=port, debug=False)
