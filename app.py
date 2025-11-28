@@ -25,7 +25,7 @@ update_queue = queue.Queue()
 user_limits = {}
 user_sessions = {}
 
-# User tier management
+# User tier management - FIXED VERSION
 user_tiers = {}
 ADMIN_IDS = [6307001401]  # Your Telegram ID
 ADMIN_USERNAME = "@LekzyDevX"  # Your admin username
@@ -37,7 +37,7 @@ USER_TIERS = {
         'signals_daily': 10,
         'duration_days': 14,
         'price': 0,
-        'features': ['10 signals/day', 'All 15 assets', '8 AI engines', 'All strategies']
+        'features': ['10 signals/day', 'All 22 assets', '8 AI engines', 'All strategies']
     },
     'basic': {
         'name': 'BASIC', 
@@ -61,6 +61,129 @@ USER_TIERS = {
         'features': ['Full system access', 'User management', 'All features', 'Admin privileges']
     }
 }
+
+# Tier Management Functions - FIXED VERSION
+def get_user_tier(chat_id):
+    """Get user's current tier"""
+    # Check if user is admin first - this takes priority
+    if chat_id in ADMIN_IDS:
+        # Ensure admin is properly initialized in user_tiers
+        if chat_id not in user_tiers:
+            user_tiers[chat_id] = {
+                'tier': 'admin',
+                'expires': datetime.now() + timedelta(days=9999),
+                'joined': datetime.now(),
+                'date': datetime.now().date().isoformat(),
+                'count': 0
+            }
+        return 'admin'
+    
+    if chat_id in user_tiers:
+        tier_data = user_tiers[chat_id]
+        # Check if trial expired
+        if tier_data['tier'] == 'free_trial' and datetime.now() > tier_data['expires']:
+            return 'free_trial_expired'
+        return tier_data['tier']
+    
+    # New user - give free trial
+    user_tiers[chat_id] = {
+        'tier': 'free_trial',
+        'expires': datetime.now() + timedelta(days=14),
+        'joined': datetime.now(),
+        'date': datetime.now().date().isoformat(),
+        'count': 0
+    }
+    return 'free_trial'
+
+def can_generate_signal(chat_id):
+    """Check if user can generate signal based on tier"""
+    tier = get_user_tier(chat_id)
+    
+    if tier == 'free_trial_expired':
+        return False, "Free trial expired. Contact admin to upgrade."
+    
+    # Admin and Pro users have unlimited access
+    if tier in ['admin', 'pro']:
+        # Still track usage but don't limit
+        today = datetime.now().date().isoformat()
+        if chat_id not in user_tiers:
+            user_tiers[chat_id] = {'date': today, 'count': 0}
+        
+        user_data = user_tiers[chat_id]
+        if user_data.get('date') != today:
+            user_data['date'] = today
+            user_data['count'] = 0
+        
+        user_data['count'] = user_data.get('count', 0) + 1
+        return True, f"{USER_TIERS[tier]['name']}: Unlimited access"
+    
+    tier_info = USER_TIERS.get(tier, USER_TIERS['free_trial'])
+    
+    # Reset daily counter if new day
+    today = datetime.now().date().isoformat()
+    if chat_id not in user_tiers:
+        user_tiers[chat_id] = {'date': today, 'count': 0}
+    
+    user_data = user_tiers[chat_id]
+    
+    if user_data.get('date') != today:
+        user_data['date'] = today
+        user_data['count'] = 0
+    
+    if user_data.get('count', 0) >= tier_info['signals_daily']:
+        return False, f"Daily limit reached ({tier_info['signals_daily']} signals)"
+    
+    user_data['count'] = user_data.get('count', 0) + 1
+    return True, f"{tier_info['name']}: {user_data['count']}/{tier_info['signals_daily']} signals"
+
+def get_user_stats(chat_id):
+    """Get user statistics"""
+    tier = get_user_tier(chat_id)
+    
+    # Ensure all users are properly initialized in user_tiers
+    if chat_id not in user_tiers:
+        if tier == 'admin':
+            user_tiers[chat_id] = {
+                'tier': 'admin',
+                'date': datetime.now().date().isoformat(),
+                'count': 0
+            }
+        else:
+            user_tiers[chat_id] = {
+                'tier': 'free_trial',
+                'date': datetime.now().date().isoformat(),
+                'count': 0
+            }
+    
+    tier_info = USER_TIERS.get(tier, USER_TIERS['free_trial'])
+    
+    today = datetime.now().date().isoformat()
+    if user_tiers[chat_id].get('date') == today:
+        count = user_tiers[chat_id].get('count', 0)
+    else:
+        # Reset counter for new day
+        user_tiers[chat_id]['date'] = today
+        user_tiers[chat_id]['count'] = 0
+        count = 0
+    
+    return {
+        'tier': tier,
+        'tier_name': tier_info['name'],
+        'signals_today': count,
+        'daily_limit': tier_info['signals_daily'],
+        'features': tier_info['features'],
+        'is_admin': chat_id in ADMIN_IDS
+    }
+
+def upgrade_user_tier(chat_id, new_tier, duration_days=30):
+    """Upgrade user to new tier"""
+    user_tiers[chat_id] = {
+        'tier': new_tier,
+        'expires': datetime.now() + timedelta(days=duration_days),
+        'date': datetime.now().date().isoformat(),
+        'count': 0
+    }
+    return True
 
 # OTC Binary Trading Configuration
 OTC_ASSETS = {
@@ -109,85 +232,6 @@ TRADING_STRATEGIES = {
     "Support/Resistance": "Trades bounces from key technical levels",
     "Fibonacci Retracement": "Trades from golden ratio levels"
 }
-
-# Tier Management Functions
-def get_user_tier(chat_id):
-    """Get user's current tier"""
-    if chat_id in user_tiers:
-        tier_data = user_tiers[chat_id]
-        # Check if trial expired
-        if tier_data['tier'] == 'free_trial' and datetime.now() > tier_data['expires']:
-            return 'free_trial_expired'
-        return tier_data['tier']
-    
-    # New user - give free trial
-    user_tiers[chat_id] = {
-        'tier': 'free_trial',
-        'expires': datetime.now() + timedelta(days=14),
-        'joined': datetime.now(),
-        'date': datetime.now().date().isoformat(),
-        'count': 0
-    }
-    return 'free_trial'
-
-def can_generate_signal(chat_id):
-    """Check if user can generate signal based on tier"""
-    tier = get_user_tier(chat_id)
-    
-    if tier == 'free_trial_expired':
-        return False, "Free trial expired. Contact admin to upgrade."
-    
-    if tier == 'admin' or tier == 'pro':
-        return True, "Unlimited access"
-    
-    tier_info = USER_TIERS.get(tier, USER_TIERS['free_trial'])
-    
-    # Reset daily counter if new day
-    today = datetime.now().date().isoformat()
-    if chat_id not in user_tiers:
-        user_tiers[chat_id] = {'date': today, 'count': 0}
-    
-    user_data = user_tiers[chat_id]
-    
-    if user_data.get('date') != today:
-        user_data['date'] = today
-        user_data['count'] = 0
-    
-    if user_data.get('count', 0) >= tier_info['signals_daily']:
-        return False, f"Daily limit reached ({tier_info['signals_daily']} signals)"
-    
-    user_data['count'] = user_data.get('count', 0) + 1
-    return True, f"{tier_info['name']}: {user_data['count']}/{tier_info['signals_daily']} signals"
-
-def get_user_stats(chat_id):
-    """Get user statistics"""
-    tier = get_user_tier(chat_id)
-    tier_info = USER_TIERS.get(tier, USER_TIERS['free_trial'])
-    
-    today = datetime.now().date().isoformat()
-    if chat_id in user_tiers and user_tiers[chat_id].get('date') == today:
-        count = user_tiers[chat_id].get('count', 0)
-    else:
-        count = 0
-    
-    return {
-        'tier': tier,
-        'tier_name': tier_info['name'],
-        'signals_today': count,
-        'daily_limit': tier_info['signals_daily'],
-        'features': tier_info['features'],
-        'is_admin': chat_id in ADMIN_IDS
-    }
-
-def upgrade_user_tier(chat_id, new_tier, duration_days=30):
-    """Upgrade user to new tier"""
-    user_tiers[chat_id] = {
-        'tier': new_tier,
-        'expires': datetime.now() + timedelta(days=duration_days),
-        'date': datetime.now().date().isoformat(),
-        'count': 0
-    }
-    return True
 
 class OTCTradingBot:
     """OTC Binary Trading Bot with Full Features"""
@@ -642,7 +686,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         
         keyboard = {"inline_keyboard": keyboard_rows}
         
-        # Format account status
+        # Format account status - FIXED FOR ADMIN
         if stats['daily_limit'] == 9999:
             signals_text = "UNLIMITED"
         else:
@@ -1138,7 +1182,7 @@ Measures market momentum and acceleration using neural networks to detect early 
         """Show account dashboard"""
         stats = get_user_stats(chat_id)
         
-        # Format signals text
+        # Format signals text - FIXED FOR ADMIN
         if stats['daily_limit'] == 9999:
             signals_text = f"UNLIMITED"
             status_emoji = "💎"
