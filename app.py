@@ -807,6 +807,16 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 /performance - Performance analytics 📊 NEW!
 /backtest - Strategy backtesting 🤖 NEW!
 
+**QUICK ACCESS BUTTONS:**
+🎯 **Signals** - Live trading signals
+📊 **Assets** - All 22 instruments  
+🚀 **Strategies** - 16 trading approaches
+🤖 **AI Engines** - Advanced analysis
+💼 **Account** - Your dashboard
+📈 **Performance** - Analytics & stats
+🕒 **Sessions** - Market timings
+⚡ **Limits** - Usage & upgrades
+
 **ENHANCED FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
 • 📊 **22 Assets** - Forex, Crypto, Commodities, Indices
@@ -826,7 +836,29 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Smart signal filtering
 • Risk-based position sizing"""
         
-        self.send_message(chat_id, help_text, parse_mode="Markdown")
+        # Create quick access buttons for all commands
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "🎯 SIGNALS", "callback_data": "menu_signals"},
+                    {"text": "📊 ASSETS", "callback_data": "menu_assets"},
+                    {"text": "🚀 STRATEGIES", "callback_data": "menu_strategies"}
+                ],
+                [
+                    {"text": "🤖 AI ENGINES", "callback_data": "menu_aiengines"},
+                    {"text": "💼 ACCOUNT", "callback_data": "menu_account"},
+                    {"text": "📈 PERFORMANCE", "callback_data": "performance_stats"}
+                ],
+                [
+                    {"text": "🕒 SESSIONS", "callback_data": "menu_sessions"},
+                    {"text": "⚡ LIMITS", "callback_data": "menu_limits"},
+                    {"text": "🤖 BACKTEST", "callback_data": "menu_backtest"}
+                ],
+                [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}]
+            ]
+        }
+        
+        self.send_message(chat_id, help_text, parse_mode="Markdown", reply_markup=keyboard)
     
     def _handle_signals(self, chat_id):
         """Handle /signals command"""
@@ -915,7 +947,23 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     def _handle_unknown(self, chat_id):
         """Handle unknown commands"""
         text = "🤖 Enhanced OTC Binary Pro: Use /help for trading commands or /start to begin.\n\n**NEW:** Try /performance for analytics or /backtest for strategy testing!"
-        self.send_message(chat_id, text, parse_mode="Markdown")
+        
+        # Add quick access buttons
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "🎯 SIGNALS", "callback_data": "menu_signals"},
+                    {"text": "📊 ASSETS", "callback_data": "menu_assets"}
+                ],
+                [
+                    {"text": "💼 ACCOUNT", "callback_data": "menu_account"},
+                    {"text": "📈 PERFORMANCE", "callback_data": "performance_stats"}
+                ],
+                [{"text": "🤖 BACKTEST", "callback_data": "menu_backtest"}]
+            ]
+        }
+        
+        self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
     # =========================================================================
     # NEW FEATURE HANDLERS
@@ -1051,7 +1099,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             ],
             [
                 {"text": "🕒 SESSIONS", "callback_data": "menu_sessions"},
-                {"text": "📚 EDUCATION", "callback_data": "menu_education"}
+                {"text": "⚡ LIMITS", "callback_data": "menu_limits"}
             ],
             [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}]
         ]
@@ -2712,9 +2760,9 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 *Contact enhanced developer for system modifications*"""
         
         self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-    
-    def _generate_enhanced_signal(self, chat_id, message_id, asset, expiry):
-        """Generate enhanced OTC trading signal with V2 display format"""
+
+    def _generate_enhanced_signal_v8(self, chat_id, message_id, asset, expiry):
+        """Generate enhanced OTC trading signal with V8 display format"""
         try:
             # Check user limits using tier system
             can_signal, message = can_generate_signal(chat_id)
@@ -2751,7 +2799,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             liquidity_flow = random.choice(["Positive", "Negative", "Neutral"])
             multi_tf_alignment = random.randint(3, 5)  # 3-5 timeframes aligned
             
-            # NEW: Create signal data for risk assessment
+            # Create signal data for risk assessment
             signal_data = {
                 'asset': asset,
                 'volatility': volatility,
@@ -2762,12 +2810,12 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 'volume': volume_confirmation
             }
             
-            # NEW: Apply smart filters and risk scoring
+            # Apply smart filters and risk scoring
             filter_result = risk_system.apply_smart_filters(signal_data)
             risk_score = risk_system.calculate_risk_score(signal_data)
             risk_recommendation = risk_system.get_risk_recommendation(risk_score)
             
-            # NEW: Send smart notification for high-confidence signals
+            # Send smart notification for high-confidence signals
             if confidence >= 85 and filter_result['passed']:
                 smart_notifications.send_smart_alert(chat_id, "high_confidence_signal", signal_data)
             
@@ -2817,63 +2865,75 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 ]
             }
             
-            # V2 SIGNAL DISPLAY FORMAT
+            # V8 SIGNAL DISPLAY FORMAT WITH ARROWS
             risk_indicator = "🟢" if risk_score >= 70 else "🟡" if risk_score >= 50 else "🔴"
-            direction_emoji = "📈" if direction == "CALL" else "📉"
-            direction_text = "CALL (UP)" if direction == "CALL" else "PUT (DOWN)"
+            
+            if direction == "CALL":
+                direction_emoji = "🔼📈🎯"  # Multiple UP arrows
+                direction_text = "CALL (UP)"
+                arrow_line = "⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️"
+                trade_action = f"🔼 BUY CALL OPTION - PRICE UP"
+            else:
+                direction_emoji = "🔽📉🎯"  # Multiple DOWN arrows  
+                direction_text = "PUT (DOWN)"
+                arrow_line = "⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
+                trade_action = f"🔽 BUY PUT OPTION - PRICE DOWN"
             
             text = f"""
-🎯 **ENHANCED OTC BINARY SIGNAL V2** 🚀
+{arrow_line}
+🎯 **OTC BINARY SIGNAL V8** 🚀
+{arrow_line}
 
-**TRADE SETUP:**
-{direction_emoji} **DIRECTION:** {direction_text}
+{direction_emoji} **TRADE DIRECTION:** {direction_text}
 ⚡ **ASSET:** {asset}
 ⏰ **EXPIRY:** {expiry} MINUTES
-📊 **CONFIDENCE:** {confidence}%
+📊 **CONFIDENCE LEVEL:** {confidence}%
 
-**RISK ASSESSMENT:**
 {risk_indicator} **RISK SCORE:** {risk_score}/100
 ✅ **FILTERS PASSED:** {filter_result['score']}/{filter_result['total']}
 💡 **RECOMMENDATION:** {risk_recommendation}
 
-**TECHNICAL ANALYSIS:**
-📊 **Trend Strength:** {trend_strength}%
-⚡ **Momentum:** {momentum}%
-💧 **Volume:** {volume_confirmation}
-🔄 **Pattern:** {pattern_alignment}
-🎯 **Multi-TF Alignment:** {multi_tf_alignment}/5
+📈 **TECHNICAL ANALYSIS:**
+• Trend Strength: {trend_strength}%
+• Momentum: {momentum}%
+• Volume: {volume_confirmation}
+• Pattern: {pattern_alignment}
+• Multi-TF Alignment: {multi_tf_alignment}/5
 
-**MARKET CONDITIONS:**
-🌊 **Volatility:** {volatility}
-🕒 **Session:** {session}
-📈 **Regime:** {market_regime}
-💧 **Liquidity:** {liquidity_flow}
+🌊 **MARKET CONDITIONS:**
+• Volatility: {volatility}
+• Session: {session}
+• Regime: {market_regime}
+• Liquidity: {liquidity_flow}
 
-**AI ANALYSIS:**
-🤖 **Active Engines:** {', '.join(active_engines[:3])}...
-🎯 **Optimal Strategy:** {optimal_strategies[0]}
-⏰ **Analysis Time:** {analysis_time} UTC
-🎯 **Expected Entry:** {expected_entry} UTC
+🤖 **AI ANALYSIS:**
+• Active Engines: {', '.join(active_engines[:3])}...
+• Optimal Strategy: {optimal_strategies[0]}
+• Analysis Time: {analysis_time} UTC
+• Expected Entry: {expected_entry} UTC
 
-**TRADING RECOMMENDATION:**
-💰 **Place {direction} option** with {expiry}-minute expiry
-📊 **Entry:** Within 30 seconds of {expected_entry} UTC
-🎯 **Strategy:** {optimal_strategies[0]}
-💎 **Payout:** {payout_range}
+💰 **TRADING RECOMMENDATION:**
+{trade_action}
+• Expiry: {expiry} minutes
+• Strategy: {optimal_strategies[0]}
+• Payout: {payout_range}
 
-**RISK MANAGEMENT:**
-⚠️ **Max Risk:** 2% of account
-💵 **Investment:** $25-$100
-🛡 **Stop Loss:** Mental (close if multi-TF invalidates)
+⚡ **EXECUTION:**
+• Entry: Within 30 seconds of {expected_entry} UTC
+• Max Risk: 2% of account
+• Investment: $25-$100
+• Stop Loss: Mental (close if multi-TF invalidates)
 
-*Signal valid for 2 minutes - OTC trading involves risk*"""
+{arrow_line}
+*Signal valid for 2 minutes - OTC trading involves risk*
+{arrow_line}"""
 
             self.edit_message_text(
                 chat_id, message_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
             
-            # NEW: Record this trade for performance analytics
+            # Record this trade for performance analytics
             trade_data = {
                 'asset': asset,
                 'direction': direction,
@@ -2957,14 +3017,14 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 if len(parts) >= 3:
                     asset = parts[1]
                     expiry = parts[2]
-                    self._generate_enhanced_signal(chat_id, message_id, asset, expiry)
+                    self._generate_enhanced_signal_v8(chat_id, message_id, asset, expiry)
                     
             elif data.startswith("signal_"):
                 parts = data.split("_")
                 if len(parts) >= 3:
                     asset = parts[1]
                     expiry = parts[2]
-                    self._generate_enhanced_signal(chat_id, message_id, asset, expiry)
+                    self._generate_enhanced_signal_v8(chat_id, message_id, asset, expiry)
                     
             elif data.startswith("strategy_"):
                 strategy = data.replace("strategy_", "")
@@ -3171,12 +3231,13 @@ def home():
     return jsonify({
         "status": "running",
         "service": "enhanced-otc-binary-trading-pro", 
-        "version": "5.0.0",
+        "version": "8.0.0",
         "features": [
             "22_assets", "16_ai_engines", "16_strategies", "enhanced_otc_signals", 
             "user_tiers", "admin_panel", "multi_timeframe_analysis", "liquidity_analysis",
             "market_regime_detection", "adaptive_strategy_selection",
-            "performance_analytics", "risk_scoring", "smart_filters", "backtesting_engine"
+            "performance_analytics", "risk_scoring", "smart_filters", "backtesting_engine",
+            "v8_signal_display", "directional_arrows", "quick_access_buttons"
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -3194,7 +3255,8 @@ def health():
         "active_users": len(user_tiers),
         "enhanced_features": True,
         "performance_tracking": True,
-        "risk_management": True
+        "risk_management": True,
+        "signal_version": "V8"
     })
 
 @app.route('/set_webhook')
@@ -3217,7 +3279,8 @@ def set_webhook():
             "ai_engines": len(AI_ENGINES),
             "strategies": len(TRADING_STRATEGIES),
             "users": len(user_tiers),
-            "enhanced_features": True
+            "enhanced_features": True,
+            "signal_version": "V8"
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -3246,7 +3309,8 @@ def webhook():
             "status": "queued", 
             "update_id": update_id,
             "queue_size": update_queue.qsize(),
-            "enhanced_processing": True
+            "enhanced_processing": True,
+            "signal_version": "V8"
         })
         
     except Exception as e:
@@ -3264,7 +3328,8 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection"]
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection"],
+        "signal_version": "V8"
     })
 
 @app.route('/stats')
@@ -3280,17 +3345,19 @@ def stats():
         "enhanced_ai_engines": len(AI_ENGINES),
         "enhanced_strategies": len(TRADING_STRATEGIES),
         "server_time": datetime.now().isoformat(),
-        "enhanced_features": True
+        "enhanced_features": True,
+        "signal_version": "V8"
     })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     
-    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro on port {port}")
+    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V8 on port {port}")
     logger.info(f"📊 Enhanced OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | Strategies: {len(TRADING_STRATEGIES)}")
-    logger.info("🎯 NEW FEATURES: Performance Analytics, Risk Scoring, Backtesting Engine, Smart Notifications")
-    logger.info("📈 V2 SIGNAL DISPLAY: Enhanced signal format with better organization")
+    logger.info("🎯 NEW FEATURES: V8 Signal Display with Directional Arrows")
+    logger.info("📈 V8 SIGNAL DISPLAY: Enhanced format with multiple arrows for better visualization")
     logger.info("🏦 Professional Enhanced OTC Binary Options Platform Ready")
     logger.info("⚡ Advanced Features: Multi-timeframe Analysis, Liquidity Flow, Market Regime Detection, Risk Management")
+    logger.info("🔘 QUICK ACCESS: All commands now have clickable buttons")
     
     app.run(host='0.0.0.0', port=port, debug=False)
