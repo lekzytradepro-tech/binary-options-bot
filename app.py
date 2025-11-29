@@ -80,8 +80,8 @@ class PerformanceAnalytics:
                 "total_trades": random.randint(10, 100),
                 "win_rate": f"{random.randint(65, 85)}%",
                 "total_profit": f"${random.randint(100, 5000)}",
-                "best_strategy": random.choice(list(TRADING_STRATEGIES.keys())),
-                "best_asset": random.choice(list(OTC_ASSETS.keys())),
+                "best_strategy": random.choice(["Quantum Trend", "AI Momentum Breakout", "Liquidity Grab"]),
+                "best_asset": random.choice(["EUR/USD", "BTC/USD", "XAU/USD"]),
                 "daily_average": f"{random.randint(2, 8)} trades/day",
                 "success_rate": f"{random.randint(70, 90)}%",
                 "risk_reward_ratio": f"1:{round(random.uniform(1.5, 3.0), 1)}",
@@ -1048,12 +1048,14 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 📈 **Performance** - Analytics & stats
 🕒 **Sessions** - Market timings
 ⚡ **Limits** - Usage & upgrades
+📚 **Education** - Learn trading (NEW!)
 
 **NEW ENHANCED FEATURES:**
 • 🎯 **Auto Expiry Detection** - AI chooses optimal expiry
 • 🤖 **AI Momentum Breakout** - New powerful strategy
 • 📊 **22 Professional Strategies** - Expanded arsenal
 • ⚡ **Smart Signal Filtering** - Enhanced risk management
+• 📚 **Complete Education** - Learn professional trading
 
 **ENHANCED FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
@@ -1065,6 +1067,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • 📊 **Performance Analytics** - Track your trading results
 • ⚡ **Risk Scoring** - Intelligent risk assessment
 • 🤖 **Backtesting Engine** - Test strategies historically
+• 📚 **Trading Education** - Complete learning materials
 
 **ADVANCED RISK MANAGEMENT:**
 • Multi-timeframe confirmation
@@ -1092,7 +1095,10 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     {"text": "⚡ LIMITS", "callback_data": "menu_limits"},
                     {"text": "🤖 BACKTEST", "callback_data": "menu_backtest"}
                 ],
-                [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}]
+                [
+                    {"text": "📚 EDUCATION", "callback_data": "menu_education"},
+                    {"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}
+                ]
             ]
         }
         
@@ -1208,7 +1214,10 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     {"text": "💼 ACCOUNT", "callback_data": "menu_account"},
                     {"text": "📈 PERFORMANCE", "callback_data": "performance_stats"}
                 ],
-                [{"text": "🤖 BACKTEST", "callback_data": "menu_backtest"}]
+                [
+                    {"text": "📚 EDUCATION", "callback_data": "menu_education"},
+                    {"text": "🤖 BACKTEST", "callback_data": "menu_backtest"}
+                ]
             ]
         }
         
@@ -1412,7 +1421,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         """Show main OTC trading menu"""
         stats = get_user_stats(chat_id)
         
-        # Create optimized button layout with new features
+        # Create optimized button layout with new features including EDUCATION
         keyboard_rows = [
             [{"text": "🎯 GET ENHANCED SIGNALS", "callback_data": "menu_signals"}],
             [
@@ -1431,7 +1440,10 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 {"text": "🕒 SESSIONS", "callback_data": "menu_sessions"},
                 {"text": "⚡ LIMITS", "callback_data": "menu_limits"}
             ],
-            [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}]
+            [
+                {"text": "📚 EDUCATION", "callback_data": "menu_education"},
+                {"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}
+            ]
         ]
         
         # Add admin panel for admins
@@ -1460,6 +1472,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🤖 **NEW: BACKTESTING ENGINE** - Test strategies historically
 🔄 **NEW: AUTO EXPIRY DETECTION** - AI chooses optimal expiry
 🚀 **NEW: AI MOMENTUM BREAKOUT** - Powerful new strategy
+📚 **COMPLETE EDUCATION** - Learn professional trading
 
 💎 **ACCOUNT TYPE:** {stats['tier_name']}
 📈 **SIGNALS TODAY:** {signals_text}
@@ -3810,7 +3823,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             )
 
     def _handle_button_click(self, chat_id, message_id, data, callback_query=None):
-        """Handle button clicks - UPDATED WITH NEW FEATURES"""
+        """Handle button clicks - UPDATED WITH EDUCATION MENU"""
         try:
             logger.info(f"🔄 Button clicked: {data}")
             
@@ -3842,6 +3855,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             elif data == "menu_account":
                 self._show_account_dashboard(chat_id, message_id)
                 
+            # ADD EDUCATION MENU HANDLER
             elif data == "menu_education":
                 self._show_education_menu(chat_id, message_id)
                 
@@ -4119,7 +4133,7 @@ def home():
             "performance_analytics", "risk_scoring", "smart_filters", "backtesting_engine",
             "v8_signal_display", "directional_arrows", "quick_access_buttons",
             "auto_expiry_detection", "ai_momentum_breakout_strategy",
-            "manual_payment_system", "admin_upgrade_commands"
+            "manual_payment_system", "admin_upgrade_commands", "education_system"
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -4141,7 +4155,8 @@ def health():
         "signal_version": "V8",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
-        "payment_system": "manual_admin"
+        "payment_system": "manual_admin",
+        "education_system": True
     })
 
 @app.route('/set_webhook')
@@ -4168,7 +4183,8 @@ def set_webhook():
             "signal_version": "V8",
             "auto_expiry_detection": True,
             "ai_momentum_breakout": True,
-            "payment_system": "manual_admin"
+            "payment_system": "manual_admin",
+            "education_system": True
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -4200,7 +4216,8 @@ def webhook():
             "enhanced_processing": True,
             "signal_version": "V8",
             "auto_expiry_detection": True,
-            "payment_system": "manual_admin"
+            "payment_system": "manual_admin",
+            "education_system": True
         })
         
     except Exception as e:
@@ -4218,11 +4235,12 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments"],
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education"],
         "signal_version": "V8",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
-        "payment_system": "manual_admin"
+        "payment_system": "manual_admin",
+        "education_system": True
     })
 
 @app.route('/stats')
@@ -4242,7 +4260,8 @@ def stats():
         "signal_version": "V8",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
-        "payment_system": "manual_admin"
+        "payment_system": "manual_admin",
+        "education_system": True
     })
 
 if __name__ == '__main__':
@@ -4255,6 +4274,7 @@ if __name__ == '__main__':
     logger.info("🤖 AI MOMENTUM BREAKOUT: Simple and powerful strategy with clean entries")
     logger.info("💰 MANUAL PAYMENT SYSTEM: Users contact admin for upgrades")
     logger.info("👑 ADMIN UPGRADE COMMAND: /upgrade USER_ID TIER")
+    logger.info("📚 COMPLETE EDUCATION: 5 comprehensive trading modules")
     logger.info("📈 V8 SIGNAL DISPLAY: Enhanced format with multiple arrows for better visualization")
     logger.info("🏦 Professional Enhanced OTC Binary Options Platform Ready")
     logger.info("⚡ Advanced Features: Multi-timeframe Analysis, Liquidity Flow, Market Regime Detection, Risk Management")
