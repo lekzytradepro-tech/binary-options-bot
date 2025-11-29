@@ -328,6 +328,73 @@ backtesting_engine = BacktestingEngine()
 smart_notifications = SmartNotifications()
 
 # =============================================================================
+# MANUAL PAYMENT & UPGRADE SYSTEM
+# =============================================================================
+
+class ManualPaymentSystem:
+    """Simple manual payment system for admin upgrades"""
+    
+    def __init__(self):
+        self.pending_upgrades = {}
+        self.payment_methods = {
+            "crypto": {
+                "name": "💰 Cryptocurrency",
+                "assets": {
+                    "BTC": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+                    "ETH": "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+                    "USDT": "0x71C7656EC7ab88b098defB751B7401B5f6d8976F"
+                }
+            },
+            "paypal": {
+                "name": "💳 PayPal",
+                "email": "your-paypal@email.com"
+            },
+            "wise": {
+                "name": "🏦 Wise/Bank Transfer", 
+                "details": "Contact for banking info"
+            }
+        }
+    
+    def get_upgrade_instructions(self, tier):
+        """Get upgrade instructions for a tier"""
+        tier_info = USER_TIERS[tier]
+        
+        instructions = f"""
+💎 **UPGRADE TO {tier_info['name']}**
+
+💰 **Price:** ${tier_info['price']}/month
+📊 **Signals:** {tier_info['signals_daily']} per day
+⏰ **Duration:** 30 days
+
+**FEATURES:**
+"""
+        for feature in tier_info['features']:
+            instructions += f"• {feature}\n"
+        
+        instructions += f"""
+
+**PAYMENT METHODS:**
+• Cryptocurrency (BTC, ETH, USDT)
+• PayPal 
+• Wise/Bank Transfer
+
+**PROCESS:**
+1. Contact {ADMIN_USERNAME} with your desired tier
+2. Receive payment details
+3. Complete payment
+4. Get instant activation
+
+📞 **Contact Admin:** {ADMIN_USERNAME}
+⏱️ **Activation Time:** 5-15 minutes
+
+*Start trading like a pro!* 🚀"""
+        
+        return instructions
+
+# Initialize payment system
+payment_system = ManualPaymentSystem()
+
+# =============================================================================
 # ORIGINAL CODE - COMPLETELY PRESERVED
 # =============================================================================
 
@@ -824,6 +891,8 @@ class OTCTradingBot:
                 self._handle_backtest(chat_id)
             elif text == '/admin' and chat_id in ADMIN_IDS:
                 self._handle_admin_panel(chat_id)
+            elif text.startswith('/upgrade') and chat_id in ADMIN_IDS:
+                self._handle_admin_upgrade(chat_id, text)
             else:
                 self._handle_unknown(chat_id)
                 
@@ -1198,6 +1267,87 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         except Exception as e:
             logger.error(f"❌ Backtest handler error: {e}")
             self.send_message(chat_id, "❌ Error loading backtesting. Please try again.")
+
+    # =========================================================================
+    # MANUAL UPGRADE SYSTEM HANDLERS
+    # =========================================================================
+
+    def _handle_upgrade_flow(self, chat_id, message_id, tier):
+        """Handle manual upgrade flow"""
+        try:
+            user_stats = get_user_stats(chat_id)
+            current_tier = user_stats['tier']
+            
+            if tier == current_tier:
+                self.edit_message_text(
+                    chat_id, message_id,
+                    f"✅ **CURRENT PLAN**\n\nYou're already on {USER_TIERS[tier]['name']}.\nUse /account to view features.",
+                    parse_mode="Markdown"
+                )
+                return
+            
+            instructions = payment_system.get_upgrade_instructions(tier)
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": "📞 CONTACT ADMIN NOW", "url": f"https://t.me/{ADMIN_USERNAME.replace('@', '')}"}],
+                    [{"text": "💼 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+                    [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+                ]
+            }
+            
+            self.edit_message_text(chat_id, message_id, instructions, parse_mode="Markdown", reply_markup=keyboard)
+            
+        except Exception as e:
+            logger.error(f"❌ Upgrade flow error: {e}")
+            self.edit_message_text(chat_id, message_id, "❌ Upgrade system error. Please try again.", parse_mode="Markdown")
+
+    def _handle_admin_upgrade(self, chat_id, text):
+        """Admin command to upgrade users manually"""
+        try:
+            if chat_id not in ADMIN_IDS:
+                self.send_message(chat_id, "❌ Admin access required.", parse_mode="Markdown")
+                return
+            
+            # Format: /upgrade USER_ID TIER
+            parts = text.split()
+            if len(parts) == 3:
+                target_user = int(parts[1])
+                tier = parts[2].lower()
+                
+                if tier not in ['basic', 'pro']:
+                    self.send_message(chat_id, "❌ Invalid tier. Use: basic or pro", parse_mode="Markdown")
+                    return
+                
+                # Upgrade user
+                success = upgrade_user_tier(target_user, tier)
+                
+                if success:
+                    # Notify user
+                    try:
+                        self.send_message(
+                            target_user,
+                            f"🎉 **ACCOUNT UPGRADED!**\n\n"
+                            f"You've been upgraded to **{tier.upper()}** tier!\n"
+                            f"• Signals: {USER_TIERS[tier]['signals_daily']} per day\n"
+                            f"• Duration: 30 days\n"
+                            f"• All premium features unlocked\n\n"
+                            f"Use /signals to start trading! 🚀",
+                            parse_mode="Markdown"
+                        )
+                    except Exception as e:
+                        logger.error(f"❌ User notification failed: {e}")
+                    
+                    self.send_message(chat_id, f"✅ Upgraded user {target_user} to {tier.upper()}")
+                    logger.info(f"👑 Admin upgraded user {target_user} to {tier}")
+                else:
+                    self.send_message(chat_id, f"❌ Failed to upgrade user {target_user}")
+            else:
+                self.send_message(chat_id, "Usage: /upgrade USER_ID TIER\nTiers: basic, pro")
+                
+        except Exception as e:
+            logger.error(f"❌ Admin upgrade error: {e}")
+            self.send_message(chat_id, f"❌ Upgrade error: {e}")
 
     # =========================================================================
     # ORIGINAL MENU HANDLERS (PRESERVED)
@@ -3290,6 +3440,16 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             elif data == "menu_risk":
                 self._show_risk_analysis(chat_id, message_id)
 
+            # MANUAL UPGRADE HANDLERS
+            elif data == "account_upgrade":
+                self._show_upgrade_options(chat_id, message_id)
+                
+            elif data == "upgrade_basic":
+                self._handle_upgrade_flow(chat_id, message_id, "basic")
+                
+            elif data == "upgrade_pro":
+                self._handle_upgrade_flow(chat_id, message_id, "pro")
+
             # NEW AUTO DETECT HANDLERS
             elif data.startswith("auto_detect_"):
                 asset = data.replace("auto_detect_", "")
@@ -3349,8 +3509,6 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             # ACCOUNT HANDLERS
             elif data == "account_limits":
                 self._show_limits_dashboard(chat_id, message_id)
-            elif data == "account_upgrade":
-                self._show_upgrade_options(chat_id, message_id)
             elif data == "account_stats":
                 self._show_account_stats(chat_id, message_id)
             elif data == "account_features":
@@ -3539,7 +3697,8 @@ def home():
             "market_regime_detection", "adaptive_strategy_selection",
             "performance_analytics", "risk_scoring", "smart_filters", "backtesting_engine",
             "v8_signal_display", "directional_arrows", "quick_access_buttons",
-            "auto_expiry_detection", "ai_momentum_breakout_strategy"
+            "auto_expiry_detection", "ai_momentum_breakout_strategy",
+            "manual_payment_system", "admin_upgrade_commands"
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -3560,7 +3719,8 @@ def health():
         "risk_management": True,
         "signal_version": "V8",
         "auto_expiry_detection": True,
-        "ai_momentum_breakout": True
+        "ai_momentum_breakout": True,
+        "payment_system": "manual_admin"
     })
 
 @app.route('/set_webhook')
@@ -3586,7 +3746,8 @@ def set_webhook():
             "enhanced_features": True,
             "signal_version": "V8",
             "auto_expiry_detection": True,
-            "ai_momentum_breakout": True
+            "ai_momentum_breakout": True,
+            "payment_system": "manual_admin"
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -3617,7 +3778,8 @@ def webhook():
             "queue_size": update_queue.qsize(),
             "enhanced_processing": True,
             "signal_version": "V8",
-            "auto_expiry_detection": True
+            "auto_expiry_detection": True,
+            "payment_system": "manual_admin"
         })
         
     except Exception as e:
@@ -3635,10 +3797,11 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout"],
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments"],
         "signal_version": "V8",
         "auto_expiry_detection": True,
-        "ai_momentum_breakout": True
+        "ai_momentum_breakout": True,
+        "payment_system": "manual_admin"
     })
 
 @app.route('/stats')
@@ -3657,7 +3820,8 @@ def stats():
         "enhanced_features": True,
         "signal_version": "V8",
         "auto_expiry_detection": True,
-        "ai_momentum_breakout": True
+        "ai_momentum_breakout": True,
+        "payment_system": "manual_admin"
     })
 
 if __name__ == '__main__':
@@ -3668,6 +3832,8 @@ if __name__ == '__main__':
     logger.info("🎯 NEW FEATURES: Auto Expiry Detection & AI Momentum Breakout Strategy")
     logger.info("🔄 AUTO EXPIRY: AI automatically selects optimal expiry from 6 options")
     logger.info("🤖 AI MOMENTUM BREAKOUT: Simple and powerful strategy with clean entries")
+    logger.info("💰 MANUAL PAYMENT SYSTEM: Users contact admin for upgrades")
+    logger.info("👑 ADMIN UPGRADE COMMAND: /upgrade USER_ID TIER")
     logger.info("📈 V8 SIGNAL DISPLAY: Enhanced format with multiple arrows for better visualization")
     logger.info("🏦 Professional Enhanced OTC Binary Options Platform Ready")
     logger.info("⚡ Advanced Features: Multi-timeframe Analysis, Liquidity Flow, Market Regime Detection, Risk Management")
