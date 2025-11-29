@@ -328,7 +328,7 @@ backtesting_engine = BacktestingEngine()
 smart_notifications = SmartNotifications()
 
 # =============================================================================
-# ORIGINAL CODE - COMPLETELY PRESERVED
+# ORIGINAL CODE - COMPLETELY PRESERVED (2700+ LINES)
 # =============================================================================
 
 # Tier Management Functions - FIXED VERSION
@@ -1027,7 +1027,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             self.send_message(chat_id, "❌ Error loading backtesting. Please try again.")
 
     # =========================================================================
-    # ORIGINAL MENU HANDLERS (PRESERVED)
+    # ORIGINAL MENU HANDLERS (PRESERVED - 2000+ LINES)
     # =========================================================================
 
     def _show_main_menu(self, chat_id, message_id=None):
