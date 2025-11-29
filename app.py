@@ -395,6 +395,152 @@ class ManualPaymentSystem:
 payment_system = ManualPaymentSystem()
 
 # =============================================================================
+# ENHANCED OTC ASSETS WITH MORE PAIRS (35+ total)
+# =============================================================================
+
+# ENHANCED OTC Binary Trading Configuration - EXPANDED WITH MORE PAIRS
+OTC_ASSETS = {
+    # FOREX MAJORS (8 pairs)
+    "EUR/USD": {"type": "Forex", "volatility": "High", "session": "London/NY"},
+    "GBP/USD": {"type": "Forex", "volatility": "High", "session": "London/NY"},
+    "USD/JPY": {"type": "Forex", "volatility": "Medium", "session": "Asian/London"},
+    "USD/CHF": {"type": "Forex", "volatility": "Medium", "session": "London/NY"},
+    "AUD/USD": {"type": "Forex", "volatility": "High", "session": "Asian/London"},
+    "USD/CAD": {"type": "Forex", "volatility": "Medium", "session": "London/NY"},
+    "NZD/USD": {"type": "Forex", "volatility": "High", "session": "Asian/London"},
+    "EUR/GBP": {"type": "Forex", "volatility": "Medium", "session": "London"},
+    
+    # FOREX MINORS & CROSSES (12 pairs)
+    "GBP/JPY": {"type": "Forex", "volatility": "Very High", "session": "London"},
+    "EUR/JPY": {"type": "Forex", "volatility": "High", "session": "London"},
+    "AUD/JPY": {"type": "Forex", "volatility": "High", "session": "Asian/London"},
+    "CAD/JPY": {"type": "Forex", "volatility": "Medium", "session": "London/NY"},
+    "CHF/JPY": {"type": "Forex", "volatility": "Medium", "session": "London"},
+    "EUR/AUD": {"type": "Forex", "volatility": "High", "session": "London/Asian"},
+    "EUR/CAD": {"type": "Forex", "volatility": "Medium", "session": "London/NY"},
+    "EUR/CHF": {"type": "Forex", "volatility": "Low", "session": "London"},
+    "GBP/AUD": {"type": "Forex", "volatility": "Very High", "session": "London"},
+    "GBP/CAD": {"type": "Forex", "volatility": "High", "session": "London/NY"},
+    "AUD/CAD": {"type": "Forex", "volatility": "Medium", "session": "Asian/London"},
+    "AUD/NZD": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
+    
+    # EXOTIC PAIRS (6 pairs)
+    "USD/CNH": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
+    "USD/SGD": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
+    "USD/HKD": {"type": "Forex", "volatility": "Low", "session": "Asian"},
+    "USD/MXN": {"type": "Forex", "volatility": "High", "session": "NY/London"},
+    "USD/ZAR": {"type": "Forex", "volatility": "Very High", "session": "London/NY"},
+    "USD/TRY": {"type": "Forex", "volatility": "Very High", "session": "London"},
+    
+    # CRYPTOCURRENCIES (8 pairs)
+    "BTC/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7"},
+    "ETH/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7"},
+    "XRP/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
+    "ADA/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
+    "DOT/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
+    "LTC/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
+    "LINK/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
+    "MATIC/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
+    
+    # COMMODITIES (6 pairs)
+    "XAU/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
+    "XAG/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
+    "XPT/USD": {"type": "Commodity", "volatility": "Medium", "session": "London/NY"},
+    "OIL/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
+    "GAS/USD": {"type": "Commodity", "volatility": "Very High", "session": "London/NY"},
+    "COPPER/USD": {"type": "Commodity", "volatility": "Medium", "session": "London/NY"},
+    
+    # INDICES (6 indices)
+    "US30": {"type": "Index", "volatility": "High", "session": "NY"},
+    "SPX500": {"type": "Index", "volatility": "Medium", "session": "NY"},
+    "NAS100": {"type": "Index", "volatility": "High", "session": "NY"},
+    "FTSE100": {"type": "Index", "volatility": "Medium", "session": "London"},
+    "DAX30": {"type": "Index", "volatility": "High", "session": "London"},
+    "NIKKEI225": {"type": "Index", "volatility": "Medium", "session": "Asian"}
+}
+
+# ENHANCED AI ENGINES (21 total for maximum accuracy)
+AI_ENGINES = {
+    # Core Technical Analysis
+    "QuantumTrend AI": "Advanced trend analysis with machine learning",
+    "NeuralMomentum AI": "Real-time momentum detection",
+    "VolatilityMatrix AI": "Multi-timeframe volatility assessment",
+    "PatternRecognition AI": "Advanced chart pattern detection",
+    
+    # Market Structure
+    "SupportResistance AI": "Dynamic S/R level calculation",
+    "MarketProfile AI": "Volume profile and price action analysis",
+    "LiquidityFlow AI": "Order book and liquidity analysis",
+    "OrderBlock AI": "Institutional order block identification",
+    
+    # Advanced Mathematical Models
+    "Fibonacci AI": "Golden ratio level prediction",
+    "HarmonicPattern AI": "Geometric pattern recognition",
+    "CorrelationMatrix AI": "Inter-market correlation analysis",
+    
+    # Sentiment & News
+    "SentimentAnalyzer AI": "Market sentiment analysis",
+    "NewsSentiment AI": "Real-time news impact analysis",
+    
+    # Adaptive Systems
+    "RegimeDetection AI": "Market regime identification",
+    "Seasonality AI": "Time-based pattern recognition",
+    "AdaptiveLearning AI": "Self-improving machine learning model",
+    
+    # NEW PREMIUM ENGINES
+    "MarketMicrostructure AI": "Advanced order book and market depth analysis",
+    "VolatilityForecast AI": "Predict volatility changes and breakouts",
+    "CycleAnalysis AI": "Time cycle and seasonal pattern detection", 
+    "SentimentMomentum AI": "Combine market sentiment with momentum analysis",
+    "PatternProbability AI": "Pattern success rate and probability scoring",
+    "InstitutionalFlow AI": "Track smart money and institutional positioning"
+}
+
+# ENHANCED TRADING STRATEGIES (22 total with new AI Momentum Breakout)
+TRADING_STRATEGIES = {
+    # Trend Following
+    "Quantum Trend": "AI-confirmed trend following",
+    "Momentum Breakout": "Volume-powered breakout trading",
+    
+    # NEW: AI Momentum Breakout Strategy
+    "AI Momentum Breakout": "AI tracks trend strength, volatility, dynamic levels for clean breakout entries",
+    
+    # Mean Reversion
+    "Mean Reversion": "Price reversal from statistical extremes",
+    "Support/Resistance": "Key level bounce trading",
+    
+    # Volatility Based
+    "Volatility Squeeze": "Compression/expansion patterns",
+    "Session Breakout": "Session opening momentum capture",
+    
+    # Market Structure
+    "Liquidity Grab": "Institutional liquidity pool trading",
+    "Order Block Strategy": "Smart money order flow",
+    "Market Maker Move": "Follow market maker manipulations",
+    
+    # Pattern Based
+    "Harmonic Pattern": "Precise geometric pattern trading",
+    "Fibonacci Retracement": "Golden ratio level trading",
+    
+    # Multi-Timeframe
+    "Multi-TF Convergence": "Multiple timeframe alignment",
+    "Timeframe Synthesis": "Integrated multi-TF analysis",
+    
+    # Session & News
+    "Session Overlap": "High volatility period trading",
+    "News Impact": "Economic event volatility trading",
+    "Correlation Hedge": "Cross-market confirmation",
+    
+    # NEW PREMIUM STRATEGIES
+    "Smart Money Concepts": "Follow institutional order flow and smart money",
+    "Market Structure Break": "Trade structural level breaks with volume confirmation",
+    "Impulse Momentum": "Catch strong directional moves with momentum stacking",
+    "Fair Value Gap": "Trade price inefficiencies and fair value gaps",
+    "Liquidity Void": "Trade liquidity gaps and void fills",
+    "Delta Divergence": "Volume delta and order flow divergence strategies"
+}
+
+# =============================================================================
 # ORIGINAL CODE - COMPLETELY PRESERVED
 # =============================================================================
 
@@ -520,97 +666,6 @@ def upgrade_user_tier(chat_id, new_tier, duration_days=30):
         'count': 0
     }
     return True
-
-# ENHANCED OTC Binary Trading Configuration
-OTC_ASSETS = {
-    "EUR/USD": {"type": "Forex", "volatility": "High", "session": "London/NY"},
-    "GBP/USD": {"type": "Forex", "volatility": "High", "session": "London/NY"},
-    "USD/JPY": {"type": "Forex", "volatility": "Medium", "session": "Asian/London"},
-    "USD/CHF": {"type": "Forex", "volatility": "Medium", "session": "London/NY"},
-    "AUD/USD": {"type": "Forex", "volatility": "High", "session": "Asian/London"},
-    "USD/CAD": {"type": "Forex", "volatility": "Medium", "session": "London/NY"},
-    "NZD/USD": {"type": "Forex", "volatility": "High", "session": "Asian/London"},
-    "EUR/GBP": {"type": "Forex", "volatility": "Medium", "session": "London"},
-    "GBP/JPY": {"type": "Forex", "volatility": "Very High", "session": "London"},
-    "EUR/JPY": {"type": "Forex", "volatility": "High", "session": "London"},
-    "USD/CNH": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
-    "USD/SGD": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
-    "BTC/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7"},
-    "ETH/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7"},
-    "XRP/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
-    "ADA/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
-    "XAU/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
-    "XAG/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
-    "OIL/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
-    "US30": {"type": "Index", "volatility": "High", "session": "NY"},
-    "SPX500": {"type": "Index", "volatility": "Medium", "session": "NY"},
-    "NAS100": {"type": "Index", "volatility": "High", "session": "NY"}
-}
-
-# ENHANCED AI ENGINES (16 total for maximum accuracy)
-AI_ENGINES = {
-    # Core Technical Analysis
-    "QuantumTrend AI": "Advanced trend analysis with machine learning",
-    "NeuralMomentum AI": "Real-time momentum detection",
-    "VolatilityMatrix AI": "Multi-timeframe volatility assessment",
-    "PatternRecognition AI": "Advanced chart pattern detection",
-    
-    # Market Structure
-    "SupportResistance AI": "Dynamic S/R level calculation",
-    "MarketProfile AI": "Volume profile and price action analysis",
-    "LiquidityFlow AI": "Order book and liquidity analysis",
-    "OrderBlock AI": "Institutional order block identification",
-    
-    # Advanced Mathematical Models
-    "Fibonacci AI": "Golden ratio level prediction",
-    "HarmonicPattern AI": "Geometric pattern recognition",
-    "CorrelationMatrix AI": "Inter-market correlation analysis",
-    
-    # Sentiment & News
-    "SentimentAnalyzer AI": "Market sentiment analysis",
-    "NewsSentiment AI": "Real-time news impact analysis",
-    
-    # Adaptive Systems
-    "RegimeDetection AI": "Market regime identification",
-    "Seasonality AI": "Time-based pattern recognition",
-    "AdaptiveLearning AI": "Self-improving machine learning model"
-}
-
-# ENHANCED TRADING STRATEGIES (17 total with new AI Momentum Breakout)
-TRADING_STRATEGIES = {
-    # Trend Following
-    "Quantum Trend": "AI-confirmed trend following",
-    "Momentum Breakout": "Volume-powered breakout trading",
-    
-    # NEW: AI Momentum Breakout Strategy
-    "AI Momentum Breakout": "AI tracks trend strength, volatility, dynamic levels for clean breakout entries",
-    
-    # Mean Reversion
-    "Mean Reversion": "Price reversal from statistical extremes",
-    "Support/Resistance": "Key level bounce trading",
-    
-    # Volatility Based
-    "Volatility Squeeze": "Compression/expansion patterns",
-    "Session Breakout": "Session opening momentum capture",
-    
-    # Market Structure
-    "Liquidity Grab": "Institutional liquidity pool trading",
-    "Order Block Strategy": "Smart money order flow",
-    "Market Maker Move": "Follow market maker manipulations",
-    
-    # Pattern Based
-    "Harmonic Pattern": "Precise geometric pattern trading",
-    "Fibonacci Retracement": "Golden ratio level trading",
-    
-    # Multi-Timeframe
-    "Multi-TF Convergence": "Multiple timeframe alignment",
-    "Timeframe Synthesis": "Integrated multi-TF analysis",
-    
-    # Session & News
-    "Session Overlap": "High volatility period trading",
-    "News Impact": "Economic event volatility trading",
-    "Correlation Hedge": "Cross-market confirmation"
-}
 
 # Advanced Analysis Functions
 def multi_timeframe_convergence_analysis(asset):
@@ -940,9 +995,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • You may lose your entire investment
 
 **ENHANCED OTC Trading Features:**
-• 22 major assets (Forex, Crypto, Commodities, Indices)
-• 16 AI engines for advanced analysis
-• 17 professional trading strategies (NEW: AI Momentum Breakout)
+• 35+ major assets (Forex, Crypto, Commodities, Indices)
+• 21 AI engines for advanced analysis
+• 22 professional trading strategies (NEW: AI Momentum Breakout)
 • Real-time market analysis with multi-timeframe confirmation
 • **NEW:** Auto expiry detection & AI Momentum Breakout
 • **NEW:** Performance analytics & risk management
@@ -975,9 +1030,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 **TRADING COMMANDS:**
 /start - Start OTC trading bot
 /signals - Get live binary signals
-/assets - View 22 trading assets
-/strategies - 17 trading strategies (NEW!)
-/aiengines - 16 AI analysis engines
+/assets - View 35+ trading assets
+/strategies - 22 trading strategies (NEW!)
+/aiengines - 21 AI analysis engines
 /account - Account dashboard
 /sessions - Market sessions
 /limits - Trading limits
@@ -986,8 +1041,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 **QUICK ACCESS BUTTONS:**
 🎯 **Signals** - Live trading signals
-📊 **Assets** - All 22 instruments  
-🚀 **Strategies** - 17 trading approaches (NEW!)
+📊 **Assets** - All 35+ instruments  
+🚀 **Strategies** - 22 trading approaches (NEW!)
 🤖 **AI Engines** - Advanced analysis
 💼 **Account** - Your dashboard
 📈 **Performance** - Analytics & stats
@@ -997,13 +1052,13 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 **NEW ENHANCED FEATURES:**
 • 🎯 **Auto Expiry Detection** - AI chooses optimal expiry
 • 🤖 **AI Momentum Breakout** - New powerful strategy
-• 📊 **17 Professional Strategies** - Expanded arsenal
+• 📊 **22 Professional Strategies** - Expanded arsenal
 • ⚡ **Smart Signal Filtering** - Enhanced risk management
 
 **ENHANCED FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
-• 📊 **22 Assets** - Forex, Crypto, Commodities, Indices
-• 🤖 **16 AI Engines** - Quantum analysis technology
+• 📊 **35+ Assets** - Forex, Crypto, Commodities, Indices
+• 🤖 **21 AI Engines** - Quantum analysis technology
 • ⚡ **Multiple Expiries** - 1min to 60min timeframes
 • 💰 **Payout Analysis** - Expected returns calculation
 • 📈 **Advanced Technical Analysis** - Multi-timeframe & liquidity analysis
@@ -1064,9 +1119,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         status_text = """
 ✅ **ENHANCED OTC TRADING BOT - STATUS: OPERATIONAL**
 
-🤖 **AI ENGINES ACTIVE:** 16/16
-📊 **TRADING ASSETS:** 22
-🎯 **STRATEGIES AVAILABLE:** 17 (NEW!)
+🤖 **AI ENGINES ACTIVE:** 21/21
+📊 **TRADING ASSETS:** 35+
+🎯 **STRATEGIES AVAILABLE:** 22 (NEW!)
 ⚡ **SIGNAL GENERATION:** LIVE
 💾 **MARKET DATA:** REAL-TIME
 📈 **PERFORMANCE TRACKING:** ACTIVE
@@ -1095,7 +1150,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 **4 EASY STEPS:**
 
-1. **📊 CHOOSE ASSET** - Select from 22 OTC instruments
+1. **📊 CHOOSE ASSET** - Select from 35+ OTC instruments
 2. **⏰ SELECT EXPIRY** - Use AUTO DETECT or choose manually (1min to 60min)  
 3. **🤖 GET ENHANCED SIGNAL** - Advanced AI analysis with multi-timeframe confirmation
 4. **💰 EXECUTE TRADE** - On your OTC platform
@@ -1227,8 +1282,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 *Test any strategy on historical data before trading live*
 
 **Available Backtesting Options:**
-• Test any of 17 strategies (NEW: AI Momentum Breakout)
-• All 22 assets available
+• Test any of 22 strategies (NEW: AI Momentum Breakout)
+• All 35+ assets available
 • Multiple time periods (7d, 30d, 90d)
 • Comprehensive performance metrics
 • Strategy comparison tools
@@ -1350,7 +1405,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             self.send_message(chat_id, f"❌ Upgrade error: {e}")
 
     # =========================================================================
-    # ORIGINAL MENU HANDLERS (PRESERVED)
+    # ENHANCED MENU HANDLERS WITH MORE ASSETS
     # =========================================================================
 
     def _show_main_menu(self, chat_id, message_id=None):
@@ -1361,11 +1416,11 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         keyboard_rows = [
             [{"text": "🎯 GET ENHANCED SIGNALS", "callback_data": "menu_signals"}],
             [
-                {"text": "📊 22 ASSETS", "callback_data": "menu_assets"},
-                {"text": "🤖 16 AI ENGINES", "callback_data": "menu_aiengines"}
+                {"text": "📊 35+ ASSETS", "callback_data": "menu_assets"},
+                {"text": "🤖 21 AI ENGINES", "callback_data": "menu_aiengines"}
             ],
             [
-                {"text": "🚀 17 STRATEGIES", "callback_data": "menu_strategies"},
+                {"text": "🚀 22 STRATEGIES", "callback_data": "menu_strategies"},
                 {"text": "💼 ACCOUNT", "callback_data": "menu_account"}
             ],
             [
@@ -1397,8 +1452,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 *Advanced Over-The-Counter Binary Options Platform*
 
 🎯 **ENHANCED OTC SIGNALS** - Multi-timeframe & liquidity analysis
-📊 **22 TRADING ASSETS** - Forex, Crypto, Commodities, Indices
-🤖 **16 AI ENGINES** - Quantum analysis technology
+📊 **35+ TRADING ASSETS** - Forex, Crypto, Commodities, Indices
+🤖 **21 AI ENGINES** - Quantum analysis technology
 ⚡ **MULTIPLE EXPIRIES** - 1min to 60min timeframes
 💰 **SMART PAYOUTS** - Volatility-based returns
 📊 **NEW: PERFORMANCE ANALYTICS** - Track your results
@@ -1431,13 +1486,11 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 [{"text": "📈 ENHANCED SIGNAL (15min ANY ASSET)", "callback_data": "menu_assets"}],
                 [
                     {"text": "💱 EUR/USD", "callback_data": "asset_EUR/USD"},
-                    {"text": "💱 GBP/USD", "callback_data": "asset_GBP/USD"}
+                    {"text": "💱 GBP/USD", "callback_data": "asset_GBP/USD"},
+                    {"text": "💱 USD/JPY", "callback_data": "asset_USD/JPY"}
                 ],
                 [
-                    {"text": "💱 USD/JPY", "callback_data": "asset_USD/JPY"},
-                    {"text": "₿ BTC/USD", "callback_data": "asset_BTC/USD"}
-                ],
-                [
+                    {"text": "₿ BTC/USD", "callback_data": "asset_BTC/USD"},
                     {"text": "🟡 XAU/USD", "callback_data": "asset_XAU/USD"},
                     {"text": "📈 US30", "callback_data": "asset_US30"}
                 ],
@@ -1484,9 +1537,10 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             )
     
     def _show_assets_menu(self, chat_id, message_id=None):
-        """Show all 22 trading assets"""
+        """Show all 35+ trading assets in organized categories"""
         keyboard = {
             "inline_keyboard": [
+                # FOREX MAJORS
                 [
                     {"text": "💱 EUR/USD", "callback_data": "asset_EUR/USD"},
                     {"text": "💱 GBP/USD", "callback_data": "asset_GBP/USD"},
@@ -1499,14 +1553,29 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 ],
                 [
                     {"text": "💱 NZD/USD", "callback_data": "asset_NZD/USD"},
-                    {"text": "💱 EUR/GBP", "callback_data": "asset_EUR/GBP"},
-                    {"text": "💱 USD/CNH", "callback_data": "asset_USD/CNH"}
+                    {"text": "💱 EUR/GBP", "callback_data": "asset_EUR/GBP"}
+                ],
+                
+                # FOREX MINORS & CROSSES
+                [
+                    {"text": "💱 GBP/JPY", "callback_data": "asset_GBP/JPY"},
+                    {"text": "💱 EUR/JPY", "callback_data": "asset_EUR/JPY"},
+                    {"text": "💱 AUD/JPY", "callback_data": "asset_AUD/JPY"}
                 ],
                 [
-                    {"text": "💱 USD/SGD", "callback_data": "asset_USD/SGD"},
-                    {"text": "💱 GBP/JPY", "callback_data": "asset_GBP/JPY"},
-                    {"text": "💱 EUR/JPY", "callback_data": "asset_EUR/JPY"}
+                    {"text": "💱 EUR/AUD", "callback_data": "asset_EUR/AUD"},
+                    {"text": "💱 GBP/AUD", "callback_data": "asset_GBP/AUD"},
+                    {"text": "💱 AUD/NZD", "callback_data": "asset_AUD/NZD"}
                 ],
+                
+                # EXOTIC PAIRS
+                [
+                    {"text": "💱 USD/CNH", "callback_data": "asset_USD/CNH"},
+                    {"text": "💱 USD/SGD", "callback_data": "asset_USD/SGD"},
+                    {"text": "💱 USD/ZAR", "callback_data": "asset_USD/ZAR"}
+                ],
+                
+                # CRYPTOCURRENCIES
                 [
                     {"text": "₿ BTC/USD", "callback_data": "asset_BTC/USD"},
                     {"text": "₿ ETH/USD", "callback_data": "asset_ETH/USD"},
@@ -1514,37 +1583,53 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 ],
                 [
                     {"text": "₿ ADA/USD", "callback_data": "asset_ADA/USD"},
+                    {"text": "₿ DOT/USD", "callback_data": "asset_DOT/USD"},
+                    {"text": "₿ LTC/USD", "callback_data": "asset_LTC/USD"}
+                ],
+                
+                # COMMODITIES
+                [
                     {"text": "🟡 XAU/USD", "callback_data": "asset_XAU/USD"},
-                    {"text": "🟡 XAG/USD", "callback_data": "asset_XAG/USD"}
+                    {"text": "🟡 XAG/USD", "callback_data": "asset_XAG/USD"},
+                    {"text": "🛢 OIL/USD", "callback_data": "asset_OIL/USD"}
+                ],
+                
+                # INDICES
+                [
+                    {"text": "📈 US30", "callback_data": "asset_US30"},
+                    {"text": "📈 SPX500", "callback_data": "asset_SPX500"},
+                    {"text": "📈 NAS100", "callback_data": "asset_NAS100"}
                 ],
                 [
-                    {"text": "🛢 OIL/USD", "callback_data": "asset_OIL/USD"},
-                    {"text": "📈 US30", "callback_data": "asset_US30"},
-                    {"text": "📈 SPX500", "callback_data": "asset_SPX500"}
+                    {"text": "📈 FTSE100", "callback_data": "asset_FTSE100"},
+                    {"text": "📈 DAX30", "callback_data": "asset_DAX30"},
+                    {"text": "📈 NIKKEI225", "callback_data": "asset_NIKKEI225"}
                 ],
-                [{"text": "📈 NAS100", "callback_data": "asset_NAS100"}],
+                
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
         
         text = """
-📊 **OTC TRADING ASSETS - ALL 22 INSTRUMENTS**
+📊 **OTC TRADING ASSETS - 35+ INSTRUMENTS**
 
 *Trade these OTC binary options:*
 
-💱 **FOREX MAJORS & MINORS (12 PAIRS)**
-• EUR/USD, GBP/USD, USD/JPY, USD/CHF
-• AUD/USD, USD/CAD, NZD/USD, EUR/GBP
-• USD/CNH, USD/SGD, GBP/JPY, EUR/JPY
+💱 **FOREX MAJORS & MINORS (20 PAIRS)**
+• EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD, NZD/USD, EUR/GBP
+• GBP/JPY, EUR/JPY, AUD/JPY, EUR/AUD, GBP/AUD, AUD/NZD, and more crosses
 
-₿ **CRYPTOCURRENCIES (4 PAIRS)**
-• BTC/USD, ETH/USD, XRP/USD, ADA/USD
+💱 **EXOTIC PAIRS (6 PAIRS)**
+• USD/CNH, USD/SGD, USD/HKD, USD/MXN, USD/ZAR, USD/TRY
 
-🟡 **COMMODITIES (3 PAIRS)**
-• XAU/USD (Gold), XAG/USD (Silver), OIL/USD (Oil)
+₿ **CRYPTOCURRENCIES (8 PAIRS)**
+• BTC/USD, ETH/USD, XRP/USD, ADA/USD, DOT/USD, LTC/USD, LINK/USD, MATIC/USD
 
-📈 **INDICES (3 INDICES)**
-• US30 (Dow Jones), SPX500 (S&P 500), NAS100 (Nasdaq)
+🟡 **COMMODITIES (6 PAIRS)**
+• XAU/USD (Gold), XAG/USD (Silver), XPT/USD (Platinum), OIL/USD (Oil), GAS/USD (Natural Gas), COPPER/USD
+
+📈 **INDICES (6 INDICES)**
+• US30 (Dow Jones), SPX500 (S&P 500), NAS100 (Nasdaq), FTSE100 (UK), DAX30 (Germany), NIKKEI225 (Japan)
 
 *Click any asset to generate enhanced signal*"""
         
@@ -1621,7 +1706,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         )
     
     def _show_strategies_menu(self, chat_id, message_id=None):
-        """Show all 17 trading strategies - UPDATED"""
+        """Show all 22 trading strategies - UPDATED"""
         keyboard = {
             "inline_keyboard": [
                 [
@@ -1657,14 +1742,26 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     {"text": "📰 NEWS", "callback_data": "strategy_news_impact"}
                 ],
                 [
-                    {"text": "🔗 CORRELATION", "callback_data": "strategy_correlation_hedge"}
+                    {"text": "🔗 CORRELATION", "callback_data": "strategy_correlation_hedge"},
+                    {"text": "💡 SMART MONEY", "callback_data": "strategy_smart_money"}
+                ],
+                [
+                    {"text": "🏗 STRUCTURE BREAK", "callback_data": "strategy_structure_break"},
+                    {"text": "⚡ IMPULSE", "callback_data": "strategy_impulse_momentum"}
+                ],
+                [
+                    {"text": "💰 FAIR VALUE", "callback_data": "strategy_fair_value"},
+                    {"text": "🌊 LIQUIDITY VOID", "callback_data": "strategy_liquidity_void"}
+                ],
+                [
+                    {"text": "📈 DELTA", "callback_data": "strategy_delta_divergence"}
                 ],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
         
         text = """
-🚀 **ENHANCED OTC TRADING STRATEGIES - 17 PROFESSIONAL APPROACHES**
+🚀 **ENHANCED OTC TRADING STRATEGIES - 22 PROFESSIONAL APPROACHES**
 
 *Choose your advanced OTC binary trading strategy:*
 
@@ -1697,6 +1794,14 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • News Impact - Economic event trading
 • Correlation Hedge - Cross-market confirmation
 
+**NEW PREMIUM STRATEGIES:**
+• Smart Money Concepts - Institutional order flow
+• Market Structure Break - Structural level breaks
+• Impulse Momentum - Strong directional moves
+• Fair Value Gap - Price inefficiencies
+• Liquidity Void - Liquidity gap trading
+• Delta Divergence - Volume delta strategies
+
 *Each strategy uses different AI engines for maximum accuracy*"""
         
         if message_id:
@@ -1711,7 +1816,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             )
     
     def _show_strategy_detail(self, chat_id, message_id, strategy):
-        """Show detailed strategy information - UPDATED WITH AI MOMENTUM BREAKOUT"""
+        """Show detailed strategy information - UPDATED WITH NEW STRATEGIES"""
         strategy_details = {
             "quantum_trend": """
 🚀 **QUANTUM TREND STRATEGY**
@@ -1858,7 +1963,218 @@ Trades only when multiple timeframes align in the same direction. Provides highe
 - AdaptiveLearning AI
 
 **EXPIRY RECOMMENDATION:**
-15-60 minutes for convergence"""
+15-60 minutes for convergence""",
+
+            # NEW STRATEGIES ADDED
+            "smart_money": """
+💡 **SMART MONEY CONCEPTS STRATEGY**
+
+*Follow Institutional Order Flow*
+
+**STRATEGY OVERVIEW:**
+Tracks smart money and institutional order flow to identify where the big players are positioning. Capitalizes on their superior market knowledge and execution.
+
+**ENHANCED FEATURES:**
+• Institutional order flow analysis
+• Volume delta tracking
+• Absorption and exhaustion detection
+• Smart money level identification
+
+**HOW IT WORKS:**
+1. Identifies institutional order blocks
+2. Tracks volume delta for buyer/seller imbalance
+3. Looks for absorption at key levels
+4. Enters when smart money confirms direction
+
+**BEST FOR:**
+- Following institutional positioning
+- High volume environments
+- Major currency pairs
+- Session overlaps
+
+**AI ENGINES USED:**
+- InstitutionalFlow AI (Primary)
+- MarketMicrostructure AI
+- LiquidityFlow AI
+- VolumeAnalysis AI
+
+**EXPIRY RECOMMENDATION:**
+5-15 minutes for order flow confirmation""",
+
+            "structure_break": """
+🏗 **MARKET STRUCTURE BREAK STRATEGY**
+
+*Trade Structural Level Breaks*
+
+**STRATEGY OVERVIEW:**
+Focuses on breaking key market structure levels with volume confirmation. Identifies when price is making significant structural changes.
+
+**ENHANCED FEATURES:**
+• Market structure analysis
+• Breakout volume confirmation
+• False break detection
+• Structural level identification
+
+**HOW IT WORKS:**
+1. Identifies key market structure levels
+2. Waits for break with volume confirmation
+3. Enters on retest or continuation
+4. Uses multi-timeframe structure alignment
+
+**BEST FOR:**
+- Major trend changes
+- Session opening breaks
+- High impact news events
+- Liquidity level breaks
+
+**AI ENGINES USED:**
+- SupportResistance AI (Primary)
+- MarketProfile AI
+- VolatilityForecast AI
+- PatternRecognition AI
+
+**EXPIRY RECOMMENDATION:**
+15-30 minutes for structural confirmation""",
+
+            "impulse_momentum": """
+⚡ **IMPULSE MOMENTUM STRATEGY**
+
+*Catch Strong Directional Moves*
+
+**STRATEGY OVERVIEW:**
+Identifies and trades strong impulse moves where momentum is stacking in one direction. Captures the most powerful portion of trends.
+
+**ENHANCED FEATURES:**
+• Momentum stacking detection
+• Impulse wave identification
+• Volume acceleration analysis
+• Momentum divergence alerts
+
+**HOW IT WORKS:**
+1. Identifies momentum building phases
+2. Enters on momentum acceleration
+3. Rides the impulse wave
+4. Exits on momentum exhaustion
+
+**BEST FOR:**
+- Strong trending markets
+- Momentum-driven assets
+- High volatility periods
+- Breakout continuation
+
+**AI ENGINES USED:**
+- NeuralMomentum AI (Primary)
+- VolatilityMatrix AI
+- SentimentMomentum AI
+- AdaptiveLearning AI
+
+**EXPIRY RECOMMENDATION:**
+5-15 minutes for momentum capture""",
+
+            "fair_value": """
+💰 **FAIR VALUE GAP STRATEGY**
+
+*Trade Price Inefficiencies*
+
+**STRATEGY OVERVIEW:**
+Exploits temporary price inefficiencies and fair value gaps in the market. Identifies areas where price has moved too far too fast.
+
+**ENHANCED FEATURES:**
+• Fair value gap identification
+• Price efficiency analysis
+• Mean reversion probability
+• Gap fill forecasting
+
+**HOW IT WORKS:**
+1. Identifies fair value gaps
+2. Waits for price to return to fair value
+3. Enters with volume confirmation
+4. Targets gap fills
+
+**BEST FOR:**
+- Ranging markets
+- Mean reversion environments
+- OTC price inefficiencies
+- Liquidity gap fills
+
+**AI ENGINES USED:**
+- PatternProbability AI (Primary)
+- CycleAnalysis AI
+- MarketMicrostructure AI
+- CorrelationMatrix AI
+
+**EXPIRY RECOMMENDATION:**
+5-15 minutes for gap fills""",
+
+            "liquidity_void": """
+🌊 **LIQUIDITY VOID STRATEGY**
+
+*Trade Liquidity Gaps and Voids*
+
+**STRATEGY OVERVIEW:**
+Focuses on trading liquidity voids where order book depth is thin. Capitalizes on rapid price movements through these voids.
+
+**ENHANCED FEATURES:**
+• Liquidity void detection
+• Order book depth analysis
+• Void fill forecasting
+• Thin market identification
+
+**HOW IT WORKS:**
+1. Identifies liquidity voids on order book
+2. Waits for price to enter void area
+3. Enters with momentum confirmation
+4. Targets other side of void
+
+**BEST FOR:**
+- Thin market conditions
+- OTC broker gaps
+- Low liquidity periods
+- Fast market moves
+
+**AI ENGINES USED:**
+- MarketMicrostructure AI (Primary)
+- LiquidityFlow AI
+- VolatilityForecast AI
+- InstitutionalFlow AI
+
+**EXPIRY RECOMMENDATION:**
+2-5 minutes for quick void fills""",
+
+            "delta_divergence": """
+📈 **DELTA DIVERGENCE STRATEGY**
+
+*Volume Delta and Order Flow Strategies*
+
+**STRATEGY OVERVIEW:**
+Uses volume delta and order flow divergence to identify hidden buying/selling pressure. Reveals what's happening beneath the surface.
+
+**ENHANCED FEATURES:**
+• Volume delta analysis
+• Order flow divergence
+• Hidden buying/selling detection
+• Absorption level identification
+
+**HOW IT WORKS:**
+1. Analyzes volume delta for imbalances
+2. Looks for price/volume divergence
+3. Identifies hidden absorption
+4. Enters when order flow confirms
+
+**BEST FOR:**
+- Order flow analysis
+- Institutional tracking
+- Reversal identification
+- Breakout confirmation
+
+**AI ENGINES USED:**
+- InstitutionalFlow AI (Primary)
+- MarketMicrostructure AI
+- VolumeAnalysis AI
+- PatternProbability AI
+
+**EXPIRY RECOMMENDATION:**
+5-15 minutes for order flow confirmation"""
         }
         
         detail = strategy_details.get(strategy, f"""
@@ -1890,7 +2206,7 @@ Complete strategy guide with enhanced AI analysis coming soon.
         )
     
     def _show_ai_engines_menu(self, chat_id, message_id=None):
-        """Show all 16 AI engines"""
+        """Show all 21 AI engines - UPDATED"""
         keyboard = {
             "inline_keyboard": [
                 [
@@ -1925,12 +2241,24 @@ Complete strategy guide with enhanced AI analysis coming soon.
                     {"text": "📅 SEASONALITY", "callback_data": "aiengine_seasonality"},
                     {"text": "🧠 ADAPTIVELEARNING", "callback_data": "aiengine_adaptivelearning"}
                 ],
+                [
+                    {"text": "🔬 MARKET MICRO", "callback_data": "aiengine_marketmicrostructure"},
+                    {"text": "📈 VOL FORECAST", "callback_data": "aiengine_volatilityforecast"}
+                ],
+                [
+                    {"text": "🔄 CYCLE ANALYSIS", "callback_data": "aiengine_cycleanalysis"},
+                    {"text": "⚡ SENTIMENT MOMENTUM", "callback_data": "aiengine_sentimentmomentum"}
+                ],
+                [
+                    {"text": "🎯 PATTERN PROB", "callback_data": "aiengine_patternprobability"},
+                    {"text": "💼 INSTITUTIONAL", "callback_data": "aiengine_institutionalflow"}
+                ],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
         
         text = """
-🤖 **ENHANCED AI TRADING ENGINES - 16 QUANTUM TECHNOLOGIES**
+🤖 **ENHANCED AI TRADING ENGINES - 21 QUANTUM TECHNOLOGIES**
 
 *Advanced AI analysis for OTC binary trading:*
 
@@ -1959,6 +2287,14 @@ Complete strategy guide with enhanced AI analysis coming soon.
 • RegimeDetection AI - Market regime identification
 • Seasonality AI - Time-based patterns
 • AdaptiveLearning AI - Self-improving models
+
+**NEW PREMIUM ENGINES:**
+• MarketMicrostructure AI - Order book depth analysis
+• VolatilityForecast AI - Volatility prediction
+• CycleAnalysis AI - Time cycle detection
+• SentimentMomentum AI - Sentiment + momentum
+• PatternProbability AI - Pattern success rates
+• InstitutionalFlow AI - Smart money tracking
 
 *Each engine specializes in different market aspects for maximum accuracy*"""
         
@@ -2057,7 +2393,92 @@ Continuously learns from market data and trading outcomes to improve prediction 
 - All trading strategies
 - Long-term performance improvement
 - Adaptive risk management
-- Market condition changes"""
+- Market condition changes""",
+
+            # NEW AI ENGINES
+            "marketmicrostructure": """
+🔬 **MARKETMICROSTRUCTURE AI ENGINE**
+
+*Advanced Order Book and Market Depth Analysis*
+
+**PURPOSE:**
+Analyzes market microstructure including order book depth, market maker behavior, and trade execution quality.
+
+**ENHANCED FEATURES:**
+- Order book depth analysis
+- Market maker positioning
+- Trade execution optimization
+- Microstructure pattern recognition
+- Liquidity provision analysis
+
+**ANALYSIS INCLUDES:**
+• Order book imbalances
+• Market maker inventory
+• Trade execution quality
+• Microstructure patterns
+• Liquidity provision
+
+**BEST FOR:**
+- High-frequency trading strategies
+- Order book analysis
+- Execution optimization
+- Market maker tracking""",
+
+            "volatilityforecast": """
+📈 **VOLATILITYFORECAST AI ENGINE**
+
+*Predict Volatility Changes and Breakouts*
+
+**PURPOSE:**
+Forecasts volatility changes and identifies potential breakout opportunities before they occur.
+
+**ENHANCED FEATURES:**
+- Volatility regime prediction
+- Breakout probability scoring
+- Volatility clustering analysis
+- GARCH modeling
+- Volatility surface analysis
+
+**ANALYSIS INCLUDES:**
+• Volatility regime changes
+• Breakout probabilities
+• Volatility clustering
+• Risk-adjusted positioning
+• Volatility surface
+
+**BEST FOR:**
+- Volatility trading strategies
+- Breakout identification
+- Risk management
+- Position sizing""",
+
+            "institutionalflow": """
+💼 **INSTITUTIONALFLOW AI ENGINE**
+
+*Track Smart Money and Institutional Positioning*
+
+**PURPOSE:**
+Identifies and tracks institutional order flow, smart money positioning, and large trader activity.
+
+**ENHANCED FEATURES:**
+- Institutional order flow tracking
+- Smart money identification
+- Large trader positioning
+- Order flow analysis
+- Position building detection
+
+**ANALYSIS INCLUDES:**
+• Institutional positioning
+• Smart money flows
+• Large order detection
+• Position building patterns
+• Order flow imbalances
+
+**BEST FOR:**
+- Following institutional flows
+- Smart money concepts
+- Order flow analysis
+- Position building detection"""
         }
         
         detail = engine_details.get(engine, f"""
@@ -2208,14 +2629,14 @@ Complete technical specifications and capabilities available.
 **BASIC PLAN - $19/month:**
 • ✅ **50** daily enhanced signals
 • ✅ **PRIORITY** signal delivery
-• ✅ **ADVANCED** AI analytics (16 engines)
-• ✅ **ALL** 22 assets
-• ✅ **ALL** 17 strategies (NEW!)
+• ✅ **ADVANCED** AI analytics (21 engines)
+• ✅ **ALL** 35+ assets
+• ✅ **ALL** 22 strategies (NEW!)
 
 **PRO PLAN - $49/month:**
 • ✅ **UNLIMITED** daily enhanced signals
 • ✅ **ULTRA FAST** signal delivery
-• ✅ **PREMIUM** AI analytics (16 engines)
+• ✅ **PREMIUM** AI analytics (21 engines)
 • ✅ **CUSTOM** strategy requests
 • ✅ **DEDICATED** support
 • ✅ **EARLY** feature access
@@ -2255,9 +2676,9 @@ Complete technical specifications and capabilities available.
 • Status: {'🟢 ACTIVE' if stats['signals_today'] < stats['daily_limit'] else '💎 PREMIUM'}
 
 **🎯 ENHANCED PERFORMANCE METRICS:**
-• Assets Available: 22
-• AI Engines: 16
-• Strategies: 17 (NEW!)
+• Assets Available: 35+
+• AI Engines: 21
+• Strategies: 22 (NEW!)
 • Signal Accuracy: 78-95% (enhanced)
 • Multi-timeframe Analysis: ✅ ACTIVE
 • Auto Expiry Detection: ✅ AVAILABLE (NEW!)
@@ -2303,7 +2724,7 @@ Complete technical specifications and capabilities available.
 **ENHANCED UPGRADE BENEFITS:**
 • More daily enhanced signals
 • Priority signal delivery
-• Advanced AI analytics (16 engines)
+• Advanced AI analytics (21 engines)
 • Multi-timeframe analysis
 • Liquidity flow data
 • Dedicated support
@@ -2342,7 +2763,7 @@ Complete technical specifications and capabilities available.
 **CURRENT ENHANCED SETTINGS:**
 • Notifications: ✅ ENABLED
 • Risk Level: MEDIUM (2% per trade)
-• Preferred Assets: ALL 22
+• Preferred Assets: ALL 35+
 • Trading Sessions: ALL ACTIVE
 • Signal Frequency: AS NEEDED
 • Multi-timeframe Analysis: ✅ ENABLED
@@ -2560,7 +2981,7 @@ Complete technical specifications and capabilities available.
 • Multi-TF Convergence
 
 **OPTIMAL AI ENGINES:**
-• All 16 AI engines optimal
+• All 21 AI engines optimal
 • QuantumTrend AI (primary)
 • LiquidityFlow AI (primary)
 • NeuralMomentum AI
@@ -2780,9 +3201,9 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Switch between auto/manual mode
 
 **ENHANCED BOT FEATURES:**
-• 22 OTC-optimized assets with enhanced analysis
-• 16 AI analysis engines for maximum accuracy
-• 17 professional trading strategies (NEW!)
+• 35+ OTC-optimized assets with enhanced analysis
+• 21 AI analysis engines for maximum accuracy
+• 22 professional trading strategies (NEW!)
 • Real-time market analysis with multi-timeframe
 • Advanced risk management with liquidity
 • Auto expiry detection (NEW!)
@@ -2939,8 +3360,8 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Momentum Breakout strategy
 
 **ENHANCED FEATURES SUPPORT:**
-• 16 AI engines configuration
-• 17 trading strategies guidance
+• 21 AI engines configuration
+• 22 trading strategies guidance
 • Multi-timeframe analysis help
 • Liquidity flow explanations
 • Auto expiry detection (NEW!)
@@ -2987,9 +3408,9 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Free Trials: {free_users}
 • Paid Users: {paid_users}
 • Active Today: {active_today}
-• AI Engines: 16
-• Strategies: 17 (NEW!)
-• Assets: 22
+• AI Engines: 21
+• Strategies: 22 (NEW!)
+• Assets: 35+
 
 **🛠 ENHANCED ADMIN TOOLS:**
 • Enhanced user statistics & analytics
@@ -3690,9 +4111,9 @@ def home():
     return jsonify({
         "status": "running",
         "service": "enhanced-otc-binary-trading-pro", 
-        "version": "8.1.0",
+        "version": "8.2.0",
         "features": [
-            "22_assets", "16_ai_engines", "17_strategies", "enhanced_otc_signals", 
+            "35+_assets", "21_ai_engines", "22_strategies", "enhanced_otc_signals", 
             "user_tiers", "admin_panel", "multi_timeframe_analysis", "liquidity_analysis",
             "market_regime_detection", "adaptive_strategy_selection",
             "performance_analytics", "risk_scoring", "smart_filters", "backtesting_engine",
@@ -3827,7 +4248,7 @@ def stats():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     
-    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V8.1 on port {port}")
+    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V8.2 on port {port}")
     logger.info(f"📊 Enhanced OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | Strategies: {len(TRADING_STRATEGIES)}")
     logger.info("🎯 NEW FEATURES: Auto Expiry Detection & AI Momentum Breakout Strategy")
     logger.info("🔄 AUTO EXPIRY: AI automatically selects optimal expiry from 6 options")
