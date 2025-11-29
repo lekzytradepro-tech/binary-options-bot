@@ -328,7 +328,7 @@ backtesting_engine = BacktestingEngine()
 smart_notifications = SmartNotifications()
 
 # =============================================================================
-# ORIGINAL CODE - COMPLETELY PRESERVED (2700+ LINES)
+# ORIGINAL CODE - COMPLETELY PRESERVED
 # =============================================================================
 
 # Tier Management Functions - FIXED VERSION
@@ -1027,7 +1027,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             self.send_message(chat_id, "❌ Error loading backtesting. Please try again.")
 
     # =========================================================================
-    # ORIGINAL MENU HANDLERS (PRESERVED - 2000+ LINES)
+    # ORIGINAL MENU HANDLERS (PRESERVED)
     # =========================================================================
 
     def _show_main_menu(self, chat_id, message_id=None):
@@ -2714,7 +2714,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
         self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
     
     def _generate_enhanced_signal(self, chat_id, message_id, asset, expiry):
-        """Generate enhanced OTC trading signal with advanced analysis"""
+        """Generate enhanced OTC trading signal with V2 display format"""
         try:
             # Check user limits using tier system
             can_signal, message = can_generate_signal(chat_id)
@@ -2817,66 +2817,56 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 ]
             }
             
-            # NEW: Add risk assessment to signal
+            # V2 SIGNAL DISPLAY FORMAT
             risk_indicator = "🟢" if risk_score >= 70 else "🟡" if risk_score >= 50 else "🔴"
-            filter_indicator = "✅" if filter_result['passed'] else "⚠️"
+            direction_emoji = "📈" if direction == "CALL" else "📉"
+            direction_text = "CALL (UP)" if direction == "CALL" else "PUT (DOWN)"
             
             text = f"""
-🎯 **ENHANCED OTC BINARY SIGNAL - {asset}**
+🎯 **ENHANCED OTC BINARY SIGNAL V2** 🚀
 
-📈 **DIRECTION:** {'🟢 CALL (UP)' if direction == 'CALL' else '🔴 PUT (DOWN)'}
-📊 **ENHANCED CONFIDENCE:** {confidence}%
-⏰ **EXPIRY TIME:** {expiry} MINUTES
-💎 **ASSET:** {asset}
-🏦 **MARKET:** OTC BINARY OPTIONS
-🔧 **ANALYSIS:** ENHANCED MULTI-TF + LIQUIDITY
+**TRADE SETUP:**
+{direction_emoji} **DIRECTION:** {direction_text}
+⚡ **ASSET:** {asset}
+⏰ **EXPIRY:** {expiry} MINUTES
+📊 **CONFIDENCE:** {confidence}%
 
-**🎯 RISK ASSESSMENT:**
-• Risk Score: {risk_score}/100 {risk_indicator}
-• Smart Filters: {filter_result['score']}/{filter_result['total']} passed {filter_indicator}
-• Recommendation: {risk_recommendation}
+**RISK ASSESSMENT:**
+{risk_indicator} **RISK SCORE:** {risk_score}/100
+✅ **FILTERS PASSED:** {filter_result['score']}/{filter_result['total']}
+💡 **RECOMMENDATION:** {risk_recommendation}
 
-**📊 ENHANCED TECHNICAL ANALYSIS:**
-• Trend Strength: {trend_strength}%
-• Momentum: {momentum}%
-• Volume: {volume_confirmation}
-• Pattern: {pattern_alignment}
-• Volatility: {volatility}
-• Session: {session}
-• Market Regime: {market_regime}
-• Multi-TF Alignment: {multi_tf_alignment}/5 timeframes
-• Liquidity Flow: {liquidity_flow}
+**TECHNICAL ANALYSIS:**
+📊 **Trend Strength:** {trend_strength}%
+⚡ **Momentum:** {momentum}%
+💧 **Volume:** {volume_confirmation}
+🔄 **Pattern:** {pattern_alignment}
+🎯 **Multi-TF Alignment:** {multi_tf_alignment}/5
 
-**🤖 ENHANCED AI ANALYSIS DETAILS:**
-• Analysis Time: {analysis_time} UTC
-• Expected Entry: {expected_entry} UTC
-• Active AI Engines: {', '.join(active_engines)}
-• Optimal Strategy: {optimal_strategies[0]}
+**MARKET CONDITIONS:**
+🌊 **Volatility:** {volatility}
+🕒 **Session:** {session}
+📈 **Regime:** {market_regime}
+💧 **Liquidity:** {liquidity_flow}
 
-**🎯 ENHANCED SIGNAL REASONS:**
-"""
-            
-            # Add enhanced reasons to text
-            for i, reason in enumerate(reasons, 1):
-                text += f"• {reason}\n"
-            
-            text += f"""
-**💰 ENHANCED EXPECTED PAYOUT:** {payout_range}
+**AI ANALYSIS:**
+🤖 **Active Engines:** {', '.join(active_engines[:3])}...
+🎯 **Optimal Strategy:** {optimal_strategies[0]}
+⏰ **Analysis Time:** {analysis_time} UTC
+🎯 **Expected Entry:** {expected_entry} UTC
 
-**⚡ ENHANCED TRADING RECOMMENDATION:**
-Place **{direction}** option with {expiry}-minute expiry
-Entry: Within 30 seconds of {expected_entry} UTC
-Strategy: {optimal_strategies[0]} (Regime-optimized)
-Position Size: {'INCREASE' if risk_score >= 85 else 'STANDARD' if risk_score >= 70 else 'REDUCE'}
+**TRADING RECOMMENDATION:**
+💰 **Place {direction} option** with {expiry}-minute expiry
+📊 **Entry:** Within 30 seconds of {expected_entry} UTC
+🎯 **Strategy:** {optimal_strategies[0]}
+💎 **Payout:** {payout_range}
 
-**⚠️ ENHANCED RISK MANAGEMENT:**
-• Maximum Risk: 2% of account
-• Recommended Investment: $25-$100
-• Stop Loss: Mental (close if multi-TF invalidates)
-• Trade During: {session} session
-• Confidence-Based Sizing: {'INCREASE' if confidence > 85 else 'STANDARD'}
+**RISK MANAGEMENT:**
+⚠️ **Max Risk:** 2% of account
+💵 **Investment:** $25-$100
+🛡 **Stop Loss:** Mental (close if multi-TF invalidates)
 
-*Enhanced signal valid for 2 minutes - OTC trading involves risk*"""
+*Signal valid for 2 minutes - OTC trading involves risk*"""
 
             self.edit_message_text(
                 chat_id, message_id,
@@ -3299,6 +3289,7 @@ if __name__ == '__main__':
     logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro on port {port}")
     logger.info(f"📊 Enhanced OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | Strategies: {len(TRADING_STRATEGIES)}")
     logger.info("🎯 NEW FEATURES: Performance Analytics, Risk Scoring, Backtesting Engine, Smart Notifications")
+    logger.info("📈 V2 SIGNAL DISPLAY: Enhanced signal format with better organization")
     logger.info("🏦 Professional Enhanced OTC Binary Options Platform Ready")
     logger.info("⚡ Advanced Features: Multi-timeframe Analysis, Liquidity Flow, Market Regime Detection, Risk Management")
     
