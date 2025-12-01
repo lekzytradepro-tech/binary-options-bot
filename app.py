@@ -1,5 +1,3 @@
-[file name]: deepseek_python_20251201_ba6ce8 (1).py
-[file content begin]
 from flask import Flask, request, jsonify
 import os
 import logging
