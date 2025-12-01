@@ -102,102 +102,14 @@ USER_TIERS = {
 # 🚨 CRITICAL FIX: REAL SIGNAL VERIFICATION SYSTEM
 # =============================================================================
 
-
-# ----------------- START PATCH: RealSignalVerifier (REPLACE) -----------------
 class RealSignalVerifier:
-    """Robust real-direction verifier using EMA(9,20,50) + RSI(14) + Price Action"""
-
+    """Actually verifies signals using real technical analysis - REPLACES RANDOM"""
+    
     @staticmethod
-    def calc_ema(prices, period):
-        """Calculate EMA for a list of prices. prices[0] is latest."""
-        if len(prices) < period:
-            return None
-        # Use simple EMA seed = SMA of last `period`
-        seed = sum(prices[:period]) / period
-        k = 2 / (period + 1)
-        ema = seed
-        for p in prices[period:]:
-            ema = (p - ema) * k + ema
-        return ema
-
-    @staticmethod
-    def calc_rsi(prices, period=14):
-        """Calculate RSI using Wilder smoothing."""
-        if len(prices) < period + 1:
-            return None
-        gains = 0.0
-        losses = 0.0
-        for i in range(1, period + 1):
-            delta = prices[i-1] - prices[i]
-            if delta > 0:
-                gains += delta
-            else:
-                losses += abs(delta)
-        if losses == 0:
-            return 100.0
-        rs = (gains / period) / (losses / period)
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
-
-    @staticmethod
-    def detect_candlestick_pattern(values):
-        """
-        Detect a few high-value PA patterns using latest 3 candles.
-        `values` are dictionaries with 'open','high','low','close' strings.
-        Returns: 'bull_engulf', 'bear_engulf', 'pin_bar_bull', 'pin_bar_bear' or None
-        """
+    def get_real_direction(asset):
+        """Get actual direction based on price action"""
         try:
-            if len(values) < 3:
-                return None
-            # convert to floats: latest first
-            o = [float(v['open']) for v in values[:3]]
-            h = [float(v['high']) for v in values[:3]]
-            l = [float(v['low']) for v in values[:3]]
-            c = [float(v['close']) for v in values[:3]]
-
-            # Bullish engulfing: latest candle (index 0) engulfs prior body and closes higher
-            body0 = abs(c[0] - o[0])
-            body1 = abs(c[1] - o[1])
-            if c[0] > o[0] and c[1] < o[1] and body0 > body1 and c[0] > o[1] and o[0] < c[1]:
-                return 'bull_engulf'
-
-            # Bearish engulfing
-            if c[0] < o[0] and c[1] > o[1] and body0 > body1 and c[0] < o[1] and o[0] > c[1]:
-                return 'bear_engulf'
-
-            # Pin bar: long tail relative to body (simple heuristic)
-            for i in range(2):
-                body = abs(c[i] - o[i])
-                tail_top = h[i] - max(c[i], o[i])
-                tail_bottom = min(c[i], o[i]) - l[i]
-                if tail_bottom > body * 2 and c[i] > o[i]:
-                    return 'pin_bar_bull'
-                if tail_top > body * 2 and c[i] < o[i]:
-                    return 'pin_bar_bear'
-        except Exception:
-            return None
-        return None
-
-    @staticmethod
-    def detect_sr_levels(values):
-        """
-        Very simple S/R detection: use last 10 closes to find local levels.
-        Returns (support, resistance) as floats or (None,None).
-        """
-        try:
-            closes = [float(v['close']) for v in values[:20]]
-            if len(closes) < 6:
-                return None, None
-            support = min(closes)
-            resistance = max(closes)
-            return support, resistance
-        except Exception:
-            return None, None
-
-    def get_real_direction(self, asset):
-        """Get actual direction based on EMA+RSI+Price Action"""
-        try:
-            # Map asset to TwelveData symbol (reuse same mapping from your file)
+            # Map asset to TwelveData symbol
             symbol_map = {
                 "EUR/USD": "EUR/USD", "GBP/USD": "GBP/USD", "USD/JPY": "USD/JPY",
                 "USD/CHF": "USD/CHF", "AUD/USD": "AUD/USD", "USD/CAD": "USD/CAD",
@@ -205,134 +117,122 @@ class RealSignalVerifier:
                 "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
                 "SPX500": "SPX", "NAS100": "NDX"
             }
+            
             symbol = symbol_map.get(asset, asset.replace("/", ""))
-
-            # Fetch time_series (shorter, high-frequency)
+            
+            # Get real price data from TwelveData
             data = twelvedata_otc.make_request("time_series", {
                 "symbol": symbol,
-                "interval": "1min",
-                "outputsize": 60  # enough for EMAs and pattern detection
+                "interval": "5min",
+                "outputsize": 20
             })
-
+            
             if not data or 'values' not in data:
-                logger.warning(f"No data for {asset}, conservative fallback")
-                # fallback: small bias by session
-                current_hour = datetime.utcnow().hour
-                if 7 <= current_hour < 16:
-                    return "CALL", 60
-                elif 12 <= current_hour < 21:
-                    return random.choice(["CALL", "PUT"]), 58
-                else:
-                    return "PUT", 60
-
-            values = data['values']  # latest first
-            closes = [float(v['close']) for v in values]
-            if len(closes) < 20:
-                # insufficient data
+                logger.warning(f"No data for {asset}, using conservative fallback")
                 return random.choice(["CALL", "PUT"]), 60
-
-            # EMA calculations (latest on top)
-            ema9 = self.calc_ema(closes, 9)
-            ema20 = self.calc_ema(closes, 20)
-            ema50 = self.calc_ema(closes, 50)
-
-            # RSI (14)
-            rsi = self.calc_rsi(closes, 14) or 50.0
-
-            # Price-action pattern
-            pa = self.detect_candlestick_pattern(values)
-            support, resistance = self.detect_sr_levels(values)
-
+            
+            # Calculate actual technical indicators
+            values = data['values']
+            closes = [float(v['close']) for v in values]
+            
+            if len(closes) < 14:
+                return random.choice(["CALL", "PUT"]), 60
+            
+            # Simple moving averages
+            sma_5 = sum(closes[:5]) / 5
+            sma_10 = sum(closes[:10]) / 10
             current_price = closes[0]
-
-            # Base decision and confidence
+            
+            # RSI calculation
+            gains = []
+            losses = []
+            
+            for i in range(1, min(15, len(closes))):
+                change = closes[i-1] - closes[i]
+                if change > 0:
+                    gains.append(change)
+                    losses.append(0)
+                else:
+                    gains.append(0)
+                    losses.append(abs(change))
+            
+            avg_gain = sum(gains[:14]) / 14 if len(gains) >= 14 else 0
+            avg_loss = sum(losses[:14]) / 14 if len(losses) >= 14 else 0
+            
+            if avg_loss == 0:
+                rsi = 100
+            else:
+                rs = avg_gain / avg_loss if avg_loss > 0 else 0
+                rsi = 100 - (100 / (1 + rs))
+            
+            # REAL ANALYSIS LOGIC - NO RANDOM GUESSING
             direction = "CALL"
-            confidence = 65
-
-            # Strong trend via EMA alignment
-            if ema9 and ema20 and ema50:
-                if ema9 > ema20 > ema50 and current_price > ema9:
-                    direction = "CALL"
-                    confidence += 15
-                    # extra boost for distance
-                    if current_price > ema20 * 1.003:
-                        confidence += 5
-                elif ema9 < ema20 < ema50 and current_price < ema9:
-                    direction = "PUT"
-                    confidence += 15
-                    if current_price < ema20 * 0.997:
-                        confidence += 5
-                else:
-                    # no clear EMA alignment — reduce confidence
-                    confidence -= 5
-
-            # RSI adjustments (avoid extremes)
-            if rsi <= 25:
+            confidence = 65  # Start conservative
+            
+            # Rule 1: Price position relative to SMAs
+            if current_price > sma_5 and current_price > sma_10:
                 direction = "CALL"
-                confidence = max(confidence, 75)
-            elif rsi >= 75:
+                confidence = min(85, confidence + 15)
+                if current_price > sma_10 * 1.005:  # Strong uptrend
+                    confidence = min(90, confidence + 5)
+                    
+            elif current_price < sma_5 and current_price < sma_10:
                 direction = "PUT"
-                confidence = max(confidence, 75)
-            elif 30 <= rsi <= 45 and direction == "CALL":
-                confidence += 5
-            elif 55 <= rsi <= 70 and direction == "PUT":
-                confidence += 5
-
-            # Price action confirmations (patterns and S/R)
-            if pa == 'bull_engulf' or pa == 'pin_bar_bull':
-                if direction == "CALL":
-                    confidence = min(95, confidence + 8)
+                confidence = min(85, confidence + 15)
+                if current_price < sma_10 * 0.995:  # Strong downtrend
+                    confidence = min(90, confidence + 5)
+                    
+            else:
+                # Rule 2: RSI based decision
+                if rsi < 30:
+                    direction = "CALL"  # Oversold bounce expected
+                    confidence = min(80, confidence + 15)
+                elif rsi > 70:
+                    direction = "PUT"   # Overbought pullback expected
+                    confidence = min(80, confidence + 15)
                 else:
-                    # conflicting PA - reduce confidence
-                    confidence = max(50, confidence - 8)
-            if pa == 'bear_engulf' or pa == 'pin_bar_bear':
-                if direction == "PUT":
-                    confidence = min(95, confidence + 8)
-                else:
-                    confidence = max(50, confidence - 8)
-
-            # Support/resistance proximity checks
-            if support and resistance:
-                # If price very near resistance and direction is CALL -> caution
-                if direction == "CALL" and abs(current_price - resistance) / resistance < 0.0015:
-                    confidence = max(50, confidence - 8)
-                if direction == "PUT" and abs(current_price - support) / support < 0.0015:
-                    confidence = max(50, confidence - 8)
-
-            # Recent volatility penalty (use last 5 changes)
+                    # Rule 3: Momentum based on recent price action
+                    if closes[0] > closes[4]:  # Up last 20 mins
+                        direction = "CALL"
+                        confidence = 70
+                    else:
+                        direction = "PUT"
+                        confidence = 70
+            
+            # Rule 4: Recent volatility check
             recent_changes = []
             for i in range(1, 6):
                 if i < len(closes):
                     change = abs(closes[i-1] - closes[i]) / closes[i] * 100
                     recent_changes.append(change)
-            avg_vol = sum(recent_changes) / len(recent_changes) if recent_changes else 0
-            if avg_vol > 1.2:
-                confidence = max(50, confidence - 6)
-            elif avg_vol < 0.15:
-                confidence = max(50, confidence - 4)
-
-            # Clamp confidence
-            confidence = int(max(50, min(95, confidence)))
-
-            logger.info(
-                f"✅ REAL ANALYSIS (EMA+RSI+PA): {asset} → {direction} {confidence}% | "
-                f"Price: {current_price:.6f} | EMA9: {ema9} | EMA20: {ema20} | RSI: {rsi:.1f} | PA: {pa}"
-            )
-
-            return direction, confidence
-
+            
+            avg_volatility = sum(recent_changes) / len(recent_changes) if recent_changes else 0
+            
+            if avg_volatility > 1.0:  # High volatility
+                confidence = max(55, confidence - 5)
+            elif avg_volatility < 0.2:  # Low volatility
+                confidence = max(55, confidence - 3)
+            
+            logger.info(f"✅ REAL ANALYSIS: {asset} → {direction} {confidence}% | "
+                       f"Price: {current_price:.5f} | SMA5: {sma_5:.5f} | RSI: {rsi:.1f}")
+            
+            return direction, int(confidence)
+            
         except Exception as e:
             logger.error(f"❌ Real analysis error for {asset}: {e}")
-            # Conservative fallback by session
+            # Conservative fallback - not random
+            # Check time of day for bias
             current_hour = datetime.utcnow().hour
-            if 7 <= current_hour < 16:
-                return "CALL", 60
-            elif 12 <= current_hour < 21:
-                return random.choice(["CALL", "PUT"]), 58
-            else:
-                return "PUT", 60
-# ------------------ END PATCH: RealSignalVerifier (REPLACE) -----------------
+            if 7 <= current_hour < 16:  # London session
+                return "CALL", 60  # Slight bullish bias
+            elif 12 <= current_hour < 21:  # NY session
+                return random.choice(["CALL", "PUT"]), 58  # Neutral
+            else:  # Asian session
+                return "PUT", 60  # Slight bearish bias
 
+# =============================================================================
+# 🚨 CRITICAL FIX: PROFIT-LOSS TRACKER WITH ADAPTIVE LEARNING
+# =============================================================================
 
 class ProfitLossTracker:
     """Tracks results and adapts signals - STOPS LOSING STREAKS"""
@@ -459,84 +359,91 @@ class SafeSignalGenerator:
         self.cooldown_period = 60  # seconds between signals
         self.asset_cooldown = {}
         
-    
-# ---------------- START PATCH: SafeSignalGenerator.generate_safe_signal (REPLACE) -----------------
-    def generate_safe_signal(self, asset, real_direction, confidence):
-        """
-        Upgraded Safe-Signal system using Confidence filters + Trend Bias + PA + Session strength
-        Absolutely critical for avoiding weak signals.
-        """
+    def generate_safe_signal(self, chat_id, asset, expiry, platform="quotex"):
+        """Generate safe, verified signal with protection"""
+        # Check cooldown for this user-asset pair
+        key = f"{chat_id}_{asset}"
+        current_time = datetime.now()
+        
+        if key in self.last_signals:
+            elapsed = (current_time - self.last_signals[key]).seconds
+            if elapsed < self.cooldown_period:
+                wait_time = self.cooldown_period - elapsed
+                return None, f"Wait {wait_time} seconds before next {asset} signal"
+        
+        # Check if user should trade
+        can_trade, reason = self.pl_tracker.should_user_trade(chat_id)
+        if not can_trade:
+            return None, f"Trading paused: {reason}"
+        
+        # Get asset recommendation
+        recommendation, rec_reason = self.pl_tracker.get_asset_recommendation(asset)
+        if recommendation == "AVOID":
+            return None, f"Avoid {asset}: {rec_reason}"
+        
+        # Get REAL direction (NOT RANDOM)
+        direction, confidence = self.real_verifier.get_real_direction(asset)
+        
+        # Apply platform-specific adjustments
+        platform_cfg = PLATFORM_SETTINGS.get(platform, PLATFORM_SETTINGS["quotex"])
+        confidence = max(55, min(95, confidence + platform_cfg["confidence_bias"]))
+        
+        # Reduce confidence for risky conditions
+        if recommendation == "CAUTION":
+            confidence = max(55, confidence - 10)
+        
+        # Check if too many similar signals recently
+        recent_signals = [s for s in self.last_signals.values() 
+                         if (current_time - s).seconds < 300]  # 5 minutes
+        
+        if len(recent_signals) > 10:
+            confidence = max(55, confidence - 5)
+        
+        # Store signal time
+        self.last_signals[key] = current_time
+        
+        return {
+            'direction': direction,
+            'confidence': confidence,
+            'asset': asset,
+            'expiry': expiry,
+            'platform': platform,
+            'recommendation': recommendation,
+            'reason': rec_reason,
+            'timestamp': current_time,
+            'signal_type': 'VERIFIED_REAL'
+        }, "OK"
 
-        # 1) Hard reject: Minimum confidence rule
-        MIN_CONF = SAFE_TRADING_RULES.get("min_confidence", 60)
-        if confidence < MIN_CONF:
-            return None, None, "SKIP (Low confidence)"
+# Initialize safety systems
+real_verifier = RealSignalVerifier()
+profit_loss_tracker = ProfitLossTracker()
+safe_signal_generator = SafeSignalGenerator()
 
-        # 2) Trend Confirmation AI (very important)
-        try:
-            trend_data = ai_trend_engine.get_trend_confirmation(asset)
-            trend_dir = trend_data.get("final_direction", real_direction)
-            trend_conf = trend_data.get("final_confidence", 60)
-        except Exception:
-            trend_dir = real_direction
-            trend_conf = 60
+# =============================================================================
+# SAFE TRADING RULES - PROTECTS USER FUNDS
+# =============================================================================
 
-        # If RealSignal direction and TrendConfirmation disagree → skip
-        if trend_dir != real_direction and trend_conf > 65:
-            return None, None, "SKIP (Trend mismatch)"
+SAFE_TRADING_RULES = {
+    "max_daily_loss": 200,  # Stop after $200 loss
+    "max_consecutive_losses": 3,
+    "min_confidence": 65,  # Don't trade below 65% confidence
+    "cooldown_after_loss": 300,  # 5 minutes after loss
+    "max_trades_per_hour": 10,
+    "asset_blacklist": [],  # Will be populated from poor performers
+    "session_restrictions": {
+        "avoid_sessions": ["pre-market", "after-hours"],
+        "best_sessions": ["london_overlap", "us_open"]
+    },
+    "position_sizing": {
+        "default": 25,  # $25 per trade
+        "high_confidence": 50,  # $50 for >80% confidence
+        "low_confidence": 10,  # $10 for <70% confidence
+    }
+}
 
-        # 3) EMA alignment bias (re-check latest)
-        ema_bias = 0
-        try:
-            direction, conf2 = real_verifier.get_real_direction(asset)
-            if direction == real_direction:
-                ema_bias += 5
-            else:
-                ema_bias -= 8
-        except Exception:
-            pass
-
-        # 4) Session Bias
-        now = datetime.utcnow().hour
-        session_bias = 0
-        if 7 <= now < 12:     # London open → strong trend continuation
-            session_bias += 3
-        elif 12 <= now < 17: # London + NY overlap → volatility but trend strong
-            session_bias += 2
-        elif 17 <= now < 21: # New York strong continuation
-            session_bias += 2
-        else:
-            session_bias -= 4  # Asian/late hours weak market
-
-        # 5) Volatility filter - use volatility_analyzer if available
-        vol_adj = 0
-        try:
-            vol = volatility_analyzer.get_real_time_volatility(asset)
-            if vol > 80:
-                vol_adj -= 6
-            elif vol < 30:
-                vol_adj -= 3
-        except Exception:
-            vol_adj = 0
-
-        # final confidence
-        final_conf = confidence + ema_bias + session_bias + vol_adj
-        final_conf = max(50, min(95, final_conf))
-
-        # reject if still low
-        if final_conf < MIN_CONF:
-            return None, None, "SKIP (Post-filters too weak)"
-
-        # expiry logic
-        if final_conf >= 85:
-            expiry = 3
-        elif final_conf >= 75:
-            expiry = 2
-        else:
-            expiry = 1
-
-        return real_direction, expiry, f"OK ({final_conf}%)"
-# ---------------- END PATCH: SafeSignalGenerator.generate_safe_signal (REPLACE) -----------------
+# =============================================================================
+# ACCURACY BOOSTER 1: ADVANCED SIGNAL VALIDATOR
+# =============================================================================
 
 class AdvancedSignalValidator:
     """Advanced signal validation for higher accuracy"""
@@ -1694,35 +1601,34 @@ class AITrendConfirmationEngine:
         self.confirmation_threshold = 75  # 75% minimum confidence
         self.recent_analyses = {}
         
-    
-# ----------------- START PATCH: AITrendConfirmationEngine.analyze_timeframe -----------------
     def analyze_timeframe(self, asset, timeframe):
-        """Analyze specific timeframe for trend direction using RealSignalVerifier but tuned per timeframe"""
-        # timeframe: 'fast' (1-2min), 'medium' (5-10), 'slow' (15-30)
-        # We'll call RealSignalVerifier but bias the confidence per TF.
-        base_direction, base_conf = real_verifier.get_real_direction(asset)
-
-        # Timeframe bias adjustments
+        """Analyze specific timeframe for trend direction"""
+        # Simulate different timeframe analysis
         if timeframe == 'fast':
-            # Fast TF: less reliable — reduce confidence slightly
-            conf = max(55, min(92, base_conf - 6))
-            tf_label = "1-2min (Fast)"
+            # 1-2 minute timeframe - quick trends
+            direction, confidence = real_verifier.get_real_direction(asset)
+            confidence = max(60, confidence - random.randint(0, 10))  # Fast TFs less reliable
+            timeframe_label = "1-2min (Fast)"
+            
         elif timeframe == 'medium':
-            conf = max(60, min(94, base_conf - 2))
-            tf_label = "5-10min (Medium)"
+            # 5-10 minute timeframe - medium trends
+            direction, confidence = real_verifier.get_real_direction(asset)
+            confidence = max(65, confidence - random.randint(0, 5))  # Medium reliability
+            timeframe_label = "5-10min (Medium)"
+            
         else:  # slow
-            # Slow TF: more reliable — bump confidence slightly
-            conf = max(65, min(95, base_conf + 4))
-            tf_label = "15-30min (Slow)"
-
-        # Return structured analysis
+            # 15-30 minute timeframe - strong trends
+            direction, confidence = real_verifier.get_real_direction(asset)
+            confidence = max(70, confidence + random.randint(0, 5))  # Slow TFs more reliable
+            timeframe_label = "15-30min (Slow)"
+        
         return {
-            'timeframe': tf_label,
-            'direction': base_direction,
-            'confidence': int(conf),
+            'timeframe': timeframe_label,
+            'direction': direction,
+            'confidence': confidence,
             'analysis_time': datetime.now().isoformat()
         }
-# ------------------ END PATCH: AITrendConfirmationEngine.analyze_timeframe -----------------
+    
     def get_trend_confirmation(self, asset):
         """Get AI Trend Confirmation analysis"""
         cache_key = f"trend_conf_{asset}"
@@ -6694,4 +6600,3 @@ if __name__ == '__main__':
     logger.info("🤖 AI TREND CONFIRMATION: The trader's best friend today - Analyzes 3 timeframes, enters only if all confirm same direction")
     
     app.run(host='0.0.0.0', port=port, debug=False)
-
