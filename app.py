@@ -6143,7 +6143,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
         self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
     def _show_admin_settings(self, chat_id, message_id):
-    """Show admin settings"""
+    """show admin settings"""
     keyboard = {
         "inline_keyboard": [
             [{"text": "📊 ENHANCED STATS", "callback_data": "admin_stats"}],
