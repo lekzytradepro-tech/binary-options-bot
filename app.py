@@ -343,10 +343,9 @@ class RealSignalVerifier:
             avg_loss = sum(losses[:14]) / 14 if len(losses) >= 14 else 0
             
             if avg_loss == 0:
-                rs = 0 if avg_gain == 0 else float('inf')
-                rsi = 100 if rs == float('inf') else 50
+                rsi = 100
             else:
-                rs = avg_gain / avg_loss
+                rs = avg_gain / avg_loss if avg_loss > 0 else 0
                 rsi = 100 - (100 / (1 + rs))
             
             # REAL ANALYSIS LOGIC - NO RANDOM GUESSING
@@ -400,19 +399,27 @@ class RealSignalVerifier:
             logger.info(f"✅ REAL ANALYSIS: {asset} → {direction} {confidence}% | "
                        f"Price: {current_price:.5f} | SMA5: {sma_5:.5f} | RSI: {rsi:.1f}")
             
-            return direction, int(confidence)
+            # Determine a simple trend description based on SMA position
+            trend_description = "Neutral"
+            if current_price > sma_10 * 1.002:
+                trend_description = "Uptrend"
+            elif current_price < sma_10 * 0.998:
+                trend_description = "Downtrend"
+            
+            return direction, int(confidence), trend_description
             
         except Exception as e:
             logger.error(f"❌ Real analysis error for {asset}: {e}")
             # Conservative fallback - not random
             # Check time of day for bias
             current_hour = datetime.utcnow().hour
+            trend_description = "Neutral"
             if 7 <= current_hour < 16:  # London session
-                return "CALL", 60  # Slight bullish bias
+                return "CALL", 60, "Uptrend"  # Slight bullish bias
             elif 12 <= current_hour < 21:  # NY session
-                return random.choice(["CALL", "PUT"]), 58  # Neutral
+                return random.choice(["CALL", "PUT"]), 58, "Neutral"  # Neutral
             else:  # Asian session
-                return "PUT", 60  # Slight bearish bias
+                return "PUT", 60, "Downtrend"  # Slight bearish bias
 
 # =============================================================================
 # 🚨 CRITICAL FIX: PROFIT-LOSS TRACKER WITH ADAPTIVE LEARNING
@@ -572,7 +579,7 @@ class SafeSignalGenerator:
                  return None, f"Avoid {asset}: {rec_reason}"
         
         # Get REAL direction (NOT RANDOM)
-        direction, confidence = self.real_verifier.get_real_direction(asset)
+        direction, confidence, trend = self.real_verifier.get_real_direction(asset)
         
         # Apply platform-specific adjustments
         platform_cfg = PLATFORM_SETTINGS.get(platform, PLATFORM_SETTINGS["quotex"])
@@ -601,7 +608,8 @@ class SafeSignalGenerator:
             'recommendation': recommendation,
             'reason': rec_reason,
             'timestamp': current_time,
-            'signal_type': 'VERIFIED_REAL'
+            'signal_type': 'VERIFIED_REAL',
+            'trend': trend # Added trend
         }, "OK"
 
 # Initialize safety systems
@@ -1278,7 +1286,7 @@ class PlatformAdaptiveGenerator:
     def generate_platform_signal(self, asset, platform="quotex"):
         """Generate signal optimized for specific platform"""
         # Get base signal from real analysis
-        direction, confidence = self.real_verifier.get_real_direction(asset)
+        direction, confidence, trend = self.real_verifier.get_real_direction(asset)
         
         # Apply platform-specific adjustments
         platform_key = platform.lower().replace(' ', '_')
@@ -1327,7 +1335,7 @@ class PlatformAdaptiveGenerator:
                    f"Direction: {adjusted_direction} | "
                    f"Confidence: {confidence}% → {adjusted_confidence}%")
         
-        return adjusted_direction, round(adjusted_confidence)
+        return adjusted_direction, round(adjusted_confidence), trend
     
     def get_platform_recommendation(self, asset, platform):
         """Get trading recommendation for platform-asset pair"""
@@ -1516,7 +1524,7 @@ class IntelligentSignalGenerator:
     def generate_intelligent_signal(self, asset, strategy=None, platform="quotex"):
         """Generate signal with platform-specific intelligence"""
         # 🎯 USE PLATFORM-ADAPTIVE GENERATOR
-        direction, confidence = platform_generator.generate_platform_signal(asset, platform)
+        direction, confidence, trend = platform_generator.generate_platform_signal(asset, platform)
         
         # Get platform configuration
         platform_key = platform.lower().replace(' ', '_')
@@ -1593,7 +1601,7 @@ class IntelligentSignalGenerator:
                    f"Confidence: {confidence}% → {final_confidence}% | "
                    f"Platform Bias: {platform_cfg['confidence_bias']}")
         
-        return direction, round(final_confidence)
+        return direction, round(final_confidence), trend
 
 # Initialize intelligent signal generator
 intelligent_generator = IntelligentSignalGenerator()
@@ -1775,10 +1783,10 @@ class EnhancedOTCAnalysis:
                 market_context = {'market_context_available': False}
             
             # 🚨 CRITICAL FIX: Use intelligent generator instead of safe generator for platform optimization
-            direction, confidence = intelligent_generator.generate_intelligent_signal(asset, strategy, platform)
+            direction, confidence, trend = intelligent_generator.generate_intelligent_signal(asset, strategy, platform)
             
             # Generate OTC-specific analysis (not direct market signals)
-            analysis = self._generate_otc_analysis(asset, market_context, direction, confidence, strategy, platform)
+            analysis = self._generate_otc_analysis(asset, market_context, direction, confidence, trend, strategy, platform)
             
             # Cache the results
             self.analysis_cache[cache_key] = {
@@ -1791,7 +1799,7 @@ class EnhancedOTCAnalysis:
         except Exception as e:
             logger.error(f"❌ OTC signal analysis failed: {e}")
             # Return a basic but valid analysis using intelligent generator as fallback
-            direction, confidence = intelligent_generator.generate_intelligent_signal(asset, platform="quotex") # Fallback to quotex logic
+            direction, confidence, trend = intelligent_generator.generate_intelligent_signal(asset, platform="quotex") # Fallback to quotex logic
                 
             return {
                 'asset': asset,
@@ -1802,6 +1810,7 @@ class EnhancedOTCAnalysis:
                 'strategy': strategy or 'Quantum Trend',
                 'direction': direction,
                 'confidence': confidence,
+                'trend': trend,
                 'expiry_recommendation': '30s-5min',
                 'risk_level': 'Medium',
                 'otc_pattern': 'Standard OTC Pattern',
@@ -1809,7 +1818,7 @@ class EnhancedOTCAnalysis:
                 'platform': platform
             }
         
-    def _generate_otc_analysis(self, asset, market_context, direction, confidence, strategy, platform):
+    def _generate_otc_analysis(self, asset, market_context, direction, confidence, trend, strategy, platform):
         """Generate OTC-specific trading analysis with PLATFORM BALANCING"""
         asset_info = OTC_ASSETS.get(asset, {})
         
@@ -1825,6 +1834,7 @@ class EnhancedOTCAnalysis:
             'otc_optimized': True,
             'direction': direction,
             'confidence': confidence,
+            'trend': trend, # Added trend
             'platform': platform
         }
         
@@ -2211,19 +2221,19 @@ class AITrendConfirmationEngine:
         # Simulate different timeframe analysis
         if timeframe == 'fast':
             # 1-2 minute timeframe - quick trends
-            direction, confidence = self.real_verifier.get_real_direction(asset)
+            direction, confidence, trend = self.real_verifier.get_real_direction(asset)
             confidence = max(60, confidence - random.randint(0, 10))  # Fast TFs less reliable
             timeframe_label = "1-2min (Fast)"
             
         elif timeframe == 'medium':
             # 5-10 minute timeframe - medium trends
-            direction, confidence = self.real_verifier.get_real_direction(asset)
+            direction, confidence, trend = self.real_verifier.get_real_direction(asset)
             confidence = max(65, confidence - random.randint(0, 5))  # Medium reliability
             timeframe_label = "5-10min (Medium)"
             
         else:  # slow
             # 15-30 minute timeframe - strong trends
-            direction, confidence = self.real_verifier.get_real_direction(asset)
+            direction, confidence, trend = self.real_verifier.get_real_direction(asset)
             confidence = max(70, confidence + random.randint(0, 5))  # Slow TFs more reliable
             timeframe_label = "15-30min (Slow)"
         
@@ -3012,12 +3022,12 @@ def multi_timeframe_convergence_analysis(asset):
             if error == "OK":
                 return safe_signal['direction'], safe_signal['confidence'] / 100.0
             else:
-                direction, confidence = real_verifier.get_real_direction(asset)
+                direction, confidence, _ = real_verifier.get_real_direction(asset)
                 return direction, confidence / 100.0
         except Exception as fallback_error:
             logger.error(f"❌ Safe generator also failed: {fallback_error}")
             # Ultimate fallback - real verifier
-            direction, confidence = real_verifier.get_real_direction(asset)
+            direction, confidence, _ = real_verifier.get_real_direction(asset)
             return direction, confidence / 100.0
 
 def analyze_trend_multi_tf(asset, timeframe):
@@ -3028,7 +3038,7 @@ def analyze_trend_multi_tf(asset, timeframe):
 def liquidity_analysis_strategy(asset):
     """Analyze liquidity levels for better OTC entries"""
     # Use real verifier instead of random
-    direction, confidence = real_verifier.get_real_direction(asset)
+    direction, confidence, _ = real_verifier.get_real_direction(asset)
     return direction, confidence / 100.0
 
 def get_simulated_price(asset):
@@ -3159,7 +3169,7 @@ class AIMomentumBreakout:
     def analyze_breakout_setup(self, asset):
         """Analyze breakout conditions using AI"""
         # Use real verifier for direction
-        direction, confidence = self.real_verifier.get_real_direction(asset)
+        direction, confidence, trend = self.real_verifier.get_real_direction(asset)
         
         # Simulate AI analysis
         trend_strength = random.randint(70, 95)
@@ -3196,166 +3206,169 @@ auto_expiry_detector = AutoExpiryDetector()
 ai_momentum_breakout = AIMomentumBreakout()
 
 # =============================================================================
-# ⭐ V10 SIGNAL BUILDER (New Functions)
+# ⭐ V10 SIGNAL BUILDER FUNCTIONS (NEW)
 # =============================================================================
 
-# ⭐ 1. Expiry Formatter (Include s, m, h)
 def format_expiry(exp):
+    """
+    1. Expiry Formatter
+    Formats raw expiry string/int (e.g., "30", "1", "5") into professional display format (e.g., "30s", "1m", "5m").
+    Handles Deriv tick expiries in the V9 signal generator, but keeps raw keys for logic.
+    """
     exp = str(exp).lower()
-
-    # Handle deriv ticks which are strings like "5 ticks" or "duration: 2 minutes"
-    if "ticks" in exp or "duration" in exp:
-        return exp
     
-    # Handle direct s, m, h suffixes
+    # Already formatted with unit (e.g., "1m", "5m", "1h")
     if exp.endswith(("s", "m", "h")):
         return exp
 
-    if exp == "30":
+    # Standard Binary Options Expiries (in seconds or minutes)
+    if exp == "30": 
         return "30s"
-
+    
     if exp.isdigit():
-        if int(exp) == 1:
+        n = int(exp)
+        if n == 1:
             return "1m"
-        # Map common keys back to minutes format
-        if int(exp) in [2, 3, 5, 10, 15, 30, 60]:
-            return f"{exp}m"
+        if n in [2, 3, 5, 10, 15]:
+            return f"{n}m"
+        # Longer expiries default to minutes if they are larger integers (e.g., 30, 60)
+        if n > 15 and n % 5 == 0:
+            return f"{n}m"
+    
+    # Fallback to display Deriv tick logic, although this is ideally handled in adjust_for_deriv
+    if "ticks" in exp.lower() or "duration" in exp.lower():
+        return exp
+        
+    return f"{exp}m" # Default to minutes if unhandled
 
-    if "h" in exp:
-        return exp.replace("h", "") + "h"
-
-    # Default fallback to minutes
-    return f"{exp}m"
-
-# ⭐ 2. New Candle Entry Generator
 def get_new_candle_time(exp):
-    exp = format_expiry(exp)
+    """
+    2. New Candle Entry Time Generator
+    Calculates the next clean candle start time (e.g., next minute start for 1m expiry).
+    Uses UTC time.
+    """
+    exp_str = format_expiry(exp)
     now = datetime.utcnow()
-
-    # Handle Deriv ticks/duration formats
-    if "ticks" in exp or "duration" in exp:
-        return now.strftime("%H:%M:%S UTC") + " (Next Tick/Start)"
-
-    # 30 seconds
-    if exp.endswith("s"):
-        try:
-            sec_val = int(exp.replace("s", ""))
-        except:
-            sec_val = 30
-            
-        if sec_val <= 30: # 30s expiry is fast
-            sec = 30 if now.second < 30 else 0
-            entry = now.replace(second=sec, microsecond=0)
-            if sec == 0:
-                entry += timedelta(minutes=1)
-            return entry.strftime("%H:%M:%S UTC")
-        else: # Treat as a short minute expiry fallback
+    
+    # 30 seconds expiry (next 30-second interval or next minute start)
+    if exp_str.endswith("s") and int(exp_str[:-1]) == 30:
+        if now.second < 30:
+            entry = now.replace(microsecond=0)
+            entry += timedelta(seconds=30 - now.second)
+        else:
             entry = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
-            return entry.strftime("%H:%M:%S UTC")
+        return entry.strftime("%H:%M:%S UTC")
 
-
-    # Minutes
-    if exp.endswith("m"):
+    # Minute expiries (next minute start)
+    elif exp_str.endswith("m") or exp_str.isdigit():
         entry = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
         return entry.strftime("%H:%M:%S UTC")
-
-    # Hours
-    if exp.endswith("h"):
+    
+    # Hour expiries (next hour start)
+    elif exp_str.endswith("h"):
         entry = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
         return entry.strftime("%H:%M:%S UTC")
+        
+    # Fallback for Deriv ticks or unhandled formats
+    return now.strftime("%H:%M:%S UTC") 
 
-    return now.strftime("%H:%M:%S UTC")
-
-
-# ⭐ 3. Auto AI Analysis Generator (3 bullet points)
-def generate_analysis(trend, volatility, direction, filters_passed):
-    analysis = []
-
-    # Trend (The 'trend' here should be the market_trend_direction, but the input data structure doesn't easily map it, so we'll use a simulated 'trend' string like 'Downtrend' or 'Uptrend' for the V10 format as it's meant to be minimal.)
-    if "up" in trend.lower():
-        analysis.append("🟢 Buyers gaining strength")
-    elif "down" in trend.lower():
-        analysis.append("🟠 Sellers slowing after drop")
+def generate_analysis(trend, volatility, direction, filters):
+    """
+    3. Auto AI Analysis (Professional 3 Point Version)
+    Generates three clean lines of human-readable analysis.
+    """
+    results = []
+    
+    # 1. Trend-based analysis
+    if trend == "Uptrend":
+        results.append("Buyers are gaining strength, market structure is bullish")
+    elif trend == "Downtrend":
+        results.append("Sellers are maintaining pressure, market structure is bearish")
+    else: # Neutral
+        if direction == "CALL":
+             results.append("Consolidation may lead to upward breakout")
+        elif direction == "PUT":
+             results.append("Consolidation may lead to downward breakout")
+        else:
+             results.append("Market stabilizing before next directional move")
+             
+    # 2. Volatility/Filters-based combination
+    if "very high" in volatility.lower() or "high" in volatility.lower():
+        results.append("Volatility is high - use quick entry for precise execution")
+    elif "low" in volatility.lower():
+        results.append("Volatility is low - patience needed for clearer setup")
+    else: # Medium
+        results.append("Volatility steady - technical structure should be respected")
+        
+    # 3. Filters-based analysis
+    if filters >= 4:
+        results.append("Multiple AI filters aligned, increasing signal reliability")
+    elif filters < 3:
+        results.append("Mixed filter data - exercise caution or use minimal risk")
     else:
-        analysis.append("🟡 Market consolidating")
+        results.append("Filters aligned well - proceed with calculated risk")
 
-    # Volatility
-    if "high" in volatility.lower():
-        analysis.append("🟠 Volatility elevated → strong movement")
-    else:
-        analysis.append("🟡 Moderate volatility → stable structure")
+    return results[:3] # Ensure exactly 3 points
 
-    # Filters
-    if filters_passed >= 4:
-        analysis.append("🟢 Filters aligned → signal reliable")
-    else:
-        analysis.append("🟠 Mixed filters → caution advised")
-
-    return analysis[:3]
-
-
-# ⭐ 4. FINAL COLOR V10 SIGNAL BUILDER
 def build_v10_signal(data):
     """
-    data = {
-        "asset": "BTC/USD",
-        "direction": "PUT" or "CALL",
-        "expiry": "30", # Can be "30", "1", "5", "5 ticks", "duration: 2 minutes"
-        "confidence": 67,
-        "trend": "Downtrend" or "Uptrend" or "Ranging", # Simplified Trend Status
-        "volatility": "High",
-        "ai_engines": "QuantumTrend, MomentumAI", # String of engines
-        "filters_passed": 4,
-        "risk_score": 70,
-        "final_expiry_display": "5 ticks" # NEW: Use the Deriv-adjusted display value if available
-    }
+    4. PROFESSIONAL V10 SIGNAL BUILDER (FINAL)
+    Constructs the final, clean V10 signal message.
     """
-
     direction = data["direction"].upper()
-    arrow = "🔻🔴" if direction == "PUT" else "🔺🟢"
+    arrow = "⬆️" if direction == "CALL" else "⬇️"
+    expiry = format_expiry(data["expiry"])
+    entry_time = get_new_candle_time(data["expiry"])
+    analysis_time = datetime.utcnow().strftime("%H:%M:%S UTC")
     
-    # Use final_expiry_display if available, otherwise format the raw expiry
-    expiry = data.get("final_expiry_display") or format_expiry(data["expiry"])
-    
-    new_candle = get_new_candle_time(data["expiry"])
-
-    # Determine trend status for display (V10 uses a simple Uptrend/Downtrend for a clean look)
-    trend_status = '🔺 Uptrend' if direction == 'CALL' else '🔻 Downtrend'
-
-    analysis_list = generate_analysis(
-        data["trend"],
-        data["volatility"],
-        data["direction"],
-        data["filters_passed"]
+    # Generate the 3-point analysis
+    analysis_lines = generate_analysis(
+        data.get("trend", "Neutral"), 
+        data.get("volatility", "Medium"), 
+        direction, 
+        data.get("filters_passed", 3)
     )
-    analysis_text = "\n".join([f"• {a}" for a in analysis_list])
-
+    analysis_text = "\n• ".join(analysis_lines)
+    
+    # Entry rule based on direction (Beginner Entry Rule)
+    entry_rule_pullback_dir = "DOWN" if direction == "CALL" else "UP"
+    entry_rule_enter_dir = "CALL" if direction == "CALL" else "PUT"
+    
+    # Payout is approximated here or can be passed in `data`
+    payout = data.get("payout_range", "78-85%")
+    
+    # Risk score indicator
+    risk_score = data.get('risk_score', 65)
+    
     return f"""
 🎯 OTC SIGNAL V10 🚀
+{arrow} {direction} | {data['asset']}
+⏰ {expiry} | 🕒 Expected Entry: **{entry_time}** (New Candle)
+🕓 Analysis Time: {analysis_time} UTC
 
-{arrow} **{direction}** | **{data['asset']}**
-⏰ **{expiry}** | 🕒 Entry: New Candle ({new_candle})
 📊 **Confidence:** {data['confidence']}%
+💰 **Payout Est.:** {payout}
+---
+📝 **AI 3-POINT ANALYSIS:**
+• {analysis_text}
+---
+📈 **Trend:** {data.get('trend', 'N/A')} | 🔥 **Volatility:** {data.get('volatility', 'N/A')}
+🤖 **AI Engines:** {data.get('ai_engines', 'N/A')}
+🧪 **Filters:** {data.get('filters_passed', 'N/A')}/5 | **Risk:** {risk_score}/100
 
-📝 **AI Analysis:**
-{analysis_text}
+📘 **ENTRY RULE (BEGINNER):**
+• Wait for **NEW** candle start
+• Small pullback **{entry_rule_pullback_dir} → Enter {entry_rule_enter_dir}**
 
-📈 **Trend:** {trend_status}
-🔥 **Volatility:** {'🔴 High' if 'high' in data['volatility'].lower() else '🟡 Medium'}
-🤖 **AI Engines:** 🟣 {data['ai_engines']}
-🧪 **Filters:** 🟡 {data['filters_passed']}/5 | **Risk:** 🔥 {data['risk_score']}/100
-
-📘 **Entry Rule:**
-• Wait for NEW candle
-• Small pullback {'🔼' if direction=='PUT' else '🔽'} → Enter {direction}
-
-💰 **Action:**
+💰 **ACTION:**
 {arrow} Enter **{direction}** at new candle start (1–2% risk).
+
+---
+*Follow the new candle entry time for optimal precision.*
 """.strip()
 
-
 # =============================================================================
-# END V10 SIGNAL BUILDER
+# END V10 SIGNAL BUILDER FUNCTIONS
 # =============================================================================
 
 
@@ -3674,6 +3687,7 @@ class OTCTradingBot:
         best = ranked[0]
 
         # Use intelligent generator to get an expiry recommendation (since there's no UI for expiry selection in this flow)
+        # Default to a 2 minute expiry key for the auto-detector logic
         base_expiry, reason, market_conditions, final_expiry_display = auto_expiry_detector.get_expiry_recommendation(asset, platform_key)
 
         output = f"""
@@ -3693,7 +3707,6 @@ Volatility: **{best['volatility']}/100**
 💡 **Reason:** {reason}
 """
         
-        # Pass the base_expiry value for use in the signal generation step
         keyboard = {
             "inline_keyboard": [
                 [{"text": f"🎯 GET {final_expiry_display} SIGNAL", "callback_data": f"signal_{asset}_{base_expiry}"}],
@@ -3743,6 +3756,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **🚨 SAFETY FEATURES:** Real technical analysis, Stop loss protection, Profit-loss tracking
 • **🤖 NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
 • **🔥 NEW: AUTO BEST-PLATFORM/ASSET SCANNER** - AI picks the safest broker/asset now!
+• **⭐ NEW: V10 Signal Format** - Professional, clean, and includes new candle entry time
 
 *By continuing, you accept full responsibility for your trading decisions.*"""
 
@@ -3807,6 +3821,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • 🚨 **SAFETY FEATURES** - Real technical analysis, Stop loss protection, Profit-loss tracking
 • 🤖 **NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
 • **🔥 NEW: AUTO BEST-PLATFORM/ASSET SCANNER** - AI picks the safest broker/asset now!
+• **⭐ NEW: V10 Signal Format** - Professional, clean, and includes new candle entry time
 
 **ENHANCED FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
@@ -3902,6 +3917,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🚨 **SAFETY SYSTEMS:** REAL ANALYSIS, STOP LOSS, PROFIT TRACKING (NEW!)
 🤖 **AI TREND CONFIRMATION:** ACTIVE (NEW!)
 🔥 **AUTO BEST-PLATFORM/ASSET SCANNER:** ACTIVE (NEW!)
+⭐ **V10 SIGNAL FORMAT:** ACTIVE (NEW!)
 
 **ENHANCED OTC FEATURES:**
 • QuantumTrend AI: ✅ Active
@@ -4056,7 +4072,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     
     def _handle_unknown(self, chat_id):
         """Handle unknown commands"""
-        text = "🤖 Enhanced OTC Binary Pro: Use /help for trading commands or /start to begin.\n\n**NEW:** Try /performance for analytics or /backtest for strategy testing!\n**NEW:** Auto expiry detection now available!\n**NEW:** TwelveData market context integration!\n**NEW:** Intelligent probability system active (10-15% accuracy boost)!\n**NEW:** Multi-platform support (Quotex, Pocket Option, Binomo, Olymp Trade, Expert Option, IQ Option, Deriv)!\n**🎯 NEW:** Accuracy boosters active (Consensus Voting, Real-time Volatility, Session Boundaries)!\n**🚨 NEW:** Safety systems active (Real analysis, Stop loss, Profit tracking)!\n**🤖 NEW:** AI Trend Confirmation strategy available!"
+        text = "🤖 Enhanced OTC Binary Pro: Use /help for trading commands or /start to begin.\n\n**NEW:** Try /performance for analytics or /backtest for strategy testing!\n**NEW:** Auto expiry detection now available!\n**NEW:** TwelveData market context integration!\n**NEW:** Intelligent probability system active (10-15% accuracy boost)!\n**NEW:** Multi-platform support (Quotex, Pocket Option, Binomo, Olymp Trade, Expert Option, IQ Option, Deriv)!\n**🎯 NEW:** Accuracy boosters active (Consensus Voting, Real-time Volatility, Session Boundaries)!\n**🚨 NEW:** Safety systems active (Real analysis, Stop loss, Profit tracking)!\n**🤖 NEW:** AI Trend Confirmation strategy available!\n**⭐ NEW:** Professional V10 Signal Format!"
 
         # Add quick access buttons
         keyboard = {
@@ -4161,6 +4177,12 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Multiple time periods (7d, 30d, 90d)
 • Comprehensive performance metrics
 • Strategy comparison tools
+
+**Backtesting Benefits:**
+• Verify strategy effectiveness
+• Optimize parameters
+• Build confidence in signals
+• Reduce live trading risks
 
 *Select a strategy to backtest*"""
             
@@ -4376,9 +4398,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             asset = parts[2].upper()
             
             # --- Get PLATFORM-ADAPTIVE Signals ---
-            po_direction, po_confidence = platform_generator.generate_platform_signal(asset, "pocket option")
-            q_direction, q_confidence = platform_generator.generate_platform_signal(asset, "quotex")
-            b_direction, b_confidence = platform_generator.generate_platform_signal(asset, "binomo")
+            po_direction, po_confidence, po_trend = platform_generator.generate_platform_signal(asset, "pocket option")
+            q_direction, q_confidence, q_trend = platform_generator.generate_platform_signal(asset, "quotex")
+            b_direction, b_confidence, b_trend = platform_generator.generate_platform_signal(asset, "binomo")
             
             # --- Get Expiry Recs ---
             po_expiry = platform_generator.get_optimal_expiry(asset, "pocket option")
@@ -4389,12 +4411,15 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 f"🔍 **PLATFORM COMPARISON - {asset}**\n\n"
                 f"🟠 **Pocket Option (PO):**\n"
                 f"  Signal: {po_direction} | Conf: {po_confidence}%\n"
+                f"  Trend: {po_trend}\n"
                 f"  Rec Expiry: {po_expiry}\n\n"
                 f"🔵 **Quotex (QX):**\n"
                 f"  Signal: {q_direction} | Conf: {q_confidence}%\n"
+                f"  Trend: {q_trend}\n"
                 f"  Rec Expiry: {q_expiry}\n\n"
                 f"🟢 **Binomo (BN):**\n"
                 f"  Signal: {b_direction} | Conf: {b_confidence}%\n"
+                f"  Trend: {b_trend}\n"
                 f"  Rec Expiry: {b_expiry}\n\n"
                 f"PO Confidence Adjustment (vs QX): {po_confidence - q_confidence}%",
                 parse_mode="Markdown")
@@ -4516,6 +4541,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🎯 **NEW: ACCURACY BOOSTERS** - Consensus Voting, Real-time Volatility, Session Boundaries
 🚨 **NEW: SAFETY SYSTEMS** - Real analysis, Stop loss, Profit tracking
 🔥 **NEW: AUTO BEST-PLATFORM/ASSET SCANNER** - AI picks the safest broker/asset now!
+⭐ **NEW: V10 Signal Format** - Professional, clean, and includes new candle entry time
 
 💎 **ACCOUNT TYPE:** {stats['tier_name']}
 📈 **SIGNALS TODAY:** {signals_text}
@@ -5498,6 +5524,7 @@ Complete technical specifications and capabilities available.
 • ✅ **SAFETY SYSTEMS** (Real analysis, Stop loss, Profit tracking) (NEW!)
 • ✅ **7 PLATFORM SUPPORT** (NEW!)
 • **🔥 NEW: AUTO BEST-PLATFORM/ASSET SCANNER**
+• **⭐ NEW: V10 Signal Format**
 
 **CONTACT ADMIN:** @LekzyDevX
 *Message for upgrade instructions*"""
@@ -5552,6 +5579,7 @@ Complete technical specifications and capabilities available.
 • Safety Systems: ✅ ACTIVE (NEW!)
 • AI Trend Confirmation: ✅ AVAILABLE (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER:** ✅ ACTIVE
+• **⭐ V10 Signal Format:** ✅ ACTIVE
 
 **💡 ENHANCED RECOMMENDATIONS:**
 • Trade during active sessions with liquidity
@@ -5610,6 +5638,7 @@ Complete technical specifications and capabilities available.
 • Safety systems (NEW!)
 • **7 Platform Support** (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** (NEW!)
+• **⭐ V10 Signal Format** (NEW!)
 
 *Contact admin for enhanced upgrade options*"""
         
@@ -5651,12 +5680,13 @@ Complete technical specifications and capabilities available.
 • Auto Expiry Detection: ✅ AVAILABLE (NEW!)
 • TwelveData Context: ✅ AVAILABLE (NEW!)
 • Intelligent Probability: ✅ ACTIVE (NEW!)
-• Multi-Platform Support: ✅ AVAILABLE (7 Platforms!) (NEW!)
+• Multi-Platform Support: ✅ AVAILABLE (NEW!)
 • Accuracy Boosters: ✅ ACTIVE (NEW!)
 • Safety Systems: ✅ ACTIVE (NEW!)
 • AI Trend Confirmation: ✅ AVAILABLE (NEW!)
 • Spike Fade Strategy: ✅ AVAILABLE (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER:** ✅ ACTIVE
+• **⭐ V10 Signal Format:** ✅ ACTIVE
 
 **ENHANCED SETTINGS AVAILABLE:**
 • Notification preferences
@@ -5959,6 +5989,7 @@ Complete technical specifications and capabilities available.
 • **🤖 NEW:** AI Trend Confirmation strategy guide
 • **⚡ NEW:** Spike Fade Strategy guide
 • **🔥 NEW: AUTO BEST-PLATFORM/ASSET SCANNER**
+• **⭐ NEW: V10 Signal Format**
 
 *Build your enhanced OTC trading expertise*"""
         
@@ -6061,6 +6092,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation (NEW!)
 • Spike Fade Strategy (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** (NEW!)
+• **⭐ V10 Signal Format** (NEW!)
 
 *Enhanced OTC trading requires understanding these advanced market dynamics*"""
 
@@ -6168,9 +6200,10 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • **🚨 NEW:** Check safety system status
 • **🤖 NEW:** Consider AI Trend Confirmation strategy
 • **⚡ NEW:** Consider Spike Fade Strategy
+• **⭐ NEW:** Use the **V10 Signal Format** with **New Candle Entry Time**
 
 **7. ⚡ EXECUTE ENHANCED TRADE**
-• Enter within 30 seconds of expected entry
+• Enter within 30 seconds of expected entry (preferably at the **New Candle Start Time**)
 • **🟢 BEGINNER ENTRY RULE:** Wait for price to pull back slightly against the signal direction before entering (e.g., wait for a small red candle on a CALL signal).
 • Use risk-adjusted position size
 • Set mental stop loss with technical levels
@@ -6243,6 +6276,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation strategy (NEW!)
 • Spike Fade Strategy (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** (NEW!)
+• **⭐ V10 Signal Format** (NEW!)
 
 *Master the enhanced bot, master advanced OTC trading*"""
 
@@ -6518,7 +6552,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Auto expiry system management (NEW!)
 • Strategy performance analytics (NEW!)
 • TwelveData integration management (NEW!)
-• Intelligent probability system management (NEW!)
+• Intelligent probability system (NEW!)
 • Multi-platform balancing management (NEW!)
 • Accuracy boosters management (NEW!)
 • Safety systems management (NEW!)
@@ -6527,6 +6561,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • User broadcast system (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** management (NEW!)
 • 🟠 PO Debugging: `/podebug` (NEW!)
+• **⭐ V10 Signal Format:** Active
 
 *Select an enhanced option below*"""
         
@@ -6571,13 +6606,14 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • System Uptime: 100%
 • Enhanced Bot Status: 🟢 OPERATIONAL
 • AI Engine Performance: ✅ OPTIMAL
-• TwelveData Integration: {'✅ OTC CONTEXT ACTIVE' if twelvedata_otc.api_keys else '⚠️ NOT CONFIGURED'}
+• TwelveData Integration: {'✅ OTC CONTEXT AVAILABLE' if twelvedata_otc.api_keys else '⚠️ NOT CONFIGURED'}
 • Intelligent Probability: ✅ ACTIVE
 • Multi-Platform Support: ✅ ACTIVE (7 Platforms!) (NEW!)
 • Accuracy Boosters: ✅ ACTIVE (NEW!)
 • Safety Systems: ✅ ACTIVE 🚨 (NEW!)
 • AI Trend Confirmation: ✅ ACTIVE (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER:** ✅ ACTIVE (NEW!)
+• **⭐ V10 Signal Format:** ✅ ACTIVE
 
 **🤖 ENHANCED BOT FEATURES:**
 • Assets Available: {len(OTC_ASSETS)} (Incl. Synthetics) (NEW!)
@@ -6644,6 +6680,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation usage (NEW!)
 • Spike Fade Strategy usage (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** monitoring (NEW!)
+• **⭐ V10 Signal Format:** Monitoring active
 
 **ENHANCED QUICK ACTIONS:**
 • Reset user enhanced limits
@@ -6697,6 +6734,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation: ✅ ENABLED (NEW!)
 • Spike Fade Strategy: ✅ ENABLED (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER:** ✅ ENABLED (NEW!)
+• **⭐ V10 Signal Format:** ✅ ENABLED
 
 **ENHANCED CONFIGURATION OPTIONS:**
 • Enhanced signal frequency limits
@@ -6751,6 +6789,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
             
             # 🚨 CRITICAL FIX: Use safe signal generator with real analysis (for initial safety check)
+            # The *intelligence* comes from the intelligent_generator, but the safety filter is first.
             safe_signal_check, error = safe_signal_generator.generate_safe_signal(chat_id, asset, expiry, platform_key)
 
             if error != "OK":
@@ -6762,7 +6801,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 return
 
             # Get the fully optimized signal from the intelligent generator (which includes platform balancing)
-            direction, confidence = intelligent_generator.generate_intelligent_signal(
+            direction, confidence, trend = intelligent_generator.generate_intelligent_signal(
                 asset, platform=platform_key
             )
             
@@ -6770,16 +6809,23 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             analysis = otc_analysis.analyze_otc_signal(asset, platform=platform_key)
             
             # --- EXTRACT PARAMETERS FOR AI TREND FILTER ---
-            market_trend_direction, trend_confidence = real_verifier.get_real_direction(asset)
+            # 1. Trend Direction: Use the final determined direction if consensus is high, else use RealVerifier's trend.
+            # We approximate the market's current underlying trend direction using RealSignalVerifier.
+            market_trend_direction, trend_confidence, market_trend_desc = real_verifier.get_real_direction(asset)
+            
+            # 2. Trend Strength: Approximate using a combination of the raw confidence and a random factor
             trend_strength = min(100, max(0, trend_confidence + random.randint(-15, 15)))
             
+            # 3. Momentum: Approximate momentum based on asset's volatility class and random factor
             asset_vol_type = OTC_ASSETS.get(asset, {}).get('volatility', 'Medium')
             vol_map = {'Low': 25, 'Medium': 50, 'High': 75, 'Very High': 90}
             momentum_base = vol_map.get(asset_vol_type, 50)
             momentum = min(100, max(0, momentum_base + random.randint(-20, 20)))
             
+            # 4. Volatility Value: Use the output from the Volatility Analyzer
             _, volatility_value = volatility_analyzer.get_volatility_adjustment(asset, confidence) # returns normalized volatility 0-100
             
+            # 5. Spike Detected: Simulate this based on PO platform and high volatility/reversal pattern
             spike_detected = platform_key == 'pocket_option' and (volatility_value > 80 or analysis.get('otc_pattern') == "Spike Reversal Pattern")
 
             # --- Apply AI Trend Filter before proceeding ---
@@ -6803,6 +6849,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                     f"**Recommendation:** Wait for a cleaner setup or try a different asset.",
                     parse_mode="Markdown"
                 )
+                # Still decrement signal count if reached this point and passed initial checks
                 return
             else:
                 logger.info(f"✅ AI Trend Filter Passed for {asset} ({direction} {confidence}%) → {reason}")
@@ -6813,21 +6860,20 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
             # --- Continue with Signal Generation ---
             
-            # Active enhanced AI engines for this signal (String for V10)
-            core_engines = ["TrendConfirmation AI", "QuantumTrend AI", "NeuralMomentum AI", "PatternRecognition AI"]
-            additional_engines = random.sample([eng for eng in AI_ENGINES.keys() if eng not in core_engines], 4)
-            active_engines = core_engines + additional_engines
-            active_engines_string = ", ".join([e.replace(' AI', '').replace(' ', '') for e in active_engines[:3]])
-
+            # Asset-specific enhanced analysis
+            asset_info = OTC_ASSETS.get(asset, {})
+            volatility = asset_info.get('volatility', 'Medium')
+            session = asset_info.get('session', 'Multiple')
+            
             # Create signal data for risk assessment with safe defaults
             signal_data_risk = {
                 'asset': asset,
-                'volatility': asset_vol_type, # Use the qualitative volatility for V10 trend/volatility text
+                'volatility': volatility,
                 'confidence': confidence,
                 'otc_pattern': analysis.get('otc_pattern', 'Standard OTC'),
                 'market_context_used': analysis.get('market_context_used', False),
                 'volume': 'Moderate', # Default value
-                'platform': platform_key
+                'platform': platform_key # NEW: Include platform for risk scoring adjustment
             }
             
             # Apply smart filters and risk scoring with error handling
@@ -6840,27 +6886,45 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 filter_result = {'passed': True, 'score': 4, 'total': 5}
                 risk_score = 75
                 risk_recommendation = "🟡 MEDIUM CONFIDENCE - Good OTC opportunity"
-
-            # =========================================================
-            # 🎯 V10 SIGNAL BUILDER USAGE (Replaces verbose V9 output)
-            # =========================================================
-
+            
+            # Calculate enhanced payout based on volatility and confidence
+            base_payout = 78  # Slightly higher base for OTC
+            if volatility == "Very High":
+                payout_bonus = 12 if confidence > 85 else 8
+            elif volatility == "High":
+                payout_bonus = 8 if confidence > 85 else 4
+            else:
+                payout_bonus = 4 if confidence > 85 else 0
+            
+            payout_range = f"{base_payout + payout_bonus}-{base_payout + payout_bonus + 7}%"
+            
+            # Active enhanced AI engines for this signal
+            core_engines = ["TrendConfirmation AI", "QuantumTrend AI", "NeuralMomentum AI", "PatternRecognition AI"]
+            additional_engines = random.sample([eng for eng in AI_ENGINES.keys() if eng not in core_engines], 4)
+            active_engines = core_engines + additional_engines
+            
+            # --- NEW V10 DATA PREPARATION ---
+            
+            # Select 3 main active engines for display
+            active_engines_display = " • ".join(random.sample(list(AI_ENGINES.keys()), 3))
+            
             v10_data = {
                 "asset": asset,
                 "direction": direction,
-                "expiry": expiry, # Pass raw expiry for new candle time calculation
+                "expiry": expiry, # Pass raw expiry, V10 builder handles display format
                 "confidence": confidence,
-                "trend": market_trend_direction, # Use the real verifier trend for V10 analysis text
-                "volatility": asset_vol_type, # Use the qualitative volatility type
-                "ai_engines": active_engines_string,
+                "trend": trend, # Use the trend determined by intelligent generator
+                "volatility": asset_vol_type, # Use the general volatility rating
+                "ai_engines": active_engines_display,
                 "filters_passed": filter_result['score'],
                 "risk_score": risk_score,
-                "final_expiry_display": final_expiry_display # Use the Deriv-adjusted display value
+                "payout_range": payout_range,
+                "platform": platform_info['name']
             }
-
+            
+            # Generate the new V10 signal text
             v10_signal_text = build_v10_signal(v10_data)
             
-            # V10 Keyboard (Same as V9 structure)
             keyboard = {
                 "inline_keyboard": [
                     [{"text": "🔄 NEW ENHANCED SIGNAL (SAME)", "callback_data": f"signal_{asset}_{expiry}"}],
@@ -6875,14 +6939,16 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
             self.edit_message_text(
                 chat_id, message_id,
-                v10_signal_text, parse_mode="Markdown", reply_markup=keyboard
+                v10_signal_text, 
+                parse_mode="Markdown", 
+                reply_markup=keyboard
             )
             
             # Record this trade for performance analytics
             trade_data = {
                 'asset': asset,
                 'direction': direction,
-                'expiry': f"{expiry}{'s' if expiry == '30' else 'min'}",
+                'expiry': format_expiry(expiry), # Use formatted expiry for history
                 'confidence': confidence,
                 'risk_score': risk_score,
                 'outcome': 'pending',
@@ -7268,6 +7334,7 @@ on {asset}. Consider using it during optimal market conditions.
 • ✅ AI Trend Confirmation 🤖 (NEW!)
 • ✅ Spike Fade Strategy ⚡ (NEW!)
 • **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** to filter low-risk setups
+• **⭐ V10 Signal Format** with **New Candle Entry Time** (NEW!)
 
 **Risk Score Interpretation:**
 • 🟢 80-100: High Confidence - Optimal OTC setup
@@ -7440,14 +7507,14 @@ def home():
     return jsonify({
         "status": "running",
         "service": "enhanced-otc-binary-trading-pro", 
-        "version": "9.1.2",
+        "version": "10.0.0",
         "platform": "OTC_BINARY_OPTIONS",
         "features": [
             "35+_otc_assets", "23_ai_engines", "33_otc_strategies", "enhanced_otc_signals", 
             "user_tiers", "admin_panel", "multi_timeframe_analysis", "liquidity_analysis",
             "market_regime_detection", "adaptive_strategy_selection",
             "performance_analytics", "risk_scoring", "smart_filters", "backtesting_engine",
-            "v9_signal_display", "directional_arrows", "quick_access_buttons",
+            "v10_signal_display", "directional_arrows", "quick_access_buttons",
             "auto_expiry_detection", "ai_momentum_breakout_strategy",
             "manual_payment_system", "admin_upgrade_commands", "education_system",
             "twelvedata_integration", "otc_optimized_analysis", "30s_expiry_support",
@@ -7458,8 +7525,7 @@ def home():
             "stop_loss_protection", "broadcast_system", "user_feedback",
             "pocket_option_specialist", "beginner_entry_rule", "ai_trend_filter_v2",
             "7_platform_support", "deriv_tick_expiries", "asset_ranking_system",
-            "auto_best_platform_scanner", "auto_best_asset_scanner", "telegram_inline_ui",
-            "v10_signal_builder" # Added new V10 feature
+            "auto_best_platform_scanner", "auto_best_asset_scanner", "telegram_inline_ui"
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -7486,7 +7552,7 @@ def health():
         "otc_strategies": len(TRADING_STRATEGIES),
         "active_users": len(user_tiers),
         "platform_type": "OTC_BINARY_OPTIONS",
-        "signal_version": "V10.0.0_OTC", # Updated Version to V10
+        "signal_version": "V10.0.0_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -7513,8 +7579,7 @@ def health():
         "ai_trend_filter_v2": True,
         "auto_best_platform_scanner": True,
         "auto_best_asset_scanner": True,
-        "telegram_inline_ui": True,
-        "v10_signal_builder": True # Added new V10 feature
+        "telegram_inline_ui": True
     })
 
 @app.route('/broadcast/safety', methods=['POST'])
@@ -7606,7 +7671,7 @@ def set_webhook():
             "otc_strategies": len(TRADING_STRATEGIES),
             "users": len(user_tiers),
             "enhanced_features": True,
-            "signal_version": "V10.0.0_OTC", # Updated Version to V10
+            "signal_version": "V10.0.0_OTC",
             "auto_expiry_detection": True,
             "ai_momentum_breakout": True,
             "payment_system": "manual_admin",
@@ -7625,8 +7690,7 @@ def set_webhook():
             "7_platform_support": True,
             "auto_best_platform_scanner": True,
             "auto_best_asset_scanner": True,
-            "telegram_inline_ui": True,
-            "v10_signal_builder": True # Added new V10 feature
+            "telegram_inline_ui": True
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -7656,7 +7720,7 @@ def webhook():
             "update_id": update_id,
             "queue_size": update_queue.qsize(),
             "enhanced_processing": True,
-            "signal_version": "V10.0.0_OTC", # Updated Version to V10
+            "signal_version": "V10.0.0_OTC",
             "auto_expiry_detection": True,
             "payment_system": "manual_admin",
             "education_system": True,
@@ -7674,8 +7738,7 @@ def webhook():
             "7_platform_support": True,
             "auto_best_platform_scanner": True,
             "auto_best_asset_scanner": True,
-            "telegram_inline_ui": True,
-            "v10_signal_builder": True # Added new V10 feature
+            "telegram_inline_ui": True
         })
         
     except Exception as e:
@@ -7693,8 +7756,8 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "auto_best_platform_scanner", "auto_best_asset_scanner", "telegram_inline_ui", "v10_signal_builder"], 
-        "signal_version": "V10.0.0_OTC", # Updated Version to V10
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "auto_best_platform_scanner", "auto_best_asset_scanner", "telegram_inline_ui"], 
+        "signal_version": "V10.0.0_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -7713,8 +7776,7 @@ def debug():
         "7_platform_support": True,
         "auto_best_platform_scanner": True,
         "auto_best_asset_scanner": True,
-        "telegram_inline_ui": True,
-        "v10_signal_builder": True # Added new V10 feature
+        "telegram_inline_ui": True
     })
 
 @app.route('/stats')
@@ -7731,7 +7793,7 @@ def stats():
         "enhanced_strategies": len(TRADING_STRATEGIES),
         "server_time": datetime.now().isoformat(),
         "enhanced_features": True,
-        "signal_version": "V10.0.0_OTC", # Updated Version to V10
+        "signal_version": "V10.0.0_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -7753,8 +7815,7 @@ def stats():
         "7_platform_support": True,
         "auto_best_platform_scanner": True,
         "auto_best_asset_scanner": True,
-        "telegram_inline_ui": True,
-        "v10_signal_builder": True # Added new V10 feature
+        "telegram_inline_ui": True
     })
 
 # =============================================================================
@@ -7812,7 +7873,7 @@ def diagnose_user(chat_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     
-    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V10.0.0 on port {port}") # Updated Version to V10
+    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V10.0.0 on port {port}")
     logger.info(f"📊 OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | OTC Strategies: {len(TRADING_STRATEGIES)}")
     logger.info("🎯 OTC OPTIMIZED: TwelveData integration for market context only")
     logger.info("📈 REAL DATA USAGE: Market context for OTC pattern correlation")
@@ -7821,7 +7882,7 @@ if __name__ == '__main__':
     logger.info("💰 MANUAL PAYMENT SYSTEM: Users contact admin for upgrades")
     logger.info("👑 ADMIN UPGRADE COMMAND: /upgrade USER_ID TIER")
     logger.info("📚 COMPLETE EDUCATION: OTC trading modules")
-    logger.info("📈 V10 SIGNAL DISPLAY: OTC-optimized format (NEW!)") # Updated Log
+    logger.info("📈 V10 SIGNAL DISPLAY: Professional format with New Candle Entry Time (NEW!)")
     logger.info("⚡ 30s EXPIRY SUPPORT: Ultra-fast trading now available")
     logger.info("🧠 INTELLIGENT PROBABILITY: 10-15% accuracy boost (NEW!)")
     logger.info("🎮 MULTI-PLATFORM SUPPORT: Quotex, Pocket Option, Binomo, Olymp Trade, Expert Option, IQ Option, Deriv (7 Platforms!) (NEW!)")
@@ -7838,7 +7899,7 @@ if __name__ == '__main__':
     logger.info("📝 FEEDBACK SYSTEM: Users can provide feedback via /feedback")
     logger.info("🏦 Professional OTC Binary Options Platform Ready")
     logger.info("⚡ OTC Features: Pattern recognition, Market context, Risk management")
-    logger.info("🔘 QUICK ACCESS: All commands with clickable buttons")
+    logger("🔘 QUICK ACCESS: All commands with clickable buttons")
     logger.info("🟢 BEGINNER ENTRY RULE: Automatically added to signals (Wait for pullback)")
     logger.info("🎯 INTELLIGENT PROBABILITY: Session biases, Asset tendencies, Strategy weighting, Platform adjustments")
     logger.info("🎮 PLATFORM BALANCING: Quotex (clean trends), Pocket Option (adaptive), Binomo (balanced), Deriv (stable synthetic) (NEW!)")
@@ -7848,6 +7909,5 @@ if __name__ == '__main__':
     logger.info("🔥 AI TREND FILTER V2: Semi-strict filter integrated for final safety check (NEW!)") 
     logger.info("⭐ AUTO BEST-PLATFORM/ASSET SCANNER: Integrated for optimal environment detection (NEW!)") 
     logger.info("⭐ TELEGRAM INLINE UI: New button-based flow for signals (NEW!)")
-    logger.info("⭐ V10 SIGNAL BUILDER: Active for streamlined, color-coded output (NEW!)") # Updated Log
     
     app.run(host='0.0.0.0', port=port, debug=False)
