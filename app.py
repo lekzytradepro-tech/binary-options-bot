@@ -43,9 +43,10 @@ ADMIN_USERNAME = "@LekzyDevX"  # Your admin username
 
 # --- NEW: EXPANDED PLATFORM SUPPORT CONFIGURATION ---
 
-SUPPORTED_PLATFORMS = [
-    "Quotex",
+# ⭐ 1. PLATFORM + BEHAVIOR DEFINITIONS (Integrated)
+PLATFORMS = [
     "Pocket Option",
+    "Quotex",
     "Binomo",
     "Olymp Trade",
     "Expert Option",
@@ -53,46 +54,46 @@ SUPPORTED_PLATFORMS = [
     "Deriv"
 ]
 
+SUPPORTED_PLATFORMS = PLATFORMS # Keep existing variable for compatibility
+
 def platform_behavior(platform):
-    """3. PLATFORM BEHAVIOR RULES (For New Platforms)"""
+    """2. PLATFORM BEHAVIOR ENGINE (Integrated)"""
     p = platform.lower()
 
     if p == "pocket option":
-        return {"trend_trust": 0.70, "volatility_sensitivity": 0.85, "spike_mode": True, "emoji": "🟠"}
+        return {"trend_trust": 0.70, "volatility_sensitivity": 0.85, "spike_mode": True, "emoji": "🟠", "trend_weight": 0.7, "volatility_risk": 0.8}
     elif p == "quotex":
-        return {"trend_trust": 0.90, "volatility_sensitivity": 0.60, "spike_mode": False, "emoji": "🔵"}
+        return {"trend_trust": 0.90, "volatility_sensitivity": 0.60, "spike_mode": False, "emoji": "🔵", "trend_weight": 0.9, "volatility_risk": 0.5}
     elif p == "binomo":
-        return {"trend_trust": 0.75, "volatility_sensitivity": 0.70, "spike_mode": True, "emoji": "🟢"}
+        return {"trend_trust": 0.75, "volatility_sensitivity": 0.70, "spike_mode": True, "emoji": "🟢", "trend_weight": 0.75, "volatility_risk": 0.65}
     elif p == "olymp trade":
-        return {"trend_trust": 0.80, "volatility_sensitivity": 0.50, "spike_mode": False, "emoji": "🟡"}
+        return {"trend_trust": 0.80, "volatility_sensitivity": 0.50, "spike_mode": False, "emoji": "🟡", "trend_weight": 0.85, "volatility_risk": 0.45}
     elif p == "expert option":
-        return {"trend_trust": 0.60, "volatility_sensitivity": 0.90, "spike_mode": True, "emoji": "🟣"}
+        return {"trend_trust": 0.60, "volatility_sensitivity": 0.90, "spike_mode": True, "emoji": "🟣", "trend_weight": 0.6, "volatility_risk": 0.9}
     elif p == "iq option":
-        return {"trend_trust": 0.85, "volatility_sensitivity": 0.55, "spike_mode": False, "emoji": "🟥"}
+        return {"trend_trust": 0.85, "volatility_sensitivity": 0.55, "spike_mode": False, "emoji": "🟥", "trend_weight": 0.88, "volatility_risk": 0.5}
     elif p == "deriv":
-        return {"trend_trust": 0.95, "volatility_sensitivity": 0.40, "spike_mode": True, "emoji": "⚪"}
+        return {"trend_trust": 0.95, "volatility_sensitivity": 0.40, "spike_mode": True, "emoji": "⚪", "trend_weight": 0.95, "volatility_risk": 0.35}
     else:
-        return {"trend_trust": 0.70, "volatility_sensitivity": 0.70, "spike_mode": False, "emoji": "❓"}
+        return {"trend_trust": 0.70, "volatility_sensitivity": 0.70, "spike_mode": False, "emoji": "❓", "trend_weight": 0.7, "volatility_risk": 0.7}
 
 def get_best_assets(platform):
-    """2. BEST ASSET LIST PER PLATFORM (Based on real data analysis)"""
+    """2. BEST ASSET LIST PER PLATFORM (Based on real data analysis - Integrated)"""
     p = platform.lower()
 
-    # Note: Assets are pulled from the full OTC_ASSETS list defined later
     if p == "pocket option":
-        return ["EUR/USD", "EUR/JPY", "AUD/USD", "GBP/USD", "BTC/USD", "XAU/USD"] 
+        return ["EUR/USD", "EUR/JPY", "AUD/USD", "GBP/USD", "BTC/USD"] 
     elif p == "quotex":
-        return ["EUR/USD", "AUD/USD", "EUR/JPY", "USD/CAD", "EUR/GBP", "XAU/USD", "US30"]
+        return ["EUR/USD", "AUD/USD", "EUR/JPY", "USD/CAD", "EUR/GBP"]
     elif p == "binomo":
-        return ["EUR/USD", "USD/JPY", "AUD/USD", "EUR/CHF", "GBP/USD", "NAS100"]
+        return ["EUR/USD", "USD/JPY", "AUD/USD", "EUR/CHF"]
     elif p == "olymp trade":
-        return ["EUR/USD", "AUD/USD", "EUR/GBP", "AUD/JPY", "EUR/CHF", "ETH/USD", "SPX500"]
+        return ["EUR/USD", "AUD/USD", "EUR/GBP", "AUD/JPY", "EUR/CHF"]
     elif p == "expert option":
-        return ["EUR/USD", "GBP/USD", "USD/CHF", "USD/CAD", "EUR/JPY", "XAG/USD", "OIL/USD"]
+        return ["EUR/USD", "GBP/USD", "USD/CHF", "USD/CAD", "EUR/JPY"]
     elif p == "iq option":
-        return ["EUR/USD", "EUR/GBP", "AUD/USD", "USD/JPY", "EUR/JPY", "BTC/USD", "DAX30"]
+        return ["EUR/USD", "EUR/GBP", "AUD/USD", "USD/JPY", "EUR/JPY"]
     elif p == "deriv":
-        # Deriv Synthetic indices are included here for the purpose of the demo
         return [
             "EUR/USD", "AUD/USD", "USD/JPY", "EUR/JPY", 
             "Volatility 10", "Volatility 25", "Volatility 50",
@@ -103,7 +104,7 @@ def get_best_assets(platform):
         return ["EUR/USD", "GBP/USD", "USD/JPY"] # Default to majors
 
 def rank_assets_live(asset_data):
-    """4. REAL-TIME ASSET RANKING ENGINE"""
+    """3. AUTO BEST-ASSET SCANNER (AI Module - Integrated)"""
     # Ranks by Trend (Highest), then Momentum (Highest), then Volatility (Lowest)
     ranked = sorted(
         asset_data,
@@ -112,10 +113,37 @@ def rank_assets_live(asset_data):
     )
     return ranked
 
+# ⭐ 4. AUTO BEST-PLATFORM SCANNER (Integrated)
+def best_platform_scanner(live_data):
+    """Evaluates every platform and picks the safest for NOW."""
+    results = []
+
+    for platform in PLATFORMS:
+        behavior = platform_behavior(platform)
+        score = 0
+
+        # Only score based on assets that actually have live data
+        if not live_data:
+            results.append({"platform": platform, "score": -99999})
+            continue
+
+        for item in live_data:
+            # item must contain "trend", "momentum", "volatility"
+            score += (item.get("trend", 0) * behavior.get("trend_weight", 0)) - (item.get("volatility", 0) * behavior.get("volatility_risk", 0))
+
+        results.append({"platform": platform, "score": score})
+
+    # Sort from highest score to lowest
+    ranked = sorted(results, key=lambda x: x["score"], reverse=True)
+    
+    if ranked:
+        return ranked[0]  # Best platform only
+    
+    # Fallback if no data/ranking possible
+    return {"platform": "Quotex", "score": 0.0}
+
 def recommend_asset(platform, live_data):
-    """5. AUTO ASSET SELECT + BEST RIGHT NOW MESSAGE"""
-    # Normalize platform name for lookup
-    p_key = platform.lower().replace(' ', '_')
+    """5. AUTO ASSET SELECT + BEST RIGHT NOW MESSAGE (Updated to use new ranking)"""
     
     best_assets = get_best_assets(platform)
     # Filter live data to only include assets supported/recommended for the platform
@@ -164,53 +192,53 @@ def adjust_for_deriv(platform, expiry):
 
 
 # =============================================================================
-# 🎮 ADVANCED PLATFORM BEHAVIOR PROFILES (EXPANDED TO 7 PLATFORMS)
+# 🎮 ADVANCED PLATFORM BEHAVIOR PROFILES (EXPANDED TO 7 PLATFORMS) - (Updated)
 # =============================================================================
 
 PLATFORM_SETTINGS = {
     # Original Platforms (kept for default settings structure)
     "quotex": {
-        "trend_weight": 1.00, "volatility_penalty": 0, "confidence_bias": +2,
+        "trend_weight": platform_behavior("quotex")["trend_weight"], "volatility_penalty": -2, "confidence_bias": +2,
         "reversal_probability": 0.10, "fakeout_adjustment": 0, "expiry_multiplier": 1.0,
         "timeframe_bias": "5min", "default_expiry": "2", "name": "Quotex",
-        "emoji": "🔵", "behavior": "trend_following"
+        "emoji": platform_behavior("quotex")["emoji"], "behavior": "trend_following"
     },
     "pocket_option": {
-        "trend_weight": 0.85, "volatility_penalty": -5, "confidence_bias": -3,
+        "trend_weight": platform_behavior("pocket option")["trend_weight"], "volatility_penalty": -5, "confidence_bias": -3,
         "reversal_probability": 0.25, "fakeout_adjustment": -8, "expiry_multiplier": 0.7,
         "timeframe_bias": "1min", "default_expiry": "1", "name": "Pocket Option", 
-        "emoji": "🟠", "behavior": "mean_reversion"
+        "emoji": platform_behavior("pocket option")["emoji"], "behavior": "mean_reversion"
     },
     "binomo": {
-        "trend_weight": 0.92, "volatility_penalty": -2, "confidence_bias": 0,
+        "trend_weight": platform_behavior("binomo")["trend_weight"], "volatility_penalty": -2, "confidence_bias": 0,
         "reversal_probability": 0.15, "fakeout_adjustment": -3, "expiry_multiplier": 0.9,
         "timeframe_bias": "2min", "default_expiry": "1", "name": "Binomo",
-        "emoji": "🟢", "behavior": "hybrid"
+        "emoji": platform_behavior("binomo")["emoji"], "behavior": "hybrid"
     },
     # New Platforms (Using new behavior function logic)
     "olymp_trade": {
-        "trend_weight": platform_behavior("olymp trade")["trend_trust"], "volatility_penalty": -1, 
+        "trend_weight": platform_behavior("olymp trade")["trend_weight"], "volatility_penalty": -1, 
         "confidence_bias": +1, "reversal_probability": 0.12, "fakeout_adjustment": -1, 
         "expiry_multiplier": 1.1, "timeframe_bias": "5min", "default_expiry": "5", 
         "name": "Olymp Trade", "emoji": platform_behavior("olymp trade")["emoji"], 
         "behavior": "trend_stable"
     },
     "expert_option": {
-        "trend_weight": platform_behavior("expert option")["trend_trust"], "volatility_penalty": -7, 
+        "trend_weight": platform_behavior("expert option")["trend_weight"], "volatility_penalty": -7, 
         "confidence_bias": -5, "reversal_probability": 0.35, "fakeout_adjustment": -10, 
         "expiry_multiplier": 0.6, "timeframe_bias": "1min", "default_expiry": "1", 
         "name": "Expert Option", "emoji": platform_behavior("expert option")["emoji"], 
         "behavior": "reversal_extreme"
     },
     "iq_option": {
-        "trend_weight": platform_behavior("iq option")["trend_trust"], "volatility_penalty": -1, 
+        "trend_weight": platform_behavior("iq option")["trend_weight"], "volatility_penalty": -1, 
         "confidence_bias": +1, "reversal_probability": 0.10, "fakeout_adjustment": -2, 
         "expiry_multiplier": 1.0, "timeframe_bias": "5min", "default_expiry": "2", 
         "name": "IQ Option", "emoji": platform_behavior("iq option")["emoji"], 
         "behavior": "trend_stable"
     },
     "deriv": {
-        "trend_weight": platform_behavior("deriv")["trend_trust"], "volatility_penalty": +2, 
+        "trend_weight": platform_behavior("deriv")["trend_weight"], "volatility_penalty": +2, 
         "confidence_bias": +3, "reversal_probability": 0.05, "fakeout_adjustment": 0, 
         "expiry_multiplier": 1.2, "timeframe_bias": "1min", "default_expiry": "2", 
         "name": "Deriv", "emoji": platform_behavior("deriv")["emoji"], 
@@ -3101,7 +3129,7 @@ class AutoExpiryDetector:
         # 🚨 NEW: Apply Deriv adjustment logic to the base expiry value
         final_expiry_display = adjust_for_deriv(platform, base_expiry)
             
-        return base_expiry, reason, final_expiry_display
+        return base_expiry, reason, market_conditions, final_expiry_display
 
     
     def get_expiry_recommendation(self, asset, platform="quotex"):
@@ -3115,7 +3143,7 @@ class AutoExpiryDetector:
             'sustained_trend': random.random() > 0.7
         }
         
-        base_expiry, reason, final_expiry_display = self.detect_optimal_expiry(asset, market_conditions, platform)
+        base_expiry, reason, market_conditions, final_expiry_display = self.detect_optimal_expiry(asset, market_conditions, platform)
         return base_expiry, reason, market_conditions, final_expiry_display
 
 # NEW: AI Momentum Breakout Strategy Implementation
@@ -3187,6 +3215,31 @@ class OTCTradingBot:
                 "volatility": random.randint(20, 80) # Simulated normalized volatility
             })
         return live_data
+
+    # ⭐ 8. WHEN USER STARTS BOT → BEST-PLATFORM RECOMMENDATION (Integrated)
+    def _send_best_platform_recommendation(self, chat_id, live_data):
+        """Sends the best platform recommendation on startup"""
+        
+        # Get all live data from all best assets for scoring
+        all_assets_for_scoring = []
+        for p in PLATFORMS:
+            all_assets_for_scoring.extend(self._simulate_live_market_data(p))
+
+        # Deduplicate and merge live_data if necessary (simple deduplication by asset name)
+        # Note: In a real system, this should come from a single, centralized real-time feed.
+        unique_assets = {}
+        for item in all_assets_for_scoring:
+            unique_assets[item['asset']] = item
+
+        best = best_platform_scanner(list(unique_assets.values()))
+
+        self.send_message(
+            chat_id,
+            f"🔥 *Best Platform Right Now:* **{best['platform']}**\n"
+            f"Score: **{best['score']:.2f}**\n\n"
+            f"Signals optimized for this broker's behavior are recommended. Proceed to select a platform or continue with this recommendation.",
+            parse_mode="Markdown"
+        )
         
     def send_message(self, chat_id, text, parse_mode=None, reply_markup=None):
         """Send message synchronously"""
@@ -3201,7 +3254,7 @@ class OTCTradingBot:
                 data["parse_mode"] = parse_mode
                 
             if reply_markup:
-                data["reply_markup"] = reply_markup
+                data["reply_markup"] = json.dumps(reply_markup) # Ensure reply_markup is JSON serialized
                 
             response = requests.post(url, json=data, timeout=10)
             return response.json()
@@ -3224,7 +3277,7 @@ class OTCTradingBot:
                 data["parse_mode"] = parse_mode
                 
             if reply_markup:
-                data["reply_markup"] = reply_markup
+                data["reply_markup"] = json.dumps(reply_markup) # Ensure reply_markup is JSON serialized
                 
             response = requests.post(url, json=data, timeout=10)
             return response.json()
@@ -3320,11 +3373,171 @@ class OTCTradingBot:
             message_id = callback_query['message']['message_id']
             data = callback_query.get('data', '')
             
+            # ⭐ 9. COMBINED TELEGRAM CALLBACK HANDLER (Integrated)
             self._handle_button_click(chat_id, message_id, data, callback_query)
             
         except Exception as e:
             logger.error(f"❌ Callback processing error: {e}")
+            
+    # --- NEW UI FLOW HANDLERS ---
     
+    # ⭐ 5. TELEGRAM BOT — AUTO UI + BUTTONS (Integrated as method)
+    def _show_platform_menu_ui(self, chat_id, message_id=None):
+        """Show platform selection menu using inline buttons (V2 with new data structure)"""
+        
+        # Get current platform preference
+        current_platform_key = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
+        
+        # Get all live data for best platform recommendation on the main menu
+        all_assets_for_scoring = []
+        for p in PLATFORMS:
+            all_assets_for_scoring.extend(self._simulate_live_market_data(p))
+        unique_assets = {}
+        for item in all_assets_for_scoring:
+            unique_assets[item['asset']] = item
+        
+        best_platform_rec = best_platform_scanner(list(unique_assets.values()))
+        
+        keyboard_rows = []
+        temp_row = []
+        for i, plat_name in enumerate(PLATFORMS):
+            plat_key = plat_name.lower().replace(' ', '_')
+            platform_info = PLATFORM_SETTINGS[plat_key]
+            
+            # Use platform_info for emoji and name
+            emoji = platform_info.get("emoji", "❓")
+            name = platform_info.get("name", plat_key.replace('_', ' ').title())
+
+            button_text = f"{'✅' if current_platform_key == plat_key else emoji} {name}"
+            button_data = f"platform:{plat_name}" # Use original platform name here for consistency with new data
+            
+            temp_row.append({"text": button_text, "callback_data": button_data})
+            
+            # Create a row of two buttons
+            if len(temp_row) == 2 or i == len(PLATFORMS) - 1:
+                keyboard_rows.append(temp_row)
+                temp_row = []
+        
+        # Add the action buttons at the end
+        keyboard_rows.append([{"text": f"🔥 RECOMMENDED: {best_platform_rec['platform']}", "callback_data": f"platform:{best_platform_rec['platform']}"}])
+        keyboard_rows.append([{"text": "🎯 CONTINUE TO SIGNALS", "callback_data": "signal_menu_start"}])
+        keyboard_rows.append([{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}])
+        
+        keyboard = {"inline_keyboard": keyboard_rows}
+        
+        platform_info = PLATFORM_SETTINGS.get(current_platform_key, PLATFORM_SETTINGS["quotex"])
+        
+        # --- NEW: Best Asset Right Now Section ---
+        live_data_current = self._simulate_live_market_data(platform_info['name'])
+        best_asset_message = recommend_asset(platform_info['name'], live_data_current)
+        # --- END NEW ---
+        
+        text = f"""
+🎮 **SELECT YOUR TRADING PLATFORM**
+
+*Current Platform: {platform_info['emoji']} **{platform_info['name']}** (Signals optimized for **{platform_info['behavior'].replace('_', ' ').title()}**)*
+---
+{best_asset_message}
+---
+*Best Platform Recommendation: **{best_platform_rec['platform']}** (Score: {best_platform_rec['score']:.2f})*
+*Select a platform or tap CONTINUE to proceed.*"""
+        
+        if message_id:
+            self.edit_message_text(
+                chat_id, message_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+        else:
+            self.send_message(
+                chat_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+    
+    # ⭐ 6. WHEN USER SELECTS PLATFORM → SHOW ASSETS (Integrated as method)
+    def _platform_selected_ui(self, chat_id, message_id, platform):
+        """Shows best assets for the selected platform"""
+        # Set the platform
+        plat_key = platform.lower().replace(' ', '_')
+        if chat_id not in self.user_sessions:
+            self.user_sessions[chat_id] = {}
+        self.user_sessions[chat_id]["platform"] = plat_key
+        logger.info(f"🎮 User {chat_id} selected platform: {platform} (Key: {plat_key})")
+        
+        assets = get_best_assets(platform)
+
+        keyboard_rows = []
+        temp_row = []
+        for i, asset in enumerate(assets):
+            button_data = f"asset:{plat_key}:{asset}"
+            temp_row.append({"text": asset, "callback_data": button_data})
+            
+            if len(temp_row) == 3 or i == len(assets) - 1:
+                keyboard_rows.append(temp_row)
+                temp_row = []
+        
+        keyboard_rows.append([{"text": "🎯 CONTINUE WITH SIGNALS", "callback_data": "signal_menu_start"}])
+        keyboard_rows.append([{"text": "🔙 CHANGE PLATFORM", "callback_data": "menu_signals_platform_change"}])
+
+        markup = {"inline_keyboard": keyboard_rows}
+
+        self.edit_message_text(
+            chat_id, message_id,
+            text=f"📌 Platform Selected: **{platform}**\n\n👇 **Choose asset to analyze** (Best assets for this broker):",
+            parse_mode="Markdown",
+            reply_markup=markup
+        )
+    
+    # ⭐ 7. WHEN USER SELECTS ASSET → RUN AI ANALYSIS (Integrated as method)
+    def _asset_selected_ui(self, chat_id, message_id, platform_key, asset):
+        """Runs best asset analysis and displays results."""
+        
+        # Get live data for the analysis
+        # For a full live data representation, we simulate data for all assets and filter, 
+        # but here we use the specific assets recommended for the platform.
+        platform_name = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])["name"]
+        live_data = self._simulate_live_market_data(platform_name) 
+        
+        # Filter to only include the selected asset for precise ranking
+        filtered_live_data = [x for x in live_data if x.get('asset') == asset]
+        
+        if not filtered_live_data:
+            self.edit_message_text(chat_id, message_id, "⚠️ **No live data available for this asset right now.** Please try again in a moment.", parse_mode="Markdown")
+            return
+
+        # Rank (though there should only be one item)
+        ranked = rank_assets_live(filtered_live_data)
+        best = ranked[0]
+
+        # Use intelligent generator to get an expiry recommendation (since there's no UI for expiry selection in this flow)
+        base_expiry, reason, market_conditions, final_expiry_display = auto_expiry_detector.get_expiry_recommendation(asset, platform_key)
+
+        output = f"""
+🔥 **BEST ASSET ANALYSIS ({platform_name})**
+Asset: **{asset}**
+
+Trend: **{best['trend']}%**
+Momentum: **{best['momentum']}%**
+Volatility: **{best['volatility']}/100**
+
+---
+📊 **AI INSIGHTS:**
+• Trend Strength: **{'HIGH' if best['trend'] >= 80 else 'MEDIUM'}**
+• Volatility Risk: **{'LOW' if best['volatility'] <= 40 else 'MEDIUM-HIGH'}**
+
+✅ **Suggested Expiry:** **{final_expiry_display}**
+💡 **Reason:** {reason}
+"""
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": f"🎯 GET {final_expiry_display} SIGNAL", "callback_data": f"signal_{asset}_{base_expiry}"}],
+                [{"text": f"🔙 CHANGE ASSET ({platform_name})", "callback_data": f"platform:{platform_name}"}]
+            ]
+        }
+
+        self.edit_message_text(chat_id, message_id, output, parse_mode="Markdown", reply_markup=keyboard)
+
+
     def _handle_start(self, chat_id, message):
         """Handle /start command"""
         try:
@@ -3360,10 +3573,10 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **NEW:** TwelveData market context integration
 • **NEW:** Performance analytics & risk management
 • **NEW:** Intelligent Probability System (10-15% accuracy boost)
-• **NEW:** Multi-platform support (Quotex, Pocket Option, Binomo)
 • **🎯 NEW ACCURACY BOOSTERS:** Consensus Voting, Real-time Volatility, Session Boundaries
 • **🚨 SAFETY FEATURES:** Real technical analysis, Stop loss protection, Profit-loss tracking
 • **🤖 NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
+• **🔥 NEW: AUTO BEST-PLATFORM/ASSET SCANNER** - AI picks the safest broker/asset now!
 
 *By continuing, you accept full responsibility for your trading decisions.*"""
 
@@ -3423,11 +3636,11 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • 📈 **TwelveData Integration** - Market context analysis
 • 📚 **Complete Education** - Learn professional trading
 • 🧠 **Intelligent Probability System** - 10-15% accuracy boost (NEW!)
-• 🎮 **Multi-Platform Support** - Quotex, Pocket Option, Binomo (NEW!)
 • 🔄 **Platform Balancing** - Signals optimized for each broker (NEW!)
 • 🎯 **ACCURACY BOOSTERS** - Consensus Voting, Real-time Volatility, Session Boundaries
 • 🚨 **SAFETY FEATURES** - Real technical analysis, Stop loss protection, Profit-loss tracking
 • 🤖 **NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
+• **🔥 NEW: AUTO BEST-PLATFORM/ASSET SCANNER** - AI picks the safest broker/asset now!
 
 **ENHANCED FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
@@ -3485,69 +3698,11 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     
     def _handle_signals(self, chat_id):
         """Handle /signals command"""
-        self._show_platform_selection(chat_id)
+        self._show_platform_menu_ui(chat_id)
     
     def _show_platform_selection(self, chat_id, message_id=None):
-        """NEW: Show platform selection menu (Expanded to 7 Platforms)"""
-        
-        # Get current platform preference
-        current_platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
-        
-        # Generate the list of buttons dynamically
-        all_platforms = PLATFORM_SETTINGS.keys()
-        keyboard_rows = []
-        temp_row = []
-        for i, plat_key in enumerate(all_platforms):
-            platform_info = PLATFORM_SETTINGS[plat_key]
-            
-            # Use platform_info for emoji and name
-            emoji = platform_info.get("emoji", "❓")
-            name = platform_info.get("name", plat_key.replace('_', ' ').title())
-
-            button_text = f"{'✅' if current_platform == plat_key else emoji} {name}"
-            button_data = f"platform_{plat_key}"
-            
-            temp_row.append({"text": button_text, "callback_data": button_data})
-            
-            # Create a row of two buttons
-            if len(temp_row) == 2 or i == len(all_platforms) - 1:
-                keyboard_rows.append(temp_row)
-                temp_row = []
-        
-        # Add the action buttons at the end
-        keyboard_rows.append([{"text": "🎯 CONTINUE WITH SIGNALS", "callback_data": "signal_menu_start"}])
-        keyboard_rows.append([{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}])
-        
-        keyboard = {"inline_keyboard": keyboard_rows}
-        
-        platform_key = current_platform.lower().replace(' ', '_')
-        platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-        
-        # --- NEW: Best Asset Right Now Section ---
-        live_data = self._simulate_live_market_data(platform_info['name'])
-        best_asset_message = recommend_asset(platform_info['name'], live_data)
-        # --- END NEW ---
-        
-        text = f"""
-🎮 **SELECT YOUR TRADING PLATFORM**
-
-*Current Platform: {platform_info['emoji']} **{platform_info['name']}** (Signals optimized for **{platform_info['behavior'].replace('_', ' ').title()}**)*
----
-{best_asset_message}
----
-*Each platform receives signals optimized for its specific market behavior.*
-*Select a platform or tap CONTINUE to proceed with **{platform_info['name']}**.*"""
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
+        """DEPRECATED: Redirect to new UI"""
+        self._show_platform_menu_ui(chat_id, message_id)
     
     def _handle_assets(self, chat_id):
         """Handle /assets command"""
@@ -3580,6 +3735,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🎯 **ACCURACY BOOSTERS:** ACTIVE (NEW!)
 🚨 **SAFETY SYSTEMS:** REAL ANALYSIS, STOP LOSS, PROFIT TRACKING (NEW!)
 🤖 **AI TREND CONFIRMATION:** ACTIVE (NEW!)
+🔥 **AUTO BEST-PLATFORM/ASSET SCANNER:** ACTIVE (NEW!)
 
 **ENHANCED OTC FEATURES:**
 • QuantumTrend AI: ✅ Active
@@ -3612,9 +3768,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 **4 EASY STEPS:**
 
-1. **🎮 CHOOSE PLATFORM** - Select from 7 supported platforms (NEW!)
-2. **📊 CHOOSE ASSET** - Select from 35+ OTC instruments
-3. **⏰ SELECT EXPIRY** - Use AUTO DETECT or choose manually (Incl. Deriv Ticks)  
+1. **🔥 BEST PLATFORM SCANNER** - AI recommends safest broker right now (NEW!)
+2. **🎮 CHOOSE PLATFORM** - Select from 7 supported platforms (NEW!)
+3. **📊 CHOOSE ASSET** - Select from 35+ OTC instruments
 4. **🤖 GET ENHANCED SIGNAL** - Advanced AI analysis with market context
 
 **NEW PLATFORM BALANCING:**
@@ -3659,27 +3815,11 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Perfect for calm and confident trading
 
 **RECOMMENDED FOR BEGINNERS:**
-• Start with Quotex platform
+• Start with the **AI-Recommended Platform**
 • Use EUR/USD 5min signals
 • Use demo account first
 • Risk maximum 2% per trade
 • Trade London (7:00-16:00 UTC) or NY (12:00-21:00 UTC) sessions
-
-**ADVANCED FEATURES:**
-• Multi-timeframe convergence analysis
-• Liquidity-based entry points
-• Market regime detection
-• Adaptive strategy selection
-• Performance tracking
-• Risk assessment
-• Auto expiry detection (NEW!)
-• AI Momentum Breakout (NEW!)
-• TwelveData market context (NEW!)
-• Intelligent probability system (NEW!)
-• Multi-platform balancing (NEW!)
-• Accuracy boosters (NEW!)
-• Safety systems (NEW!)
-• AI Trend Confirmation (NEW!)
 
 *Start with /signals now!*"""
         
@@ -3732,7 +3872,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                         f"Tier: {get_user_tier(chat_id)}\n"
                         f"Feedback: {feedback_msg}\n\n"
                         f"Time: {datetime.now().strftime('%H:%M:%S')}",
-                        parse_mode="Markdown")
+                        parse_mode="Markdown"
+                    )
             except Exception as admin_error:
                 logger.error(f"❌ Failed to notify admin: {admin_error}")
             
@@ -4214,6 +4355,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🎮 **NEW: MULTI-PLATFORM SUPPORT** - 7 Platforms (Quotex, PO, Binomo, Olymp, Expert, IQ, Deriv) (NEW!)
 🎯 **NEW: ACCURACY BOOSTERS** - Consensus Voting, Real-time Volatility, Session Boundaries
 🚨 **NEW: SAFETY SYSTEMS** - Real analysis, Stop loss, Profit tracking
+🔥 **NEW: AUTO BEST-PLATFORM/ASSET SCANNER** - AI picks the safest broker/asset now!
 
 💎 **ACCOUNT TYPE:** {stats['tier_name']}
 📈 **SIGNALS TODAY:** {signals_text}
@@ -4234,79 +4376,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             )
     
     def _show_signals_menu(self, chat_id, message_id=None):
-        """Show signals menu with all assets"""
-        # Get user's platform preference
-        platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
-        platform_key = platform.lower().replace(' ', '_')
-        platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": f"⚡ QUICK SIGNAL (EUR/USD {platform_info['default_expiry']}{'min' if platform_key != 'deriv' else ' ticks/min'})", "callback_data": f"signal_EUR/USD_{platform_info['default_expiry']}"}],
-                [{"text": "📈 ENHANCED SIGNAL (5min ANY ASSET)", "callback_data": "menu_assets"}],
-                [
-                    {"text": "💱 EUR/USD", "callback_data": "asset_EUR/USD"},
-                    {"text": "💱 GBP/USD", "callback_data": "asset_GBP/USD"},
-                    {"text": "💱 USD/JPY", "callback_data": "asset_USD/JPY"}
-                ],
-                [
-                    {"text": "₿ BTC/USD", "callback_data": "asset_BTC/USD"},
-                    {"text": "🟡 XAU/USD", "callback_data": "asset_XAU/USD"},
-                    {"text": "📈 US30", "callback_data": "asset_US30"}
-                ],
-                [
-                    {"text": f"🎮 CHANGE PLATFORM ({platform_info['name']})", "callback_data": "menu_signals_platform_change"}
-                ],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
-🎯 **ENHANCED OTC BINARY SIGNALS - ALL ASSETS**
-
-*Platform: {platform_info['emoji']} {platform_info['name']}*
-
-*Generate AI-powered signals with market context analysis:*
-
-**QUICK SIGNALS:**
-• EUR/USD {platform_info['default_expiry']}{'min' if platform_key != 'deriv' else ' ticks/min'} - Platform-optimized execution
-• Any asset 5min - Detailed multi-timeframe analysis
-
-**POPULAR OTC ASSETS:**
-• Forex Majors (EUR/USD, GBP/USD, USD/JPY)
-• Cryptocurrencies (BTC/USD, ETH/USD)  
-• Commodities (XAU/USD, XAG/USD)
-• Indices (US30, SPX500, NAS100)
-• Deriv Synthetics (Volatility 10, Crash 500) (NEW!)
-
-**ENHANCED FEATURES:**
-• Multi-timeframe convergence
-• Liquidity flow analysis
-• Market regime detection
-• Adaptive strategy selection
-• Risk scoring
-• Smart filtering
-• **NEW:** Auto expiry detection
-• **NEW:** AI Momentum Breakout strategy
-• **NEW:** TwelveData market context
-• **NEW:** Intelligent probability system
-• **NEW:** Platform-specific optimization
-• **🎯 NEW:** Accuracy boosters active
-• **🚨 NEW:** Safety systems active
-• **🤖 NEW:** AI Trend Confirmation strategy
-
-*Select asset or quick signal*"""
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
+        """Show signals menu (Original function kept for fallback, but main logic shifted to _show_platform_menu_ui)"""
+        # Redirect to the new UI platform selection flow
+        self._show_platform_menu_ui(chat_id, message_id)
     
     def _show_assets_menu(self, chat_id, message_id=None):
         """Show all 35+ trading assets in organized categories (Includes Synthetics)"""
@@ -4411,8 +4483,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         auto_mode = self.auto_mode.get(chat_id, False)
         
         # Get user's platform for default expiry
-        platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
-        platform_key = platform.lower().replace(' ', '_')
+        platform_key = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
+        platform = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])["name"]
         platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
         
         keyboard = {
@@ -5265,6 +5337,7 @@ Complete technical specifications and capabilities available.
 • ✅ **ACCURACY BOOSTERS** (Consensus Voting, Real-time Volatility, Session Boundaries)
 • ✅ **SAFETY SYSTEMS** (Real analysis, Stop loss, Profit tracking) (NEW!)
 • ✅ **7 PLATFORM SUPPORT** (NEW!)
+• **🔥 NEW: AUTO BEST-PLATFORM/ASSET SCANNER**
 
 **CONTACT ADMIN:** @LekzyDevX
 *Message for upgrade instructions*"""
@@ -5318,6 +5391,7 @@ Complete technical specifications and capabilities available.
 • Accuracy Boosters: ✅ ACTIVE (NEW!)
 • Safety Systems: ✅ ACTIVE (NEW!)
 • AI Trend Confirmation: ✅ AVAILABLE (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER:** ✅ ACTIVE
 
 **💡 ENHANCED RECOMMENDATIONS:**
 • Trade during active sessions with liquidity
@@ -5375,6 +5449,7 @@ Complete technical specifications and capabilities available.
 • Accuracy boosters (NEW!)
 • Safety systems (NEW!)
 • **7 Platform Support** (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** (NEW!)
 
 *Contact admin for enhanced upgrade options*"""
         
@@ -5400,7 +5475,7 @@ Complete technical specifications and capabilities available.
             ]
         }
         
-        text = """
+        text = f"""
 🔧 **ENHANCED ACCOUNT SETTINGS**
 
 *Customize Your Advanced OTC Trading Experience*
@@ -5421,6 +5496,7 @@ Complete technical specifications and capabilities available.
 • Safety Systems: ✅ ACTIVE (NEW!)
 • AI Trend Confirmation: ✅ AVAILABLE (NEW!)
 • Spike Fade Strategy: ✅ AVAILABLE (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER:** ✅ ACTIVE
 
 **ENHANCED SETTINGS AVAILABLE:**
 • Notification preferences
@@ -5722,6 +5798,7 @@ Complete technical specifications and capabilities available.
 • **🚨 NEW:** Safety systems explanation
 • **🤖 NEW:** AI Trend Confirmation strategy guide
 • **⚡ NEW:** Spike Fade Strategy guide
+• **🔥 NEW: AUTO BEST-PLATFORM/ASSET SCANNER**
 
 *Build your enhanced OTC trading expertise*"""
         
@@ -5823,6 +5900,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Safety systems (NEW!)
 • AI Trend Confirmation (NEW!)
 • Spike Fade Strategy (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** (NEW!)
 
 *Enhanced OTC trading requires understanding these advanced market dynamics*"""
 
@@ -5892,6 +5970,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Accuracy booster validation (NEW!)
 • Safety system protection (NEW!)
 • AI Trend Confirmation (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** for low-risk opportunities
 
 *Enhanced risk management is the key to OTC success*"""
 
@@ -5911,12 +5990,13 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
 *Step-by-Step Advanced Trading Process:*
 
-**1. 🎮 CHOOSE PLATFORM** - Select from 7 supported platforms (NEW!)
-**2. 🎯 GET ENHANCED SIGNALS** - Use /signals or main menu
-**3. 📊 CHOOSE ASSET** - Select from 35+ OTC instruments
-**4. ⏰ SELECT EXPIRY** - Use AUTO DETECT or choose manually (Incl. Deriv Ticks) (NEW!)
+**1. 🔥 AUTO SCANNER** - Check the **Best Platform/Asset Scanner** for the optimal trading environment. (NEW!)
+**2. 🎮 CHOOSE PLATFORM** - Select from 7 supported platforms (NEW!)
+**3. 🎯 GET ENHANCED SIGNALS** - Use /signals or main menu
+**4. 📊 CHOOSE ASSET** - Select from 35+ OTC instruments (or use the **Best Asset** recommendation)
+**5. ⏰ SELECT EXPIRY** - Use AUTO DETECT or choose manually (Incl. Deriv Ticks) (NEW!)
 
-**5. 📊 ANALYZE ENHANCED SIGNAL**
+**6. 📊 ANALYZE ENHANCED SIGNAL**
 • Check multi-timeframe confidence level (80%+ recommended)
 • Review technical analysis with liquidity details
 • Understand enhanced signal reasons with AI engine breakdown
@@ -5929,14 +6009,14 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • **🤖 NEW:** Consider AI Trend Confirmation strategy
 • **⚡ NEW:** Consider Spike Fade Strategy
 
-**6. ⚡ EXECUTE ENHANCED TRADE**
+**7. ⚡ EXECUTE ENHANCED TRADE**
 • Enter within 30 seconds of expected entry
 • **🟢 BEGINNER ENTRY RULE:** Wait for price to pull back slightly against the signal direction before entering (e.g., wait for a small red candle on a CALL signal).
 • Use risk-adjusted position size
 • Set mental stop loss with technical levels
 • Consider correlation hedging
 
-**7. 📈 MANAGE ENHANCED TRADE**
+**8. 📈 MANAGE ENHANCED TRADE**
 • Monitor until expiry with multi-TF confirmation
 • Close early if pattern breaks with liquidity
 • Review enhanced performance analytics
@@ -6002,6 +6082,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Safety systems (NEW!)
 • AI Trend Confirmation strategy (NEW!)
 • Spike Fade Strategy (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** (NEW!)
 
 *Master the enhanced bot, master advanced OTC trading*"""
 
@@ -6155,6 +6236,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Confidence-based trading journals
 • Mental rehearsal techniques
 • Stress management protocols
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** to remove decision fatigue
 
 *Enhanced psychology is 80% of advanced trading success*"""
 
@@ -6201,6 +6283,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Spike Fade Strategy (NEW!)
 • Accuracy boosters explanation (NEW!)
 • Safety systems setup (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** setup (NEW!)
 
 **ENHANCED FEATURES SUPPORT:**
 • 23 AI engines configuration (NEW!)
@@ -6282,6 +6365,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation management (NEW!)
 • Spike Fade Strategy management (NEW!)
 • User broadcast system (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** management (NEW!)
 • 🟠 PO Debugging: `/podebug` (NEW!)
 
 *Select an enhanced option below*"""
@@ -6333,6 +6417,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Accuracy Boosters: ✅ ACTIVE (NEW!)
 • Safety Systems: ✅ ACTIVE 🚨 (NEW!)
 • AI Trend Confirmation: ✅ ACTIVE (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER:** ✅ ACTIVE (NEW!)
 
 **🤖 ENHANCED BOT FEATURES:**
 • Assets Available: {len(OTC_ASSETS)} (Incl. Synthetics) (NEW!)
@@ -6398,6 +6483,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Safety system monitoring (NEW!)
 • AI Trend Confirmation usage (NEW!)
 • Spike Fade Strategy usage (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** monitoring (NEW!)
 
 **ENHANCED QUICK ACTIONS:**
 • Reset user enhanced limits
@@ -6413,6 +6499,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Monitor safety system usage (NEW!)
 • Track AI Trend Confirmation usage (NEW!)
 • Track Spike Fade Strategy usage (NEW!)
+• Monitor **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** usage (NEW!)
 
 *Use enhanced database commands for user management*"""
         
@@ -6449,6 +6536,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Safety Systems: ✅ ENABLED 🚨 (NEW!)
 • AI Trend Confirmation: ✅ ENABLED (NEW!)
 • Spike Fade Strategy: ✅ ENABLED (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER:** ✅ ENABLED (NEW!)
 
 **ENHANCED CONFIGURATION OPTIONS:**
 • Enhanced signal frequency limits
@@ -6466,6 +6554,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Safety system parameters (NEW!)
 • AI Trend Confirmation settings (NEW!)
 • Spike Fade Strategy settings (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** tuning (NEW!)
 
 **ENHANCED MAINTENANCE:**
 • Enhanced system restart
@@ -6481,6 +6570,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Safety system optimization (NEW!)
 • AI Trend Confirmation optimization (NEW!)
 • Spike Fade Strategy optimization (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** re-calibration (NEW!)
 
 *Contact enhanced developer for system modifications*"""
         
@@ -6496,8 +6586,8 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 return
             
             # Get user's platform preference
-            platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
-            platform_key = platform.lower().replace(' ', '_')
+            platform_key = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
+            platform = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])["name"]
             platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
             
             # 🚨 CRITICAL FIX: Use safe signal generator with real analysis (for initial safety check)
@@ -6798,7 +6888,8 @@ We encountered an issue generating your signal. This is usually temporary.
     def _handle_auto_detect(self, chat_id, message_id, asset):
         """NEW: Handle auto expiry detection"""
         try:
-            platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
+            platform_key = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
+            platform = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])["name"]
             
             # Get optimal expiry recommendation (now platform-aware)
             base_expiry, reason, market_conditions, final_expiry_display = auto_expiry_detector.get_expiry_recommendation(asset, platform)
@@ -6843,12 +6934,26 @@ We encountered an issue generating your signal. This is usually temporary.
                 parse_mode="Markdown"
             )
 
+    # ⭐ 9. COMBINED TELEGRAM CALLBACK HANDLER (Integrated and updated)
     def _handle_button_click(self, chat_id, message_id, data, callback_query=None):
-        """Handle button clicks - UPDATED WITH PLATFORM SELECTION"""
+        """Handle button clicks - UPDATED with NEW UI flow"""
         try:
             logger.info(f"🔄 Button clicked: {data}")
             
             if data == "disclaimer_accepted":
+                # On accept, show the best platform recommendation first, then the main menu buttons
+                
+                # We need to simulate the live data here just for the recommendation text
+                all_assets_for_scoring = []
+                for p in PLATFORMS:
+                    all_assets_for_scoring.extend(self._simulate_live_market_data(p))
+                unique_assets = {}
+                for item in all_assets_for_scoring:
+                    unique_assets[item['asset']] = item
+                
+                self._send_best_platform_recommendation(chat_id, list(unique_assets.values()))
+                
+                # Now show the main menu
                 self._show_main_menu(chat_id, message_id)
                 
             elif data == "disclaimer_declined":
@@ -6861,15 +6966,34 @@ We encountered an issue generating your signal. This is usually temporary.
             elif data == "menu_main":
                 self._show_main_menu(chat_id, message_id)
                 
-            elif data == "menu_signals":
-                self._show_platform_selection(chat_id, message_id)
+            # --- PLATFORM SELECTION AND ASSET SCANNER FLOW ---
+            
+            elif data == "menu_signals" or data == "menu_signals_platform_change":
+                # Start the platform selection UI
+                self._show_platform_menu_ui(chat_id, message_id)
+                
+            elif data.startswith("platform:"):
+                platform_name = data.split(":")[1]
+                # Handles platform selection and routes to asset menu for that platform
+                self._platform_selected_ui(chat_id, message_id, platform_name)
+
+            elif data.startswith("asset:"):
+                # Format: asset:PLATFORM_KEY:ASSET_NAME
+                _, platform_key, asset = data.split(":")
+                
+                # Reroute to asset selection screen which analyzes the asset (Step 7 in new flow)
+                self._asset_selected_ui(chat_id, message_id, platform_key, asset)
             
             elif data == "signal_menu_start":
-                self._show_signals_menu(chat_id, message_id)
-            
-            elif data == "menu_signals_platform_change":
-                 self._show_platform_selection(chat_id, message_id)
+                # User hit CONTINUE from platform selection, proceed to old expiry/asset menu
+                platform_key = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
+                platform = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])["name"]
                 
+                # Reroute to a combined asset/expiry selection page if they skipped the detailed asset flow
+                self._show_asset_expiry(chat_id, message_id, "EUR/USD") # Default to EUR/USD for quick start
+
+            # --- END PLATFORM SELECTION FLOW ---
+
             elif data == "menu_assets":
                 self._show_assets_menu(chat_id, message_id)
                 
@@ -6902,16 +7026,6 @@ We encountered an issue generating your signal. This is usually temporary.
             elif data == "menu_risk":
                 self._show_risk_analysis(chat_id, message_id)
 
-            # NEW PLATFORM SELECTION HANDLERS
-            elif data.startswith("platform_"):
-                platform = data.replace("platform_", "")
-                # Store user's platform preference
-                if chat_id not in self.user_sessions:
-                    self.user_sessions[chat_id] = {}
-                self.user_sessions[chat_id]["platform"] = platform
-                logger.info(f"🎮 User {chat_id} selected platform: {platform}")
-                self._show_platform_selection(chat_id, message_id) # Show selection again with checkmark
-
             # MANUAL UPGRADE HANDLERS
             elif data == "account_upgrade":
                 self._show_upgrade_options(chat_id, message_id)
@@ -6922,27 +7036,10 @@ We encountered an issue generating your signal. This is usually temporary.
             elif data == "upgrade_pro":
                 self._handle_upgrade_flow(chat_id, message_id, "pro")
 
-            # NEW STRATEGY HANDLERS
-            elif data == "strategy_30s_scalping":
-                self._show_strategy_detail(chat_id, message_id, "30s_scalping")
-            elif data == "strategy_2min_trend":
-                self._show_strategy_detail(chat_id, message_id, "2min_trend")
-            elif data == "strategy_support_resistance":
-                self._show_strategy_detail(chat_id, message_id, "support_resistance")
-            elif data == "strategy_price_action":
-                self._show_strategy_detail(chat_id, message_id, "price_action")
-            elif data == "strategy_ma_crossovers":
-                self._show_strategy_detail(chat_id, message_id, "ma_crossovers")
-            elif data == "strategy_ai_momentum":
-                self._show_strategy_detail(chat_id, message_id, "ai_momentum")
-            elif data == "strategy_quantum_ai":
-                self._show_strategy_detail(chat_id, message_id, "quantum_ai")
-            elif data == "strategy_ai_consensus":
-                self._show_strategy_detail(chat_id, message_id, "ai_consensus")
-            elif data == "strategy_ai_trend_confirmation":
-                self._show_strategy_detail(chat_id, message_id, "ai_trend_confirmation")
-            elif data == "strategy_spike_fade": # NEW SPIKE FADE HANDLER
-                self._show_strategy_detail(chat_id, message_id, "spike_fade")
+            # NEW STRATEGY HANDLERS (using generic handler)
+            elif data.startswith("strategy_"):
+                strategy = data.replace("strategy_", "")
+                self._show_strategy_detail(chat_id, message_id, strategy)
 
             # NEW AUTO DETECT HANDLERS
             elif data.startswith("auto_detect_"):
@@ -6958,6 +7055,7 @@ We encountered an issue generating your signal. This is usually temporary.
                 strategy = data.replace("backtest_", "")
                 self._show_backtest_results(chat_id, message_id, strategy)
                 
+            # ASSET HANDLER (Original flow entry point, reroutes to expiry selection)
             elif data.startswith("asset_"):
                 asset = data.replace("asset_", "")
                 self._show_asset_expiry(chat_id, message_id, asset)
@@ -6976,14 +7074,6 @@ We encountered an issue generating your signal. This is usually temporary.
                     expiry = parts[2]
                     self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, expiry)
                     
-            elif data.startswith("strategy_"):
-                strategy = data.replace("strategy_", "")
-                self._show_strategy_detail(chat_id, message_id, strategy)
-
-            # NEW AI MOMENTUM BREAKOUT STRATEGY
-            elif data == "strategy_ai_momentum_breakout":
-                self._show_strategy_detail(chat_id, message_id, "ai_momentum_breakout")
-                
             elif data.startswith("aiengine_"):
                 engine = data.replace("aiengine_", "")
                 self._show_ai_engine_detail(chat_id, message_id, engine)
@@ -7142,6 +7232,7 @@ on {asset}. Consider using it during optimal market conditions.
 • ✅ Safety Systems 🚨 (NEW!)
 • ✅ AI Trend Confirmation 🤖 (NEW!)
 • ✅ Spike Fade Strategy ⚡ (NEW!)
+• **🔥 AUTO BEST-PLATFORM/ASSET SCANNER** to filter low-risk setups
 
 **Risk Score Interpretation:**
 • 🟢 80-100: High Confidence - Optimal OTC setup
@@ -7331,7 +7422,8 @@ def home():
             "safety_systems", "real_technical_analysis", "profit_loss_tracking",
             "stop_loss_protection", "broadcast_system", "user_feedback",
             "pocket_option_specialist", "beginner_entry_rule", "ai_trend_filter_v2",
-            "7_platform_support", "deriv_tick_expiries", "asset_ranking_system" # Added new filter feature
+            "7_platform_support", "deriv_tick_expiries", "asset_ranking_system",
+            "auto_best_platform_scanner", "auto_best_asset_scanner", "telegram_inline_ui" # Added new features
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -7382,7 +7474,10 @@ def health():
         "supported_platforms": ["quotex", "pocket_option", "binomo", "olymp_trade", "expert_option", "iq_option", "deriv"],
         "broadcast_system": True,
         "feedback_system": True,
-        "ai_trend_filter_v2": True # Added new filter feature
+        "ai_trend_filter_v2": True,
+        "auto_best_platform_scanner": True, # Added new filter feature
+        "auto_best_asset_scanner": True, # Added new filter feature
+        "telegram_inline_ui": True # Added new filter feature
     })
 
 @app.route('/broadcast/safety', methods=['POST'])
@@ -7490,7 +7585,10 @@ def set_webhook():
             "safety_systems": True,
             "real_technical_analysis": True,
             "broadcast_system": True,
-            "7_platform_support": True
+            "7_platform_support": True,
+            "auto_best_platform_scanner": True,
+            "auto_best_asset_scanner": True,
+            "telegram_inline_ui": True
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -7535,7 +7633,10 @@ def webhook():
             "safety_systems": True,
             "real_technical_analysis": True,
             "broadcast_system": True,
-            "7_platform_support": True
+            "7_platform_support": True,
+            "auto_best_platform_scanner": True,
+            "auto_best_asset_scanner": True,
+            "telegram_inline_ui": True
         })
         
     except Exception as e:
@@ -7553,7 +7654,7 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system"], 
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "auto_best_platform_scanner", "auto_best_asset_scanner", "telegram_inline_ui"], 
         "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
@@ -7570,7 +7671,10 @@ def debug():
         "safety_systems": True,
         "real_technical_analysis": True,
         "broadcast_system": True,
-        "7_platform_support": True
+        "7_platform_support": True,
+        "auto_best_platform_scanner": True,
+        "auto_best_asset_scanner": True,
+        "telegram_inline_ui": True
     })
 
 @app.route('/stats')
@@ -7605,8 +7709,11 @@ def stats():
         "total_strategies": len(TRADING_STRATEGIES),
         "30s_expiry_support": True,
         "broadcast_system": True,
-        "ai_trend_filter_v2": True, # Added new filter feature
-        "7_platform_support": True
+        "ai_trend_filter_v2": True,
+        "7_platform_support": True,
+        "auto_best_platform_scanner": True,
+        "auto_best_asset_scanner": True,
+        "telegram_inline_ui": True
     })
 
 # =============================================================================
@@ -7698,5 +7805,7 @@ if __name__ == '__main__':
     logger.info("🛡️ SAFETY SYSTEMS: Real Technical Analysis (SMA+RSI), Stop Loss Protection, Profit-Loss Tracking, Asset Filtering, Cooldown Periods")
     logger.info("🤖 AI TREND CONFIRMATION: The trader's best friend today - Analyzes 3 timeframes, enters only if all confirm same direction")
     logger.info("🔥 AI TREND FILTER V2: Semi-strict filter integrated for final safety check (NEW!)") 
+    logger.info("⭐ AUTO BEST-PLATFORM/ASSET SCANNER: Integrated for optimal environment detection (NEW!)") 
+    logger.info("⭐ TELEGRAM INLINE UI: New button-based flow for signals (NEW!)")
     
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)        
