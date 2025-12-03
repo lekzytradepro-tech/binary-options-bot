@@ -7899,7 +7899,7 @@ if __name__ == '__main__':
     logger.info("📝 FEEDBACK SYSTEM: Users can provide feedback via /feedback")
     logger.info("🏦 Professional OTC Binary Options Platform Ready")
     logger.info("⚡ OTC Features: Pattern recognition, Market context, Risk management")
-    logger("🔘 QUICK ACCESS: All commands with clickable buttons")
+    logger.info("🔘 QUICK ACCESS: All commands with clickable buttons")
     logger.info("🟢 BEGINNER ENTRY RULE: Automatically added to signals (Wait for pullback)")
     logger.info("🎯 INTELLIGENT PROBABILITY: Session biases, Asset tendencies, Strategy weighting, Platform adjustments")
     logger.info("🎮 PLATFORM BALANCING: Quotex (clean trends), Pocket Option (adaptive), Binomo (balanced), Deriv (stable synthetic) (NEW!)")
