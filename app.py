@@ -8095,7 +8095,7 @@ def debug():
         "ai_trend_confirmation": True,
         "spike_fade_strategy": True,
         "ai_guided_breakout": True,
-        "accuracy_boosters": True
+        "accuracy_boosters": True,
         "safety_systems": True,
         "real_technical_analysis": True,
         "broadcast_system": True
