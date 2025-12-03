@@ -4654,7 +4654,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     {"text": "⚡ MANUAL MODE", "callback_data": f"manual_mode_{asset}"}
                 ] if not auto_mode else [
                     {"text": "✅ AUTO MODE ACTIVE", "callback_data": f"auto_detect_{asset}"},
-                    {"text": "⚡ MANUAL MODE", "callback_data": f"manual_mode_{asset"}
+                    {"text": "⚡ MANUAL MODE", "callback_data": f"manual_mode_{asset}"}
                 ],
                 [
                     {"text": "⚡ 30 SEC", "callback_data": f"expiry_{asset}_30"},
