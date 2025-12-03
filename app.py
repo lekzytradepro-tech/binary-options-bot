@@ -285,15 +285,23 @@ class RealSignalVerifier:
     def get_real_direction(asset):
         """Get actual direction based on price action"""
         try:
-            # Map asset to TwelveData symbol
-            symbol_map = {
-                "EUR/USD": "EUR/USD", "GBP/USD": "GBP/USD", "USD/JPY": "USD/JPY",
-                "USD/CHF": "USD/CHF", "AUD/USD": "AUD/USD", "USD/CAD": "USD/CAD",
-                "BTC/USD": "BTC/USD", "AUD/USD", "USD/CAD",
-                "BTC/USD": "BTC/USD", "ETH/USD": "ETH/USD", "XAU/USD": "XAU/USD",
-                "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
-                "SPX500": "SPX", "NAS100": "NDX"
-            }
+           # Map asset to TwelveData symbol
+symbol_map = {
+    "EUR/USD": "EUR/USD", 
+    "GBP/USD": "GBP/USD", 
+    "USD/JPY": "USD/JPY",
+    "USD/CHF": "USD/CHF", 
+    "AUD/USD": "AUD/USD", 
+    "USD/CAD": "USD/CAD",
+    "BTC/USD": "BTC/USD", 
+    "ETH/USD": "ETH/USD", 
+    "XAU/USD": "XAU/USD",
+    "XAG/USD": "XAG/USD", 
+    "OIL/USD": "USOIL", 
+    "US30": "DJI",
+    "SPX500": "SPX", 
+    "NAS100": "NDX"
+} 
             
             symbol = symbol_map.get(asset, asset.replace("/", ""))
             
