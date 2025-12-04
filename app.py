@@ -4806,9 +4806,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Perfect for calm and confident trading 📈
 
 **🎯 NEW: AI TREND FILTER + BREAKOUT**
-• AI gives direction (UP/DOWN), trader marks S/R
-• Enter ONLY on confirmed breakout in AI direction
-• Blends AI certainty with structured entry 💥
+• AI gives direction (UP/DOWN), trader marks S/R levels, enter only on confirmed breakout in AI direction (Hybrid Approach)
 
 **⚡ NEW: SPIKE FADE STRATEGY (PO SPECIALIST)**
 • Fade sharp spikes (reversal trading) in Pocket Option for quick profit.
@@ -4999,7 +4997,7 @@ High (High risk, high reward - tight mental stop-loss is critical)
 Designed for lightning-fast execution on 30-second timeframes. Captures micro price movements with ultra-tight risk management.
 
 **KEY FEATURES:**
-- 30-second timeframe analysis
+- 30-second primary timeframe
 - Ultra-tight stop losses (mental)
 - Instant profit taking
 - Maximum frequency opportunities
@@ -5731,16 +5729,6 @@ Complete technical specifications and capabilities available.
     def _show_sessions_dashboard(self, chat_id, message_id=None):
         """Show market sessions dashboard"""
         current_time = datetime.utcnow().strftime("%H:%M UTC")
-        current_hour = datetime.utcnow().hour
-        
-        # Determine active sessions
-        active_sessions = []
-        if 22 <= current_hour or current_hour < 6:
-            active_sessions.append("🌏 ASIAN")
-        if 7 <= current_hour < 16:
-            active_sessions.append("🇬🇧 LONDON")
-        if 12 <= current_hour < 21:
-            active_sessions.append("🇺🇸 NEW YORK")
         if 12 <= current_hour < 16:
             active_sessions.append("⚡ OVERLAP")
             
@@ -6949,43 +6937,52 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 direction_emoji = "📈"  
                 direction_text = "CALL (UP)"
                 beginner_entry = "Wait for small pullback → Enter CALL"
+                arrow = "⬆️"
             else:
                 direction_emoji = "📉"  
                 direction_text = "PUT (DOWN)"
                 beginner_entry = "Wait for small bounce → Enter PUT"
-            
-            # --- NEW: MINIMAL SIGNAL DISPLAY (FIX 3) ---
+                arrow = "⬇️"
+
+            # 🚨 NEW: Calculate the full platform-specific advice text (For the new tabular format)
+            asset_advice_text = self._get_platform_advice_text(platform_info['name'], asset)
+
+            # --- NEW: TABULAR SIGNAL DISPLAY (FIX 3) - IMPLEMENTATION START ---
             
             text = f"""
-🎯 **OTC SIGNAL** • {platform_info['emoji']} {platform_info['name']}
+{arrow} **OTC SIGNAL** • {platform_info['emoji']} {platform_info['name']}
+═══════════════════════════
 
-📊 **{asset}** • {final_expiry_display}
-{direction_emoji} **{direction}** • **{confidence}%** confidence
+📊 **Pair:** {asset} ({final_expiry_display})
+🎯 **Signal:** {arrow} **{direction_text}** • **{confidence}%**
+🕒 **Time:** {analysis_time} UTC → Entry: {expected_entry} UTC
 
-🔄 **Pattern:** {analysis.get('otc_pattern', 'OTC Setup')}
-🎯 **Strategy:** {analysis.get('strategy', 'AI Trend Confirmation')}
+📈 **ANALYSIS DETAILS:**
+├─ Trend: {trend_strength}%
+├─ Momentum: {momentum}%
+├─ Volatility: {volatility_value:.1f}/100
+├─ Pattern: {analysis.get('otc_pattern', 'Standard OTC Setup')}
+└─ Risk Score: {risk_score}/100 {risk_indicator}
 
-⚠️ **Entry Rule (Beginners):**
-{beginner_entry}
+🤖 **AI REASONING:**
+• Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}
+• Trend Filter: PASSED ({reason})
+• Platform: Optimized for **{platform_info['behavior'].replace('_', ' ').title()}**
 
-📈 **Analysis:**
-• Trend Strength: {trend_strength}%
-• Momentum: {momentum}%
-• Volatility: {volatility_value:.1f}/100
-• Filters: {filter_result['score']}/{filter_result['total']} passed
-{risk_indicator} Risk Score: {risk_score}/100
+💡 **PLATFORM ADVICE:**
+{asset_advice_text}
 
-⚡ **Execution:**
-• Entry: Within 30s
-• Expiry: {final_expiry_display}
-• Payout: {payout_range}
-• Max Risk: 2% (Investment: $25-$100)
-• Stop: Mental (if pattern breaks)
+⚡ **EXECUTION:**
+• **Beginner Entry:** {beginner_entry}
+• **Expiry:** {final_expiry_display}
+• **Payout:** {payout_range}
+• **Max Risk:** 2% (Investment: $25-$100)
+• **Stop:** Mental (if pattern breaks)
 
-📅 {analysis_time} UTC • Valid 2min
+═══════════════════════════
+🔄 Valid 2min • 📅 {datetime.now().strftime('%H:%M UTC')}
 """
-
-            # --- END NEW: MINIMAL SIGNAL DISPLAY ---
+            # --- END NEW: TABULAR SIGNAL DISPLAY ---
             
             keyboard = {
                 "inline_keyboard": [
@@ -7452,16 +7449,13 @@ on {asset}. Consider using it during optimal market conditions.
         platform_advice = self._get_platform_advice(platform, asset)
         
         # Determine the platform-specific strategy from the PO Specialist if it's PO
-        strategy_info = po_strategies.get_po_strategy(asset, po_strategies.analyze_po_market_conditions(asset))
+        # Note: We rely on _get_platform_advice to calculate and return the required strategy name and general advice.
         
         advice_text = f"""
-🎮 **PLATFORM ADVICE: {PLATFORM_SETTINGS[platform.lower().replace(' ', '_')]['emoji']} {platform}**
-• Recommended Strategy: **{platform_advice['strategy_name']}**
+• Strategy: **{platform_advice['strategy_name']}**
 • Optimal Expiry: {platform_generator.get_optimal_expiry(asset, platform)}
 • Recommendation: {platform_generator.get_platform_recommendation(asset, platform)}
-
-💡 **Advice for {asset}:**
-{platform_advice['general']}
+• Advice: {platform_advice['general']}
 """
         return advice_text
     
@@ -7501,31 +7495,31 @@ on {asset}. Consider using it during optimal market conditions.
         platform_advice_map = {
             "quotex": {
                 "strategy_name": "AI Trend Confirmation/Quantum Trend",
-                "general": "• Trust trend-following. Use 2-5 min expiries.\n• Clean technical patterns work reliably on Quotex.",
+                "general": "Trust trend-following. Use 2-5 min expiries. Clean technical patterns work reliably on Quotex.",
             },
             "pocket_option": {
                 "strategy_name": "Spike Fade Strategy/PO Mean Reversion",
-                "general": "• Mean reversion strategies prioritized. Prefer 30 seconds-1 minute expiries.\n• Be cautious of broker spikes/fakeouts; enter conservatively.",
+                "general": "Mean reversion strategies prioritized. Prefer 30 seconds-1 minute expiries. Be cautious of broker spikes/fakeouts; enter conservatively.",
             },
             "binomo": {
                 "strategy_name": "Hybrid/Support & Resistance",
-                "general": "• Balanced approach, 1-3 min expiries optimal.\n• Combine trend and reversal strategies; moderate risk is recommended.",
+                "general": "Balanced approach, 1-3 min expiries optimal. Combine trend and reversal strategies; moderate risk is recommended.",
             },
             "deriv": {
                 "strategy_name": "AI Trend Confirmation/Stable Synthetic",
-                "general": "• High stability/trend trust. Use Deriv ticks/mins as advised.\n• Synthetics are best for systematic trend following.",
+                "general": "High stability/trend trust. Use Deriv ticks/mins as advised. Synthetics are best for systematic trend following.",
             },
             "olymp_trade": {
                 "strategy_name": "AI Trend Confirmation/Trend Stable",
-                "general": "• Trend reliability is good. Use medium 2-5 min expiries.\n• Focus on clean breakouts and sustained trends.",
+                "general": "Trend reliability is good. Use medium 2-5 min expiries. Focus on clean breakouts and sustained trends.",
             },
             "expert_option": {
                 "strategy_name": "Spike Fade Strategy/Reversal Extreme",
-                "general": "• EXTREME volatility/reversal bias. Use ultra-short 30 seconds-1 minute expiries.\n• High risk: prioritize mean reversion/spike fades.",
+                "general": "EXTREME volatility/reversal bias. Use ultra-short 30 seconds-1 minute expiries. High risk: prioritize mean reversion/spike fades.",
             },
             "iq_option": {
                 "strategy_name": "AI Trend Confirmation/Trend Stable",
-                "general": "• Balanced, relatively stable platform. Use 2-5 min expiries.\n• Works well with standard technical analysis.",
+                "general": "Balanced, relatively stable platform. Use 2-5 min expiries. Works well with standard technical analysis.",
             }
         }
         
@@ -7540,9 +7534,9 @@ on {asset}. Consider using it during optimal market conditions.
             
             # Add PO specific asset advice
             if asset in ["BTC/USD", "ETH/USD"]:
-                advice['general'] = "• EXTREME CAUTION: Crypto is highly volatile on PO. Risk minimal size or AVOID."
+                advice['general'] = "EXTREME CAUTION: Crypto is highly volatile on PO. Risk minimal size or AVOID."
             elif asset == "GBP/JPY":
-                advice['general'] = "• HIGH RISK: Use only 30 seconds expiry and Spike Fade strategy."
+                advice['general'] = "HIGH RISK: Use only 30 seconds expiry and Spike Fade strategy."
         
         return advice
 
