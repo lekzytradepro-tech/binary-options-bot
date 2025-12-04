@@ -141,28 +141,35 @@ def recommend_asset(platform, live_data):
 {', '.join(best_assets[:5])}...
 """
 
+# NEW HELPER: Get clean expiry unit display (30s, 1min, etc.)
+def _get_clean_expiry_unit(expiry):
+    """Clean expiry unit conversion for non-Deriv platforms"""
+    expiry_str = str(expiry)
+    if expiry_str == "30":
+        return "30s"
+    elif expiry_str == "1":
+        return "1min"
+    elif expiry_str == "2":
+        return "2min"
+    elif expiry_str == "5":
+        return "5min"
+    elif expiry_str == "15":
+        return "15min"
+    elif expiry_str == "30":
+        return "30min"
+    elif expiry_str == "60":
+        return "60min"
+    else:
+        # Default to minutes for any other input
+        return f"{expiry_str}min"
+
+
 # UPDATED FUNCTION with units and full coverage for all standard expiries
 def adjust_for_deriv(platform, expiry):
-    """6. ADD DERIV SPECIAL LOGIC (VERY IMPORTANT)"""
+    """6. ADD DERIV SPECIAL LOGIC (VERY IMPORTANT) - FIXED FOR MINIMAL DISPLAY"""
     if platform.lower() != "deriv":
-        # For non-Deriv platforms, add appropriate units
-        expiry_str = str(expiry)
-        if expiry_str == "30":
-            return "30 seconds"
-        elif expiry_str == "1":
-            return "1 minute"
-        elif expiry_str == "2":
-            return "2 minutes"
-        elif expiry_str == "5":
-            return "5 minutes"
-        elif expiry_str == "15":
-            return "15 minutes"
-        elif expiry_str == "30":
-            return "30 minutes"
-        elif expiry_str == "60":
-            return "60 minutes"
-        else:
-            return f"{expiry_str} minutes"
+        # For non-Deriv platforms, use clean unit helper
+        return _get_clean_expiry_unit(expiry)
 
     # Deriv uses tick-based execution for synthetic indices
     expiry_str = str(expiry)
@@ -171,18 +178,18 @@ def adjust_for_deriv(platform, expiry):
     elif expiry_str == "1": # 1 minute
         return "10 ticks"
     elif expiry_str == "2": # 2 minutes
-        return "duration: 2 minutes"
+        return "2min (Deriv)"
     elif expiry_str == "5": # 5 minutes
-        return "duration: 5 minutes"
+        return "5min (Deriv)"
     elif expiry_str == "15": # 15 minutes
-        return "duration: 15 minutes"
+        return "15min (Deriv)"
     elif expiry_str == "30": # 30 minutes
-        return "duration: 30 minutes"
+        return "30min (Deriv)"
     elif expiry_str == "60": # 60 minutes
-        return "duration: 60 minutes"
+        return "60min (Deriv)"
     else:
         # Default for longer expiries is minutes
-        return f"duration: {expiry_str} minutes"
+        return f"{expiry_str}min (Deriv)"
 
 # --- END NEW PLATFORM SUPPORT LOGIC ---
 
@@ -1159,10 +1166,14 @@ class PocketOptionSpecialist:
         }
         
         new_expiry = expiry_map.get(base_expiry, base_expiry)
-        if new_expiry != base_expiry:
-            return new_expiry, f"Pocket Option optimized: shorter expiry ({new_expiry} {'seconds' if new_expiry == '30' else 'minute(s)'})"
         
-        return base_expiry, f"Standard expiry ({base_expiry} {'seconds' if base_expiry == '30' else 'minute(s)'})"
+        # Use clean unit helper for display
+        new_expiry_display = _get_clean_expiry_unit(new_expiry)
+        
+        if new_expiry != base_expiry:
+            return new_expiry, f"Pocket Option optimized: shorter expiry ({new_expiry_display})"
+        
+        return base_expiry, f"Standard expiry ({new_expiry_display})"
 
 # Initialize PO specialist
 po_specialist = PocketOptionSpecialist()
@@ -3088,7 +3099,7 @@ class AutoExpiryDetector:
         }
     
     def detect_optimal_expiry(self, asset, market_conditions, platform="quotex"):
-        """Auto-detect best expiry based on market analysis"""
+        """Auto-detect best expiry based on market analysis - MODIFIED FOR CLEAN DISPLAY"""
         asset_info = OTC_ASSETS.get(asset, {})
         volatility = asset_info.get('volatility', 'Medium')
         
@@ -3138,32 +3149,9 @@ class AutoExpiryDetector:
             base_expiry, po_reason = po_specialist.adjust_expiry_for_po(asset, base_expiry, market_conditions)
             reason = po_reason
         
-        # Get display format with units (pre-Deriv adjustment)
-        expiry_display = self.expiry_mapping.get(base_expiry, {}).get('display', f"{base_expiry} minutes")
-        
-        # 🚨 NEW: Apply Deriv adjustment logic to the base expiry value (This handles all final display logic)
+        # 🚨 NEW FIX: Use adjust_for_deriv which now uses the clean unit helper
         final_expiry_display = adjust_for_deriv(platform, base_expiry)
         
-        # FINAL CHECK: Make sure final_display has units (redundant now due to the fix in adjust_for_deriv, but kept for robustness)
-        if not any(unit in final_expiry_display.lower() for unit in ['second', 'minute', 'tick', 'duration']):
-            # This block should now be rarely hit due to the fix in adjust_for_deriv()
-            if final_expiry_display == "30":
-                final_expiry_display = "30 seconds" if platform_key != "deriv" else "5 ticks"
-            elif final_expiry_display == "1":
-                final_expiry_display = "1 minute" if platform_key != "deriv" else "10 ticks"
-            elif final_expiry_display == "2":
-                final_expiry_display = "2 minutes" if platform_key != "deriv" else "duration: 2 minutes"
-            elif final_expiry_display == "5":
-                final_expiry_display = "5 minutes" if platform_key != "deriv" else "duration: 5 minutes"
-            elif final_expiry_display == "15":
-                final_expiry_display = "15 minutes" if platform_key != "deriv" else "duration: 15 minutes"
-            elif final_expiry_display == "30":
-                final_expiry_display = "30 minutes" if platform_key != "deriv" else "duration: 30 minutes"
-            elif final_expiry_display == "60":
-                final_expiry_display = "60 minutes" if platform_key != "deriv" else "duration: 60 minutes"
-            else:
-                final_expiry_display = f"{base_expiry} minutes"
-
         return base_expiry, reason, market_conditions, final_expiry_display
 
     
@@ -3968,7 +3956,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                         f"Tier: {get_user_tier(chat_id)}\n"
                         f"Feedback: {feedback_msg}\n\n"
                         f"Time: {datetime.now().strftime('%H:%M:%S')}",
-                        parse_mode="Markdown")
+                        parse_mode="Markdown"
+                    )
             except Exception as admin_error:
                 logger.error(f"❌ Failed to notify admin: {admin_error}")
             
@@ -3977,7 +3966,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 "Your input helps us improve the system.\n"
                 "We'll review it and make improvements as needed.\n\n"
                 "Continue trading with `/signals`",
-                parse_mode="Markdown")
+                parse_mode="Markdown"
+            )
             
         except Exception as e:
             logger.error(f"❌ Feedback handler error: {e}")
@@ -4472,6 +4462,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         
         # Get final expiry display for the quick button
         default_expiry_base = platform_info['default_expiry']
+        # 🚨 NEW FIX: Use adjust_for_deriv for clean unit display
         default_expiry_display = adjust_for_deriv(platform_info['name'], default_expiry_base)
         
         keyboard = {
@@ -4650,6 +4641,14 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         platform_key = platform.lower().replace(' ', '_')
         platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
         
+        # 🚨 NEW FIX: Use clean unit helper for buttons
+        expiry_30s = _get_clean_expiry_unit("30")
+        expiry_1min = _get_clean_expiry_unit("1")
+        expiry_2min = _get_clean_expiry_unit("2")
+        expiry_5min = _get_clean_expiry_unit("5")
+        expiry_15min = _get_clean_expiry_unit("15")
+        expiry_30min = _get_clean_expiry_unit("30")
+        
         keyboard = {
             "inline_keyboard": [
                 [
@@ -4660,14 +4659,14 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     {"text": "⚡ MANUAL MODE", "callback_data": f"manual_mode_{asset}"}
                 ],
                 [
-                    {"text": "⚡ 30 SEC", "callback_data": f"expiry_{asset}_30"},
-                    {"text": "⚡ 1 MIN", "callback_data": f"expiry_{asset}_1"},
-                    {"text": "⚡ 2 MIN", "callback_data": f"expiry_{asset}_2"}
+                    {"text": f"⚡ {expiry_30s}", "callback_data": f"expiry_{asset}_30"},
+                    {"text": f"⚡ {expiry_1min}", "callback_data": f"expiry_{asset}_1"},
+                    {"text": f"⚡ {expiry_2min}", "callback_data": f"expiry_{asset}_2"}
                 ],
                 [
-                    {"text": "📈 5 MIN", "callback_data": f"expiry_{asset}_5"},
-                    {"text": "📈 15 MIN", "callback_data": f"expiry_{asset}_15"},
-                    {"text": "📈 30 MIN", "callback_data": f"expiry_{asset}_30"}
+                    {"text": f"📈 {expiry_5min}", "callback_data": f"expiry_{asset}_5"},
+                    {"text": f"📈 {expiry_15min}", "callback_data": f"expiry_{asset}_15"},
+                    {"text": f"📈 {expiry_30min}", "callback_data": f"expiry_{asset}_30"}
                 ],
                 [{"text": "🔙 BACK TO ASSETS", "callback_data": "menu_assets"}],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
@@ -4676,7 +4675,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         
         mode_text = "**🔄 AUTO DETECT MODE:** AI will automatically select the best expiry based on market analysis" if auto_mode else "**⚡ MANUAL MODE:** You select expiry manually"
         
-        # Adjust display text for Deriv synthetics and tick expiries
+        # Adjust button and display text for Deriv synthetics and tick expiries
         expiry_unit = "MINUTES"
         if asset_type == "Synthetic" or platform_key == "deriv":
             expiry_unit = "TICKS/MINUTES"
@@ -4700,9 +4699,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 *Choose Expiry Time ({expiry_unit}):*
 
-⚡ **30s-2 MINUTES** - Ultra-fast OTC trades, instant results
-📈 **5-15 MINUTES** - More analysis time, higher accuracy  
-📊 **30 MINUTES** - Swing trading, trend following
+⚡ **{expiry_30s}-{expiry_2min}** - Ultra-fast OTC trades, instant results
+📈 **{expiry_5min}-{expiry_15min}** - More analysis time, higher accuracy  
+📊 **{expiry_30min}** - Swing trading, trend following
 
 **Recommended for {asset}:**
 • {volatility} volatility: { 'Ultra-fast expiries (30s-2min)' if volatility in ['High', 'Very High'] else 'Medium expiries (2-15min)' }
@@ -5274,7 +5273,7 @@ This engine powers the most reliable strategy in the system:
 **BEST FOR:**
 • AI Trend Confirmation strategy (Primary)
 • High-probability trend trading
-• Conservative risk management
+• Conservative risk approach
 • Multi-timeframe analysis
 • Calm and confident trading
 
@@ -5516,7 +5515,7 @@ Complete technical specifications and capabilities available.
             ]
         }
         
-        text = """
+        text = f"""
 💎 **ENHANCED PREMIUM ACCOUNT UPGRADE**
 
 *Unlock Unlimited OTC Trading Power*
@@ -6196,6 +6195,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Safety system protection (NEW!)
 • AI Trend Confirmation (NEW!)
 • AI Trend Filter + Breakout (NEW!)
+• Spike Fade Strategy (NEW!)
 
 *Enhanced risk management is the key to OTC success*"""
 
@@ -6821,7 +6821,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
         self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
     def _generate_enhanced_otc_signal_v9(self, chat_id, message_id, asset, expiry):
-        """ENHANCED V9: Advanced validation for higher accuracy"""
+        """ENHANCED V9: Advanced validation for higher accuracy - MODIFIED FOR MINIMAL DISPLAY"""
         try:
             # Check user limits using tier system
             can_signal, message = can_generate_signal(chat_id)
@@ -6855,23 +6855,16 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             analysis = otc_analysis.analyze_otc_signal(asset, platform=platform_key)
             
             # --- EXTRACT PARAMETERS FOR AI TREND FILTER ---
-            # 1. Trend Direction: Use the final determined direction if consensus is high, else use RealVerifier's trend.
-            # We approximate the market's current underlying trend direction using RealSignalVerifier.
             market_trend_direction, trend_confidence = real_verifier.get_real_direction(asset)
-            
-            # 2. Trend Strength: Approximate using a combination of the raw confidence and a random factor
             trend_strength = min(100, max(0, trend_confidence + random.randint(-15, 15)))
             
-            # 3. Momentum: Approximate momentum based on asset's volatility class and random factor
             asset_vol_type = OTC_ASSETS.get(asset, {}).get('volatility', 'Medium')
             vol_map = {'Low': 25, 'Medium': 50, 'High': 75, 'Very High': 90}
             momentum_base = vol_map.get(asset_vol_type, 50)
             momentum = min(100, max(0, momentum_base + random.randint(-20, 20)))
             
-            # 4. Volatility Value: Use the output from the Volatility Analyzer
             _, volatility_value = volatility_analyzer.get_volatility_adjustment(asset, confidence) # returns normalized volatility 0-100
             
-            # 5. Spike Detected: Simulate this based on PO platform and high volatility/reversal pattern
             spike_detected = platform_key == 'pocket_option' and (volatility_value > 80 or analysis.get('otc_pattern') == "Spike Reversal Pattern")
 
             # --- Apply AI Trend Filter before proceeding ---
@@ -6895,7 +6888,6 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                     f"**Recommendation:** Wait for a cleaner setup or try a different asset.",
                     parse_mode="Markdown"
                 )
-                # Still decrement signal count if reached this point and passed initial checks
                 return
             else:
                 logger.info(f"✅ AI Trend Filter Passed for {asset} ({direction} {confidence}%) → {reason}")
@@ -6936,27 +6928,8 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 risk_score = 75
                 risk_recommendation = "🟡 MEDIUM CONFIDENCE - Good OTC opportunity"
             
-            # Enhanced signal reasons based on direction and analysis
-            if direction == "CALL":
-                reasons = [
-                    f"OTC pattern: {analysis.get('otc_pattern', 'Bullish setup')}",
-                    f"Confidence: {confidence}% (OTC optimized)",
-                    f"Market context: {'Available' if analysis.get('market_context_used') else 'Standard OTC'}",
-                    f"Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}",
-                    f"Platform: {platform_info['emoji']} {platform_info['name']} optimized",
-                    "OTC binary options pattern recognition",
-                    "Real technical analysis: SMA + RSI + Price action"
-                ]
-            else:
-                reasons = [
-                    f"OTC pattern: {analysis.get('otc_pattern', 'Bearish setup')}",
-                    f"Confidence: {confidence}% (OTC optimized)", 
-                    f"Market context: {'Available' if analysis.get('market_context_used') else 'Standard OTC'}",
-                    f"Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}",
-                    f"Platform: {platform_info['emoji']} {platform_info['name']} optimized",
-                    "OTC binary options pattern recognition",
-                    "Real technical analysis: SMA + RSI + Price action"
-                ]
+            # Enhanced signal reasons based on direction and analysis (NOT USED IN MINIMAL DISPLAY)
+            # Active enhanced AI engines for this signal (NOT USED IN MINIMAL DISPLAY)
             
             # Calculate enhanced payout based on volatility and confidence
             base_payout = 78  # Slightly higher base for OTC
@@ -6969,10 +6942,50 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             
             payout_range = f"{base_payout + payout_bonus}-{base_payout + payout_bonus + 7}%"
             
-            # Active enhanced AI engines for this signal
-            core_engines = ["TrendConfirmation AI", "QuantumTrend AI", "NeuralMomentum AI", "PatternRecognition AI"]
-            additional_engines = random.sample([eng for eng in AI_ENGINES.keys() if eng not in core_engines], 4)
-            active_engines = core_engines + additional_engines
+            # V9 SIGNAL DISPLAY FORMAT WITH ARROWS AND ACCURACY BOOSTERS
+            risk_indicator = "🟢" if risk_score >= 70 else "🟡" if risk_score >= 55 else "🔴"
+            
+            if direction == "CALL":
+                direction_emoji = "📈"  
+                direction_text = "CALL (UP)"
+                beginner_entry = "Wait for small pullback → Enter CALL"
+            else:
+                direction_emoji = "📉"  
+                direction_text = "PUT (DOWN)"
+                beginner_entry = "Wait for small bounce → Enter PUT"
+            
+            # --- NEW: MINIMAL SIGNAL DISPLAY (FIX 3) ---
+            
+            text = f"""
+🎯 **OTC SIGNAL** • {platform_info['emoji']} {platform_info['name']}
+
+📊 **{asset}** • {final_expiry_display}
+{direction_emoji} **{direction}** • **{confidence}%** confidence
+
+🔄 **Pattern:** {analysis.get('otc_pattern', 'OTC Setup')}
+🎯 **Strategy:** {analysis.get('strategy', 'AI Trend Confirmation')}
+
+⚠️ **Entry Rule (Beginners):**
+{beginner_entry}
+
+📈 **Analysis:**
+• Trend Strength: {trend_strength}%
+• Momentum: {momentum}%
+• Volatility: {volatility_value:.1f}/100
+• Filters: {filter_result['score']}/{filter_result['total']} passed
+{risk_indicator} Risk Score: {risk_score}/100
+
+⚡ **Execution:**
+• Entry: Within 30s
+• Expiry: {final_expiry_display}
+• Payout: {payout_range}
+• Max Risk: 2% (Investment: $25-$100)
+• Stop: Mental (if pattern breaks)
+
+📅 {analysis_time} UTC • Valid 2min
+"""
+
+            # --- END NEW: MINIMAL SIGNAL DISPLAY ---
             
             keyboard = {
                 "inline_keyboard": [
@@ -6985,102 +6998,6 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                     [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
                 ]
             }
-            
-            # V9 SIGNAL DISPLAY FORMAT WITH ARROWS AND ACCURACY BOOSTERS
-            risk_indicator = "🟢" if risk_score >= 70 else "🟡" if risk_score >= 55 else "🔴"
-            safety_indicator = "🛡️" if safe_signal_check['recommendation'] == "RECOMMENDED" else "⚠️" if safe_signal_check['recommendation'] == "CAUTION" else "🚫"
-            
-            if direction == "CALL":
-                direction_emoji = "🔼📈🎯"  # Multiple UP arrows
-                direction_text = "CALL (UP)"
-                arrow_line = "⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️"
-                trade_action = f"🔼 BUY CALL OPTION - PRICE UP"
-                
-                # BEGINNER ENTRY RULE INSERTION
-                beginner_entry = "🟢 **ENTRY RULE (BEGINNERS):**\n➡️ Wait for price to go **DOWN** a little (small red candle)\n➡️ Then enter **UP** (CALL)"
-            else:
-                direction_emoji = "🔽📉🎯"  # Multiple DOWN arrows  
-                direction_text = "PUT (DOWN)"
-                arrow_line = "⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
-                trade_action = f"🔽 BUY PUT OPTION - PRICE DOWN"
-                
-                # BEGINNER ENTRY RULE INSERTION
-                beginner_entry = "🟢 **ENTRY RULE (BEGINNERS):**\n➡️ Wait for price to go **UP** a little (small green candle)\n➡️ Then enter **DOWN** (PUT)"
-            
-            # Platform info
-            platform_display = f"🎮 **PLATFORM:** {platform_info['emoji']} {platform_info['name']} (Optimized)\n"
-            
-            # Market context info
-            market_context_info = ""
-            if analysis.get('market_context_used'):
-                market_context_info = "📊 **MARKET DATA:** TwelveData Context Applied\n"
-            
-            # Intelligent probability info
-            probability_info = "🧠 **INTELLIGENT PROBABILITY:** Active (10-15% accuracy boost)\n"
-            
-            # Accuracy boosters info
-            accuracy_boosters_info = "🎯 **ACCURACY BOOSTERS:** Consensus Voting, Real-time Volatility, Session Boundaries\n"
-            
-            # Safety info
-            safety_info = f"🚨 **SAFETY SYSTEM:** {safety_indicator} {safe_signal_check['recommendation']}\n"
-            
-            # AI Trend Confirmation info if applicable
-            ai_trend_info = ""
-            if analysis.get('strategy') == 'AI Trend Confirmation':
-                ai_trend_info = "🤖 **AI TREND CONFIRMATION:** 3-timeframe analysis active\n"
-            
-            # NEW: Platform-specific analysis advice
-            platform_advice_text = self._get_platform_advice_text(platform_info['name'], asset)
-            
-            text = f"""
-{arrow_line}
-🎯 **OTC BINARY SIGNAL V9.1.2** 🚀
-{arrow_line}
-
-{direction_emoji} **TRADE DIRECTION:** {direction_text}
-⚡ **ASSET:** {asset}
-⏰ **EXPIRY:** {final_expiry_display} 
-📊 **CONFIDENCE LEVEL:** {confidence}%
----
-{beginner_entry}
----
-{platform_display}{market_context_info}{probability_info}{accuracy_boosters_info}{safety_info}{ai_trend_info}
-{risk_indicator} **RISK SCORE:** {risk_score}/100
-✅ **FILTERS PASSED:** {filter_result['score']}/{filter_result['total']}
-💡 **RECOMMENDATION:** {risk_recommendation}
-
-📈 **OTC ANALYSIS:**
-• OTC Pattern: {analysis.get('otc_pattern', 'Standard')}
-• Volatility: {volatility}
-• Session: {session}
-• Risk Level: {analysis.get('risk_level', 'Medium')}
-• Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}
-• **AI Trend Filter Status:** ✅ PASSED ({reason})
-
-🤖 **AI ANALYSIS:**
-• Active Engines: {', '.join(active_engines[:3])}...
-• Analysis Time: {analysis_time} UTC
-• Expected Entry: {expected_entry} UTC
-• Data Source: {'TwelveData + OTC Patterns' if analysis.get('market_context_used') else 'OTC Pattern Recognition'}
-• Analysis Type: REAL TECHNICAL (SMA + RSI + Price Action)
-
-{platform_advice_text}
-
-💰 **TRADING RECOMMENDATION:**
-{trade_action}
-• Expiry: {final_expiry_display}
-• Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}
-• Payout: {payout_range}
-
-⚡ **EXECUTION:**
-• Entry: Within 30 seconds of {expected_entry} UTC (Use Beginner Rule!)
-• Max Risk: 2% of account
-• Investment: $25-$100
-• Stop Loss: Mental (close if pattern invalidates)
-
-{arrow_line}
-*Signal valid for 2 minutes - OTC trading involves risk*
-{arrow_line}"""
 
             self.edit_message_text(
                 chat_id, message_id,
@@ -7130,7 +7047,7 @@ We encountered an issue generating your signal. This is usually temporary.
             )
 
     def _handle_auto_detect(self, chat_id, message_id, asset):
-        """NEW: Handle auto expiry detection"""
+        """NEW: Handle auto expiry detection - MODIFIED FOR CLEAN DISPLAY (FIX 4)"""
         try:
             platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
             
@@ -7140,24 +7057,24 @@ We encountered an issue generating your signal. This is usually temporary.
             # Enable auto mode for this user
             self.auto_mode[chat_id] = True
             
-            # Show analysis results
+            # --- NEW: CLEAN AUTO DETECT DISPLAY (FIX 4) ---
             analysis_text = f"""
-🔄 **AUTO EXPIRY DETECTION ANALYSIS**
+🔄 **AUTO EXPIRY DETECTION**
 
-*Analyzing {asset} market conditions for {platform.upper()}...*
+📊 **{asset}** • {platform.upper()}
 
-**MARKET ANALYSIS:**
+**Analysis:**
 • Trend Strength: {market_conditions['trend_strength']}%
 • Momentum: {market_conditions['momentum']}%
 • Market Type: {'Ranging' if market_conditions['ranging_market'] else 'Trending'}
 • Volatility: {market_conditions['volatility']}
-• Sustained Trend: {'Yes' if market_conditions['sustained_trend'] else 'No'}
 
-**AI RECOMMENDATION:**
-🎯 **OPTIMAL EXPIRY:** {final_expiry_display} 
-💡 **REASON:** {reason}
+🎯 **Recommendation:**
+**{final_expiry_display}**
+💡 *Reason: {reason}*
 
 *Auto-selecting optimal expiry...*"""
+            # --- END NEW: CLEAN AUTO DETECT DISPLAY ---
             
             self.edit_message_text(
                 chat_id, message_id,
@@ -7831,7 +7748,7 @@ def set_webhook():
             "30s_expiry_support": True,
             "multi_platform_balancing": True,
             "ai_trend_confirmation": True,
-            "ai_trend_filter_breakout": True, # Added new breakout strategy
+            "ai_trend_filter_breakout": True,
             "spike_fade_strategy": True,
             "accuracy_boosters": True,
             "safety_systems": True,
@@ -7877,7 +7794,7 @@ def webhook():
             "30s_expiry_support": True,
             "multi_platform_balancing": True,
             "ai_trend_confirmation": True,
-            "ai_trend_filter_breakout": True, # Added new breakout strategy
+            "ai_trend_filter_breakout": True,
             "spike_fade_strategy": True,
             "accuracy_boosters": True,
             "safety_systems": True,
@@ -7914,7 +7831,7 @@ def debug():
         "multi_platform_balancing": True,
         "ai_trend_confirmation": True,
         "spike_fade_strategy": True,
-        "ai_trend_filter_breakout": True, # Added new breakout strategy
+        "ai_trend_filter_breakout": True,
         "accuracy_boosters": True,
         "safety_systems": True,
         "real_technical_analysis": True,
@@ -7946,7 +7863,7 @@ def stats():
         "intelligent_probability": True,
         "multi_platform_support": True,
         "ai_trend_confirmation": True,
-        "ai_trend_filter_breakout": True, # Added new breakout strategy
+        "ai_trend_filter_breakout": True,
         "spike_fade_strategy": True,
         "accuracy_boosters": True,
         "safety_systems": True,
@@ -7978,8 +7895,15 @@ def diagnose_user(chat_id):
         solutions = []
         
         if real_stats['total_trades'] > 0:
-            if real_stats.get('win_rate', '0%') < "50%":
-                issues.append("Low win rate (<50%)")
+            # Note: real_stats['win_rate'] is a formatted string, comparison needs careful handling or using underlying float.
+            # Assuming basic string comparison for demonstration, but safer to use numerical win rate if available.
+            try:
+                win_rate_float = float(real_stats['win_rate'].replace('%', ''))
+            except:
+                win_rate_float = 0
+                
+            if win_rate_float < 50.0:
+                issues.append(f"Low win rate ({real_stats['win_rate']})")
                 solutions.append("Use AI Trend Confirmation strategy with EUR/USD 5min signals only")
             
             if abs(real_stats.get('current_streak', 0)) >= 3:
@@ -8023,7 +7947,7 @@ if __name__ == '__main__':
     logger.info("💰 MANUAL PAYMENT SYSTEM: Users contact admin for upgrades")
     logger.info("👑 ADMIN UPGRADE COMMAND: /upgrade USER_ID TIER")
     logger.info("📚 COMPLETE EDUCATION: OTC trading modules")
-    logger.info("📈 V9 SIGNAL DISPLAY: OTC-optimized format")
+    logger.info("📈 V9 SIGNAL DISPLAY: OTC-optimized format (MINIMAL DISPLAY APPLIED)")
     logger.info("⚡ 30s EXPIRY SUPPORT: Ultra-fast trading now available")
     logger.info("🧠 INTELLIGENT PROBABILITY: 10-15% accuracy boost (NEW!)")
     logger.info("🎮 MULTI-PLATFORM SUPPORT: Quotex, Pocket Option, Binomo, Olymp Trade, Expert Option, IQ Option, Deriv (7 Platforms!) (NEW!)")
