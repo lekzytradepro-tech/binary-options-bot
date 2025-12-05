@@ -207,13 +207,13 @@ def _calculate_realistic_entry_window(platform, expiry):
     """
     # Setup times based on typical platform responsiveness
     setup_times = {
-        "pocket option": 25,  # Fast UI but often laggy
+        "pocket_option": 25,  # Fast UI but often laggy
         "quotex": 20,         # Clean UI, faster setup
         "binomo": 22,         # Medium speed
         "deriv": 30,          # More complex platform
-        "olymp trade": 28,    # Professional interface
-        "expert option": 35,  # Can be slow
-        "iq option": 18       # Optimized interface
+        "olymp_trade": 28,    # Professional interface
+        "expert_option": 35,  # Can be slow
+        "iq_option": 18       # Optimized interface
     }
     
     platform_key = platform.lower().replace(' ', '_')
@@ -6752,7 +6752,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Auto expiry system management (NEW!)
 • Strategy performance analytics (NEW!)
 • TwelveData integration management (NEW!)
-• Intelligent probability system (NEW!)
+• Intelligent probability system management (NEW!)
 • Multi-platform balancing management (NEW!)
 • Accuracy boosters management (NEW!)
 • Safety systems management (NEW!)
