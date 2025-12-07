@@ -23,7 +23,7 @@ app = Flask(__name__)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TWELVEDATA_API_KEYS = [
     os.getenv("TWELVEDATA_API_KEY1"),
-    os.getenv("TWELVEDATA_API_KEY2"), 
+    os.getenv("TWELVEDATA_API_KEY2"),
     os.getenv("TWELVEDATA_API_KEY3")
 ]
 update_queue = queue.Queue()
@@ -80,7 +80,7 @@ def get_best_assets(platform):
 
     # Note: Assets are pulled from the full OTC_ASSETS list defined later
     if p == "pocket option":
-        return ["EUR/USD", "EUR/JPY", "AUD/USD", "GBP/USD", "BTC/USD", "XAU/USD"] 
+        return ["EUR/USD", "EUR/JPY", "AUD/USD", "GBP/USD", "BTC/USD", "XAU/USD"]
     elif p == "quotex":
         return ["EUR/USD", "AUD/USD", "EUR/JPY", "USD/CAD", "EUR/GBP", "XAU/USD", "US30"]
     elif p == "binomo":
@@ -94,7 +94,7 @@ def get_best_assets(platform):
     elif p == "deriv":
         # Deriv Synthetic indices are included here for the purpose of the demo
         return [
-            "EUR/USD", "AUD/USD", "USD/JPY", "EUR/JPY", 
+            "EUR/USD", "AUD/USD", "USD/JPY", "EUR/JPY",
             "Volatility 10", "Volatility 25", "Volatility 50",
             "Volatility 75", "Volatility 100",
             "Boom 500", "Boom 1000", "Crash 500", "Crash 1000"
@@ -116,7 +116,7 @@ def recommend_asset(platform, live_data):
     """5. AUTO ASSET SELECT + BEST RIGHT NOW MESSAGE"""
     # Normalize platform name for lookup
     p_key = platform.lower().replace(' ', '_')
-    
+
     best_assets = get_best_assets(platform)
     # Filter live data to only include assets supported/recommended for the platform
     filtered = [x for x in live_data if x.get('asset') in best_assets]
@@ -198,8 +198,8 @@ def adjust_for_deriv(platform, expiry):
 def _calculate_realistic_entry_window(platform, expiry):
     """
     Calculates a realistic entry time window based on platform speed and trade urgency.
-    
-    Returns: 
+
+    Returns:
     - earliest_str: Time string for earliest entry (current time + 15s minimum)
     - latest_str: Time string for latest entry (current time + total_setup_time)
     - setup_urgency: String indicating urgency (e.g., 'FAST SETUP REQUIRED')
@@ -215,23 +215,23 @@ def _calculate_realistic_entry_window(platform, expiry):
         "expert option": 35,  # Can be slow
         "iq option": 18       # Optimized interface
     }
-    
+
     platform_key = platform.lower().replace(' ', '_')
     base_setup_time = setup_times.get(platform_key, 25)
-    
+
     # Add variance based on user experience
     setup_variance = random.randint(-5, 10)  # -5 to +10 seconds
     total_setup_time = max(15, base_setup_time + setup_variance)  # Minimum 15 seconds
-    
+
     current_time = datetime.utcnow()
-    
+
     # Calculate entry window (not exact time)
     earliest_entry = current_time + timedelta(seconds=15)
     latest_entry = current_time + timedelta(seconds=total_setup_time)
-    
+
     earliest_str = earliest_entry.strftime('%H:%M:%S UTC')
     latest_str = latest_entry.strftime('%H:%M:%S UTC')
-    
+
     # Determine validity and urgency based on expiry
     expiry_num = int(expiry) if expiry.isdigit() else 0
     if expiry_num <= 1 and expiry_num != 0:  # 30s or 1min
@@ -246,7 +246,7 @@ def _calculate_realistic_entry_window(platform, expiry):
     else:
         validity = "3M"
         setup_urgency = "STANDARD SETUP"
-    
+
     return {
         "earliest_entry": earliest_str,
         "latest_entry": latest_str,
@@ -273,7 +273,7 @@ PLATFORM_SETTINGS = {
     "pocket_option": {
         "trend_weight": 0.85, "volatility_penalty": -5, "confidence_bias": -3,
         "reversal_probability": 0.25, "fakeout_adjustment": -8, "expiry_multiplier": 0.7,
-        "timeframe_bias": "1min", "default_expiry": "1", "name": "Pocket Option", 
+        "timeframe_bias": "1min", "default_expiry": "1", "name": "Pocket Option",
         "emoji": "🟠", "behavior": "mean_reversion"
     },
     "binomo": {
@@ -284,31 +284,31 @@ PLATFORM_SETTINGS = {
     },
     # New Platforms (Using new behavior function logic)
     "olymp_trade": {
-        "trend_weight": platform_behavior("olymp trade")["trend_trust"], "volatility_penalty": -1, 
-        "confidence_bias": +1, "reversal_probability": 0.12, "fakeout_adjustment": -1, 
-        "expiry_multiplier": 1.1, "timeframe_bias": "5min", "default_expiry": "5", 
-        "name": "Olymp Trade", "emoji": platform_behavior("olymp trade")["emoji"], 
+        "trend_weight": platform_behavior("olymp trade")["trend_trust"], "volatility_penalty": -1,
+        "confidence_bias": +1, "reversal_probability": 0.12, "fakeout_adjustment": -1,
+        "expiry_multiplier": 1.1, "timeframe_bias": "5min", "default_expiry": "5",
+        "name": "Olymp Trade", "emoji": platform_behavior("olymp trade")["emoji"],
         "behavior": "trend_stable"
     },
     "expert_option": {
-        "trend_weight": platform_behavior("expert option")["trend_trust"], "volatility_penalty": -7, 
-        "confidence_bias": -5, "reversal_probability": 0.35, "fakeout_adjustment": -10, 
-        "expiry_multiplier": 0.6, "timeframe_bias": "1min", "default_expiry": "1", 
-        "name": "Expert Option", "emoji": platform_behavior("expert option")["emoji"], 
+        "trend_weight": platform_behavior("expert option")["trend_trust"], "volatility_penalty": -7,
+        "confidence_bias": -5, "reversal_probability": 0.35, "fakeout_adjustment": -10,
+        "expiry_multiplier": 0.6, "timeframe_bias": "1min", "default_expiry": "1",
+        "name": "Expert Option", "emoji": platform_behavior("expert option")["emoji"],
         "behavior": "reversal_extreme"
     },
     "iq_option": {
-        "trend_weight": platform_behavior("iq option")["trend_trust"], "volatility_penalty": -1, 
-        "confidence_bias": +1, "reversal_probability": 0.10, "fakeout_adjustment": -2, 
-        "expiry_multiplier": 1.0, "timeframe_bias": "5min", "default_expiry": "2", 
-        "name": "IQ Option", "emoji": platform_behavior("iq option")["emoji"], 
+        "trend_weight": platform_behavior("iq option")["trend_trust"], "volatility_penalty": -1,
+        "confidence_bias": +1, "reversal_probability": 0.10, "fakeout_adjustment": -2,
+        "expiry_multiplier": 1.0, "timeframe_bias": "5min", "default_expiry": "2",
+        "name": "IQ Option", "emoji": platform_behavior("iq option")["emoji"],
         "behavior": "trend_stable"
     },
     "deriv": {
-        "trend_weight": platform_behavior("deriv")["trend_trust"], "volatility_penalty": +2, 
-        "confidence_bias": +3, "reversal_probability": 0.05, "fakeout_adjustment": 0, 
-        "expiry_multiplier": 1.2, "timeframe_bias": "1min", "default_expiry": "2", 
-        "name": "Deriv", "emoji": platform_behavior("deriv")["emoji"], 
+        "trend_weight": platform_behavior("deriv")["trend_trust"], "volatility_penalty": +2,
+        "confidence_bias": +3, "reversal_probability": 0.05, "fakeout_adjustment": 0,
+        "expiry_multiplier": 1.2, "timeframe_bias": "1min", "default_expiry": "2",
+        "name": "Deriv", "emoji": platform_behavior("deriv")["emoji"],
         "behavior": "stable_synthetic"
     }
 }
@@ -323,7 +323,7 @@ USER_TIERS = {
         'features': ['10 signals/day', 'All 35+ assets', '21 AI engines', 'All 30 strategies']
     },
     'basic': {
-        'name': 'BASIC', 
+        'name': 'BASIC',
         'signals_daily': 50,
         'duration_days': 30,
         'price': 19,
@@ -351,11 +351,11 @@ USER_TIERS = {
 
 class RealSignalVerifier:
     """Actually verifies signals using real technical analysis - REPLACES RANDOM (EXPANDED)"""
-    
+
     def __init__(self):
         # Note: twelvedata_otc object is initialized later, relying on scope for this.
         pass
-        
+
     def get_price_data(self, asset):
         """Get price data for indicators"""
         symbol_map = {
@@ -365,11 +365,11 @@ class RealSignalVerifier:
             "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
             "SPX500": "SPX", "NAS100": "NDX"
         }
-        
+
         symbol = symbol_map.get(asset, asset.replace("/", ""))
-        
+
         # Note: Global access to twelvedata_otc is required here
-        global twelvedata_otc 
+        global twelvedata_otc
         if 'twelvedata_otc' not in globals():
             return None
 
@@ -379,12 +379,12 @@ class RealSignalVerifier:
             "interval": "5min",
             "outputsize": 20
         })
-        
+
         if data and 'values' in data:
             return data
         
         return None
-        
+
     def calculate_sma(self, prices, period):
         """Calculate REAL Simple Moving Average"""
         if len(prices) < period:
@@ -398,34 +398,34 @@ class RealSignalVerifier:
         if len(prices) < period:
             # Fallback to SMA for the first few periods
             return self.calculate_sma(prices, len(prices)) if prices else 0
-        
+
         # Reverse prices to get chronological order (oldest first)
-        closes = prices[::-1]  
-        
+        closes = prices[::-1]
+
         # Start with SMA for the initial EMA value
         initial_sma = sum(closes[0:period]) / period
-        
+
         k = smoothing_factor / (1 + period)
         ema_list = [initial_sma]
-        
+
         # Calculate EMA for the remaining data points
         for i in range(period, len(closes)):
             # EMA = Price * k + EMA_prev * (1 - k)
             ema = closes[i] * k + ema_list[-1] * (1 - k)
             ema_list.append(ema)
-            
+
         # The latest EMA is the last element calculated
         return ema_list[-1]
-    
+
     def calculate_rsi(self, prices, period=14):
         """Calculate REAL RSI (Relative Strength Index)"""
         if len(prices) < period + 1:
             return 50  # Neutral if insufficient data
-        
+
         # Prices are ordered [current, t-1, t-2, ...]
         gains = []
         losses = []
-        
+
         # Calculate change for the last 'period' candles
         for i in range(1, period + 1):
             change = prices[i-1] - prices[i]
@@ -435,57 +435,57 @@ class RealSignalVerifier:
             else:
                 gains.append(0)
                 losses.append(abs(change))
-        
+
         if len(gains) < period:
             return 50
-        
+
         avg_gain = sum(gains) / period
         avg_loss = sum(losses) / period
-        
+
         if avg_loss == 0:
             return 100
-        
+
         rs = avg_gain / avg_loss
         rsi = 100 - (100 / (1 + rs))
-        
+
         return round(rsi, 1)
-    
+
     def calculate_momentum(self, prices, period=5):
         """Calculate REAL price momentum (5 periods back)"""
         if len(prices) < period:
             return 0
         momentum = ((prices[0] - prices[period-1]) / prices[period-1]) * 100
         return round(momentum, 2)
-    
+
     def calculate_volatility(self, prices, period=10):
         """Calculate REAL volatility (Average True Range like)"""
         if len(prices) < period:
             return 50
-        
+
         changes = []
         for i in range(1, min(period, len(prices))):
             # Percentage change between candles
             change = abs((prices[i-1] - prices[i]) / prices[i]) * 100
             changes.append(change)
-        
+
         if not changes:
             return 50
-            
+
         avg_volatility = sum(changes) / len(changes)
         return round(min(100, avg_volatility * 10), 1)  # Normalize to 0-100
-    
+
     def calculate_trend_strength(self, prices):
         """Calculate REAL trend strength based on EMA alignment (Updated to EMA)"""
         if len(prices) < 20:
             return 50
-        
+
         # Use EMA for better responsiveness
         ema_5 = self.calculate_ema(prices, 5)
         ema_10 = self.calculate_ema(prices, 10)
         ema_20 = self.calculate_ema(prices, 20)
-        
+
         current_price = prices[0]
-        
+
         # Check alignment of EMAs
         if current_price > ema_5 > ema_10 > ema_20:
             return random.randint(75, 90)  # Strong uptrend
@@ -498,12 +498,12 @@ class RealSignalVerifier:
         """Detect REAL support/resistance levels from recent price action"""
         if len(prices) < 10:
             return "Insufficient data"
-        
+
         recent_high = max(prices[:5])
         recent_low = min(prices[:5])
-        
+
         current_price = prices[0]
-        
+
         # 0.1% buffer for 'near'
         if current_price > recent_high * 0.999:
             return f"Near Resistance: {recent_high:.5f}"
@@ -519,83 +519,116 @@ class RealSignalVerifier:
         ema_10 = analysis['ema_10']  # Use EMA
         rsi = analysis['rsi']
         momentum = analysis['price_momentum']
-        
+
         # Rule 1: Strong EMA trend (More responsive than SMA)
         if current_price > ema_5 and current_price > ema_10:
             if rsi < 70:  # Not overbought
-                return "CALL"
+                direction = "CALL"
         
         if current_price < ema_5 and current_price < ema_10:
             if rsi > 30:  # Not oversold
-                return "PUT"
-        
+                direction = "PUT"
+
         # Rule 2: RSI extremes (reversal logic)
         if rsi < 30:
-            return "CALL"  # Oversold bounce expected
-        
+            direction = "CALL"  # Oversold bounce expected
+
         if rsi > 70:
-            return "PUT"  # Overbought pullback expected
-        
+            direction = "PUT"  # Overbought pullback expected
+
         # Rule 3: Momentum continuation
         if momentum > 0.5:
-            return "CALL"
+            direction = "CALL"
         elif momentum < -0.5:
-            return "PUT"
-        
+            direction = "PUT"
+
         # Default: Follow shortest-term EMA trend (More responsive default)
-        return "CALL" if current_price > ema_5 else "PUT"
-    
+        direction = "CALL" if current_price > ema_5 else "PUT"
+        
+        # --- TREND EXHAUSTION FILTER ---
+        # Detect when trend is weakening even if indicators still point same direction
+        exhaustion = False
+
+        # EMA angle weakening (EMA5 becoming flat)
+        ema_slope = abs(analysis['ema_5'] - analysis['ema_10'])
+        if ema_slope < (analysis['current_price'] * 0.00005):
+            exhaustion = True
+
+        # Momentum dropping
+        if abs(analysis['price_momentum']) < 0.15:
+            exhaustion = True
+
+        # RSI leaving extreme zones (reversal signals)
+        if 30 < analysis['rsi'] < 45 and direction == "CALL":
+            exhaustion = True
+        if 55 < analysis['rsi'] < 70 and direction == "PUT":
+            exhaustion = True
+
+        # If trend exhaustion detected, force reversal or neutralize direction
+        if exhaustion:
+            direction = "CALL" if direction == "PUT" else "PUT"
+            # Small confidence penalty when forced reversal
+            analysis['trend_exhaustion'] = True
+        else:
+            analysis['trend_exhaustion'] = False
+            
+        return direction, analysis # Return updated analysis object
+
     def calculate_confidence(self, analysis):
         """Calculate REAL confidence from indicators - UPDATED TO USE EMA"""
         confidence = 65  # Base
-        
+
         # RSI confidence boost/penalty
         rsi = analysis['rsi']
         if rsi < 30 or rsi > 70:
             confidence += 10  # Strong signal from RSI extremes
-        
+
         # EMA alignment confidence (More responsive)
         current_price = analysis['current_price']
         ema_5 = analysis['ema_5']
         ema_10 = analysis['ema_10']
-        
+
         if (current_price > ema_5 > ema_10) or (current_price < ema_5 < ema_10):
             confidence += 12  # Strong trend alignment
-        
+
         # Volatility adjustment
         volatility = analysis['volatility']
         if volatility > 80:
             confidence -= 8  # Reduce confidence in high volatility
         elif volatility < 30:
             confidence -= 5  # Reduce in low volatility (less movement)
-        
+
         # Trend strength adjustment
         trend_strength = analysis['trend_strength']
         confidence += (trend_strength - 50) / 5  # Adjust based on trend strength
         
+        # Trend Exhaustion Adjustment (from analyze_indicators)
+        if analysis.get('trend_exhaustion'):
+            confidence -= 5 # Penalty for forcing a reversal/neutralize
+
         # Ensure bounds
         confidence = max(60, min(90, confidence))
-        
+
         # Add small randomness for natural variation
         confidence += random.uniform(-3, 3)
-        
+
         return round(confidence)
-    
+
     def get_real_analysis(self, asset):
         """Get actual analysis for signal generation - UPDATED TO INCLUDE EMA"""
         try:
             # Get real price data from TwelveData
             data = self.get_price_data(asset)
-            
+
             if not data or 'values' not in data:
                 return self.get_fallback_analysis(asset)
-            
+
             values = data['values']
             closes = [float(v['close']) for v in values[:20]]  # Last 20 periods
-            
+
             if len(closes) < 10:
                 return self.get_fallback_analysis(asset)
-            
+
             # REAL INDICATOR CALCULATIONS - NOW INCLUDES EMA
             analysis = {
                 'sma_5': self.calculate_sma(closes, 5),
@@ -609,24 +642,24 @@ class RealSignalVerifier:
                 'trend_strength': self.calculate_trend_strength(closes),
                 'support_resistance': self.detect_support_resistance(closes)
             }
-            
-            # Determine direction based on REAL indicators
-            direction = self.analyze_indicators(analysis)
+
+            # Determine direction and get updated analysis based on REAL indicators
+            direction, analysis = self.analyze_indicators(analysis)
             confidence = self.calculate_confidence(analysis)
-            
+
             logger.info(f"📊 REAL INDICATORS: {asset} | RSI: {analysis['rsi']:.1f} | Direction: {direction} {confidence}%")
-            
+
             return {
                 'direction': direction,
                 'confidence': confidence,
                 'indicators': analysis,
                 'method': 'REAL_INDICATOR_ANALYSIS'
             }
-            
+
         except Exception as e:
             logger.error(f"❌ Indicator analysis error: {e}")
             return self.get_fallback_analysis(asset)
-    
+
     # Original function, now calls the new structure
     def get_real_direction(self, asset):
         """Get actual direction based on price action (for core logic)"""
@@ -636,7 +669,7 @@ class RealSignalVerifier:
     def get_fallback_analysis(self, asset):
         """Fallback when indicators can't be calculated"""
         current_hour = datetime.utcnow().hour
-        
+
         if 7 <= current_hour < 16:  # London session
             direction = "CALL"
             confidence = 65
@@ -646,7 +679,7 @@ class RealSignalVerifier:
         else:  # Asian session
             direction = "PUT"
             confidence = 63
-        
+
         return {
             'direction': direction,
             'confidence': confidence,
@@ -660,14 +693,14 @@ class RealSignalVerifier:
 
 class ProfitLossTracker:
     """Tracks results and adapts signals - STOPS LOSING STREAKS"""
-    
+
     def __init__(self):
         self.trade_history = []
         self.asset_performance = {}
         self.max_consecutive_losses = 3
         self.current_loss_streak = 0
         self.user_performance = {}
-        
+
     def record_trade(self, chat_id, asset, direction, confidence, outcome):
         """Record trade outcome"""
         trade = {
@@ -680,11 +713,11 @@ class ProfitLossTracker:
             'payout': random.randint(75, 85) if outcome == 'win' else -100
         }
         self.trade_history.append(trade)
-        
+
         # Update user performance
         if chat_id not in self.user_performance:
             self.user_performance[chat_id] = {'wins': 0, 'losses': 0, 'streak': 0}
-        
+
         if outcome == 'win':
             self.user_performance[chat_id]['wins'] += 1
             self.user_performance[chat_id]['streak'] = max(0, self.user_performance[chat_id].get('streak', 0)) + 1
@@ -693,65 +726,65 @@ class ProfitLossTracker:
             self.user_performance[chat_id]['losses'] += 1
             self.user_performance[chat_id]['streak'] = min(0, self.user_performance[chat_id].get('streak', 0)) - 1
             self.current_loss_streak += 1
-            
+
         # Update asset performance
         if asset not in self.asset_performance:
             self.asset_performance[asset] = {'wins': 0, 'losses': 0}
-        
+
         if outcome == 'win':
             self.asset_performance[asset]['wins'] += 1
         else:
             self.asset_performance[asset]['losses'] += 1
-            
+
         # If too many losses, log warning
         if self.current_loss_streak >= self.max_consecutive_losses:
             logger.warning(f"⚠️ STOP TRADING WARNING: {self.current_loss_streak} consecutive losses")
-            
+
         # Keep only last 100 trades
         if len(self.trade_history) > 100:
             self.trade_history = self.trade_history[-100:]
-            
+
         return trade
-    
+
     def should_user_trade(self, chat_id):
         """Check if user should continue trading"""
         user_stats = self.user_performance.get(chat_id, {'wins': 0, 'losses': 0, 'streak': 0})
-        
+
         # Check consecutive losses
         if user_stats.get('streak', 0) <= -3:
             return False, f"Stop trading - 3 consecutive losses"
-        
+
         # Check overall win rate
         total = user_stats['wins'] + user_stats['losses']
         if total >= 5:
             win_rate = user_stats['wins'] / total
             if win_rate < 0.4:  # Less than 40% win rate
                 return False, f"Low win rate: {win_rate*100:.1f}%"
-        
+
         return True, "OK to trade"
-    
+
     def get_asset_recommendation(self, asset):
         """Get recommendation for specific asset"""
         perf = self.asset_performance.get(asset, {'wins': 1, 'losses': 1})
         total = perf['wins'] + perf['losses']
-        
+
         if total < 5:
             return "NEUTRAL", f"Insufficient data: {total} trades"
-        
+
         win_rate = perf['wins'] / total
-        
+
         if win_rate < 0.35:
             return "AVOID", f"Poor performance: {win_rate*100:.1f}% win rate"
         elif win_rate < 0.55:
             return "CAUTION", f"Moderate: {win_rate*100:.1f}% win rate"
         else:
             return "RECOMMENDED", f"Good: {win_rate*100:.1f}% win rate"
-    
+
     def get_user_stats(self, chat_id):
         """Get user statistics"""
         user_stats = self.user_performance.get(chat_id, {'wins': 0, 'losses': 0, 'streak': 0})
         total = user_stats['wins'] + user_stats['losses']
-        
+
         if total == 0:
             return {
                 'total_trades': 0,
@@ -759,9 +792,9 @@ class ProfitLossTracker:
                 'current_streak': 0,
                 'recommendation': 'No trades yet'
             }
-        
+
         win_rate = (user_stats['wins'] / total) * 100
-        
+
         return {
             'total_trades': total,
             'win_rate': f"{win_rate:.1f}%",
@@ -775,63 +808,63 @@ class ProfitLossTracker:
 
 class SafeSignalGenerator:
     """Generates safe, verified signals with profit protection"""
-    
+
     def __init__(self):
         self.pl_tracker = ProfitLossTracker()
         self.real_verifier = RealSignalVerifier()
         self.last_signals = {}
         self.cooldown_period = 60  # seconds between signals
         self.asset_cooldown = {}
-        
+
     def generate_safe_signal(self, chat_id, asset, expiry, platform="quotex"):
         """Generate safe, verified signal with protection"""
         # Check cooldown for this user-asset pair
         key = f"{chat_id}_{asset}"
         current_time = datetime.now()
-        
+
         if key in self.last_signals:
             elapsed = (current_time - self.last_signals[key]).seconds
             if elapsed < self.cooldown_period:
                 wait_time = self.cooldown_period - elapsed
                 return None, f"Wait {wait_time} seconds before next {asset} signal"
-        
+
         # Check if user should trade
         can_trade, reason = self.pl_tracker.should_user_trade(chat_id)
         if not can_trade:
             return None, f"Trading paused: {reason}"
-        
+
         # Get asset recommendation
         recommendation, rec_reason = self.pl_tracker.get_asset_recommendation(asset)
         if recommendation == "AVOID":
             # 🎯 PO-SPECIFIC AVOIDANCE: Avoid highly volatile assets on Pocket Option
             if platform == "pocket_option" and asset in ["BTC/USD", "ETH/USD", "XRP/USD", "GBP/JPY"]:
                  return None, f"Avoid {asset} on Pocket Option: Too volatile"
-            
+
             # Allow avoidance to be overridden if confidence is high, or if platform is Quotex (cleaner trends)
-            if platform != "quotex" and random.random() < 0.8: 
+            if platform != "quotex" and random.random() < 0.8:
                  return None, f"Avoid {asset}: {rec_reason}"
-        
+
         # Get REAL direction (NOT RANDOM)
         direction, confidence = self.real_verifier.get_real_direction(asset)
-        
+
         # Apply platform-specific adjustments
         platform_cfg = PLATFORM_SETTINGS.get(platform, PLATFORM_SETTINGS["quotex"])
         confidence = max(55, min(95, confidence + platform_cfg["confidence_bias"]))
-        
+
         # Reduce confidence for risky conditions
         if recommendation == "CAUTION":
             confidence = max(55, confidence - 10)
-        
+
         # Check if too many similar signals recently
-        recent_signals = [s for s in self.last_signals.values() 
+        recent_signals = [s for s in self.last_signals.values()
                          if (current_time - s).seconds < 300]  # 5 minutes
-        
+
         if len(recent_signals) > 10:
             confidence = max(55, confidence - 5)
-        
+
         # Store signal time
         self.last_signals[key] = current_time
-        
+
         return {
             'direction': direction,
             'confidence': confidence,
@@ -877,61 +910,78 @@ SAFE_TRADING_RULES = {
 
 class AdvancedSignalValidator:
     """Advanced signal validation for higher accuracy"""
-    
+
     def __init__(self):
         self.accuracy_history = {}
         self.pattern_cache = {}
-    
+
     def validate_signal(self, asset, direction, confidence):
         """Comprehensive signal validation"""
         validation_score = 100
-        
+
         # 1. Timeframe alignment check
         timeframe_score = self.check_timeframe_alignment(asset, direction)
         validation_score = (validation_score + timeframe_score) / 2
-        
+
         # 2. Session optimization check
         session_score = self.check_session_optimization(asset)
         validation_score = (validation_score + session_score) / 2
-        
+
         # 3. Volatility adjustment
         volatility_score = self.adjust_for_volatility(asset)
         validation_score = (validation_score + volatility_score) / 2
-        
+
         # 4. Price pattern confirmation
         pattern_score = self.check_price_patterns(asset, direction)
         validation_score = (validation_score + pattern_score) / 2
-        
+
         # 5. Correlation confirmation
         correlation_score = self.check_correlation(asset, direction)
         validation_score = (validation_score + correlation_score) / 2
-        
+
         final_confidence = min(95, confidence * (validation_score / 100))
-        
+
         logger.info(f"🎯 Signal Validation: {asset} {direction} | "
                    f"Base: {confidence}% → Validated: {final_confidence}% | "
                    f"Score: {validation_score}/100")
-        
+
         return final_confidence, validation_score
-    
+
     def check_timeframe_alignment(self, asset, direction):
-        """Check if multiple timeframes confirm the signal"""
-        # Simulate multi-timeframe analysis
-        timeframes = ['1min', '5min', '15min']
-        aligned_timeframes = random.randint(1, 3)  # 1-3 timeframes aligned
-        
-        if aligned_timeframes == 3:
-            return 95  # All timeframes aligned - excellent
-        elif aligned_timeframes == 2:
-            return 75  # Most timeframes aligned - good
+        """
+        Multi-timeframe alignment:
+        1m, 5m, 15m must support the same direction.
+        If they disagree → reduce score significantly.
+        """
+
+        # Simulate multi-timeframe indicator alignment
+        # (you already have real 5min via TwelveData; we simulate 1m/15m by probabilities)
+        tf1 = random.choice([direction, direction, "NEUTRAL"])      # 1m
+        tf5 = direction                                              # 5m real direction
+        tf15 = random.choice([direction, "NEUTRAL", "REVERSE"])      # 15m bias
+
+        aligned = 0
+
+        if tf1 == direction:
+            aligned += 1
+        if tf5 == direction:
+            aligned += 1
+        if tf15 == direction:
+            aligned += 1
+
+        # Scoring
+        if aligned == 3:
+            return 95     # Perfect alignment
+        elif aligned == 2:
+            return 75     # Mostly aligned
         else:
-            return 55  # Only one timeframe - caution
-    
+            return 55     # Weak alignment → caution
+
     def check_session_optimization(self, asset):
         """Check if current session is optimal for this asset"""
         current_hour = datetime.utcnow().hour
         asset_type = OTC_ASSETS.get(asset, {}).get('type', 'Forex')
-        
+
         # Session optimization rules
         if asset_type == 'Forex':
             if 'JPY' in asset and (22 <= current_hour or current_hour < 6):
@@ -942,17 +992,17 @@ class AdvancedSignalValidator:
                 return 80  # USD pairs optimal in NY
         elif asset_type == 'Crypto':
             return 70  # Crypto less session-dependent
-        
+
         return 60  # Suboptimal session
-    
+
     def adjust_for_volatility(self, asset):
         """Adjust signal based on current volatility conditions"""
         asset_info = OTC_ASSETS.get(asset, {})
         base_volatility = asset_info.get('volatility', 'Medium')
-        
+
         # Simulate real-time volatility assessment
         current_volatility = random.choice(['Low', 'Medium', 'High', 'Very High'])
-        
+
         # Volatility scoring - medium volatility is best for accuracy
         volatility_scores = {
             'Low': 70,      # Too slow, patterns less reliable
@@ -960,21 +1010,21 @@ class AdvancedSignalValidator:
             'High': 65,     # Increased noise
             'Very High': 50 # Too chaotic
         }
-        
+
         return volatility_scores.get(current_volatility, 75)
-    
+
     def check_price_patterns(self, asset, direction):
         """Validate with price action patterns"""
         patterns = ['pin_bar', 'engulfing', 'inside_bar', 'support_bounce', 'resistance_rejection']
         detected_patterns = random.sample(patterns, random.randint(0, 2))
-        
+
         if len(detected_patterns) == 2:
             return 85  # Strong pattern confirmation
         elif len(detected_patterns) == 1:
             return 70  # Some pattern confirmation
         else:
             return 60  # No clear patterns
-    
+
     def check_correlation(self, asset, direction):
         """Check correlated assets for confirmation"""
         # Simple correlation mapping
@@ -985,11 +1035,11 @@ class AdvancedSignalValidator:
             'XAU/USD': ['XAG/USD', 'USD/CHF'],
             'BTC/USD': ['ETH/USD', 'US30']
         }
-        
+
         correlated_assets = correlation_map.get(asset, [])
         if not correlated_assets:
             return 70  # No correlation data available
-        
+
         # Simulate correlation confirmation
         confirmation_rate = random.randint(60, 90)
         return confirmation_rate
@@ -1003,7 +1053,7 @@ advanced_validator = AdvancedSignalValidator()
 
 class ConsensusEngine:
     """Multiple AI engine consensus voting system"""
-    
+
     def __init__(self):
         self.engine_weights = {
             "QuantumTrend": 1.2,
@@ -1012,20 +1062,20 @@ class ConsensusEngine:
             "LiquidityFlow": 0.9,
             "VolatilityMatrix": 1.0
         }
-    
+
     def get_consensus_signal(self, asset):
         """Get signal from multiple AI engines and vote"""
         votes = {"CALL": 0, "PUT": 0}
         weighted_votes = {"CALL": 0, "PUT": 0}
         confidences = []
-        
+
         # Simulate multiple engine analysis
         for engine_name, weight in self.engine_weights.items():
             direction, confidence = self._simulate_engine_analysis(asset, engine_name)
             votes[direction] += 1
             weighted_votes[direction] += weight
             confidences.append(confidence)
-        
+
         # Determine consensus direction
         if weighted_votes["CALL"] > weighted_votes["PUT"]:
             final_direction = "CALL"
@@ -1033,26 +1083,26 @@ class ConsensusEngine:
         else:
             final_direction = "PUT"
             consensus_strength = weighted_votes["PUT"] / sum(self.engine_weights.values())
-        
+
         # Calculate consensus confidence
         avg_confidence = sum(confidences) / len(confidences)
-        
+
         # Boost confidence based on consensus strength
         consensus_boost = consensus_strength * 0.25  # Up to 25% boost for strong consensus
         final_confidence = min(95, avg_confidence * (1 + consensus_boost))
-        
+
         logger.info(f"🤖 Consensus Engine: {asset} | "
                    f"Direction: {final_direction} | "
                    f"Votes: CALL {votes['CALL']}-{votes['PUT']} PUT | "
                    f"Confidence: {final_confidence}%")
-        
+
         return final_direction, round(final_confidence)
-    
+
     def _simulate_engine_analysis(self, asset, engine_name):
         """Simulate different engine analyses"""
         # Base probabilities with engine-specific biases
         base_prob = 50
-        
+
         if engine_name == "QuantumTrend":
             # Trend-following engine
             base_prob += random.randint(-5, 10)
@@ -1068,15 +1118,15 @@ class ConsensusEngine:
         elif engine_name == "VolatilityMatrix":
             # Volatility-based engine
             base_prob += random.randint(-12, 3)
-        
+
         # Ensure within bounds
         call_prob = max(40, min(60, base_prob))
         put_prob = 100 - call_prob
-        
+
         # Generate direction with weighted probability
         direction = random.choices(['CALL', 'PUT'], weights=[call_prob, put_prob])[0]
         confidence = random.randint(70, 88)
-        
+
         return direction, confidence
 
 # Initialize consensus engine
@@ -1088,20 +1138,20 @@ consensus_engine = ConsensusEngine()
 
 class RealTimeVolatilityAnalyzer:
     """Real-time volatility analysis for accuracy adjustment"""
-    
+
     def __init__(self):
         self.volatility_cache = {}
         self.cache_duration = 300  # 5 minutes
-        
+
     def get_real_time_volatility(self, asset):
         """Measure real volatility from price movements"""
         try:
             cache_key = f"volatility_{asset}"
             cached = self.volatility_cache.get(cache_key)
-            
+
             if cached and (time.time() - cached['timestamp']) < self.cache_duration:
                 return cached['volatility']
-            
+
             # Get recent price data from TwelveData
             symbol_map = {
                 "EUR/USD": "EUR/USD", "GBP/USD": "GBP/USD", "USD/JPY": "USD/JPY",
@@ -1110,16 +1160,16 @@ class RealTimeVolatilityAnalyzer:
                 "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
                 "SPX500": "SPX", "NAS100": "NDX"
             }
-            
+
             symbol = symbol_map.get(asset, asset.replace("/", ""))
-            
+
             global twelvedata_otc
             data = twelvedata_otc.make_request("time_series", {
                 "symbol": symbol,
                 "interval": "1min",
                 "outputsize": 10
             })
-            
+
             if data and 'values' in data:
                 prices = [float(v['close']) for v in data['values'][:5]]
                 if len(prices) >= 2:
@@ -1128,30 +1178,30 @@ class RealTimeVolatilityAnalyzer:
                     for i in range(1, len(prices)):
                         change = abs((prices[i] - prices[i-1]) / prices[i-1]) * 100
                         changes.append(change)
-                    
+
                     volatility = np.mean(changes) if changes else 0.5
-                    
+
                     # Normalize to 0-100 scale
                     normalized_volatility = min(100, volatility * 10)
-                    
+
                     # Cache the result
                     self.volatility_cache[cache_key] = {
                         'volatility': normalized_volatility,
                         'timestamp': time.time()
                     }
-                    
+
                     logger.info(f"📊 Real-time Volatility: {asset} - {normalized_volatility:.1f}/100")
                     return normalized_volatility
-                    
+
         except Exception as e:
             logger.error(f"❌ Volatility analysis error for {asset}: {e}")
-        
+
         # Fallback to asset's base volatility
         asset_info = OTC_ASSETS.get(asset, {})
         base_vol = asset_info.get('volatility', 'Medium')
         volatility_map = {'Low': 30, 'Medium': 50, 'High': 70, 'Very High': 85}
         return volatility_map.get(base_vol, 50)
-    
+
     def _get_twelvedata_symbol(self, asset):
         """Map OTC asset to TwelveData symbol"""
         symbol_map = {
@@ -1162,11 +1212,11 @@ class RealTimeVolatilityAnalyzer:
             "SPX500": "SPX", "NAS100": "NDX"
         }
         return symbol_map.get(asset, "EUR/USD")
-    
+
     def get_volatility_adjustment(self, asset, base_confidence):
         """Adjust confidence based on real-time volatility"""
         volatility = self.get_real_time_volatility(asset)
-        
+
         # Optimal volatility range is 40-60 (medium volatility)
         if 40 <= volatility <= 60:
             # Optimal conditions - slight boost
@@ -1180,7 +1230,7 @@ class RealTimeVolatilityAnalyzer:
         else:
             # High volatility - moderate reduction
             adjustment = -5
-        
+
         adjusted_confidence = max(50, base_confidence + adjustment)
         return adjusted_confidence, volatility
 
@@ -1193,37 +1243,37 @@ volatility_analyzer = RealTimeVolatilityAnalyzer()
 
 class SessionBoundaryAnalyzer:
     """Analyze session boundaries for momentum opportunities"""
-    
+
     def get_session_momentum_boost(self):
         """Boost accuracy at session boundaries"""
         current_hour = datetime.utcnow().hour
         current_minute = datetime.utcnow().minute
-        
+
         # Session boundaries with boost values
         boundaries = {
             6: ("Asian to London", 3),    # +3% accuracy boost
-            12: ("London to NY", 5),      # +5% accuracy boost  
+            12: ("London to NY", 5),      # +5% accuracy boost
             16: ("NY Close", 2),          # +2% accuracy boost
             21: ("NY to Asian", 1)        # +1% accuracy boost
         }
-        
+
         for boundary_hour, (session_name, boost) in boundaries.items():
             # Check if within ±1 hour of boundary
             if abs(current_hour - boundary_hour) <= 1:
                 # Additional boost if within 15 minutes of exact boundary
                 if abs(current_minute - 0) <= 15:
                     boost += 2  # Extra boost at exact boundary
-                
+
                 logger.info(f"🕒 Session Boundary: {session_name} - +{boost}% accuracy boost")
                 return boost, session_name
-        
+
         return 0, "Normal Session"
-    
+
     def is_high_probability_session(self, asset):
         """Check if current session is high probability for asset"""
         current_hour = datetime.utcnow().hour
         asset_type = OTC_ASSETS.get(asset, {}).get('type', 'Forex')
-        
+
         if asset_type == 'Forex':
             if 'JPY' in asset and (22 <= current_hour or current_hour < 6):
                 return True, "Asian session optimal for JPY pairs"
@@ -1233,7 +1283,7 @@ class SessionBoundaryAnalyzer:
                 return True, "NY session optimal for USD pairs"
             elif 12 <= current_hour < 16:
                 return True, "Overlap session optimal for all pairs"
-        
+
         return False, "Normal session conditions"
 
 # Initialize session analyzer
@@ -1245,50 +1295,50 @@ session_analyzer = SessionBoundaryAnalyzer()
 
 class AccuracyTracker:
     """Track and learn from signal accuracy"""
-    
+
     def __init__(self):
         self.performance_data = {}
         self.asset_performance = {}
-    
+
     def record_signal_outcome(self, chat_id, asset, direction, confidence, outcome):
         """Record whether signal was successful"""
         key = f"{asset}_{direction}"
         if key not in self.performance_data:
             self.performance_data[key] = {'wins': 0, 'losses': 0, 'total_confidence': 0}
-        
+
         if outcome == 'win':
             self.performance_data[key]['wins'] += 1
         else:
             self.performance_data[key]['losses'] += 1
-        
+
         self.performance_data[key]['total_confidence'] += confidence
-        
+
         # Update asset performance
         if asset not in self.asset_performance:
             self.asset_performance[asset] = {'wins': 0, 'losses': 0}
-        
+
         if outcome == 'win':
             self.asset_performance[asset]['wins'] += 1
         else:
             self.asset_performance[asset]['losses'] += 1
-    
+
     def get_asset_accuracy(self, asset, direction):
         """Get historical accuracy for this asset/direction"""
         key = f"{asset}_{direction}"
         data = self.performance_data.get(key, {'wins': 1, 'losses': 1})
         total = data['wins'] + data['losses']
         accuracy = (data['wins'] / total) * 100 if total > 0 else 70
-        
+
         # Adjust based on sample size
         if total < 10:
             accuracy = max(60, min(80, accuracy))  # Conservative estimate for small samples
-        
+
         return accuracy
-    
+
     def get_confidence_adjustment(self, asset, direction, base_confidence):
         """Adjust confidence based on historical performance"""
         historical_accuracy = self.get_asset_accuracy(asset, direction)
-        
+
         # Boost confidence if historical accuracy is high
         if historical_accuracy >= 80:
             adjustment = 5
@@ -1298,7 +1348,7 @@ class AccuracyTracker:
             adjustment = 1
         else:
             adjustment = -2
-        
+
         adjusted_confidence = max(50, min(95, base_confidence + adjustment))
         return adjusted_confidence, historical_accuracy
 
@@ -1311,7 +1361,7 @@ accuracy_tracker = AccuracyTracker()
 
 class PocketOptionSpecialist:
     """Specialized analysis for Pocket Option's unique market behavior"""
-    
+
     def __init__(self):
         self.po_patterns = {
             "spike_reversal": "Price spikes then reverses immediately",
@@ -1322,7 +1372,7 @@ class PocketOptionSpecialist:
             "stop_hunt": "Price pushes through level to hit stops then reverses"
         }
         self.session_data = {}
-        
+
     def analyze_po_behavior(self, asset, current_price, historical_data):
         """Analyze Pocket Option specific patterns"""
         analysis = {
@@ -1332,12 +1382,12 @@ class PocketOptionSpecialist:
             "recommendation": "Standard trade",
             "spike_warning": False
         }
-        
+
         current_hour = datetime.utcnow().hour
         current_minute = datetime.utcnow().minute
-        
+
         # 🎯 POCKET OPTION SPECIFIC RULES
-        
+
         # 1. Session opening spikes (common in PO)
         if current_hour in [7, 12] and current_minute < 15:
             analysis["detected_patterns"].append("session_spike")
@@ -1345,21 +1395,21 @@ class PocketOptionSpecialist:
             analysis["po_adjustment"] = -10
             analysis["spike_warning"] = True
             analysis["recommendation"] = "Avoid first 15min of London/NY open"
-        
+
         # 2. High volatility periods
         elif current_hour in [13, 14, 15]:  # NY afternoon
             analysis["detected_patterns"].append("high_volatility_period")
             analysis["risk_level"] = "High"
             analysis["po_adjustment"] = -8
             analysis["recommendation"] = "Use shorter expiries (30s-1min)"
-        
+
         # 3. Asian session (more stable)
         elif 22 <= current_hour or current_hour < 6:
             analysis["detected_patterns"].append("asian_session")
             analysis["risk_level"] = "Low"
             analysis["po_adjustment"] = +3
             analysis["recommendation"] = "Good for mean reversion"
-        
+
         # 4. Check for recent spikes (PO loves spikes)
         if historical_data and len(historical_data) >= 3:
             recent_changes = []
@@ -1368,20 +1418,20 @@ class PocketOptionSpecialist:
                     # Simulated data check - simplified from real verifier logic
                     change = abs(historical_data[i] - historical_data[i+1]) / historical_data[i+1] * 100
                     recent_changes.append(change)
-            
+
             if recent_changes and max(recent_changes) > 0.5:  # 0.5%+ spike
                 analysis["detected_patterns"].append("recent_spike")
                 analysis["spike_warning"] = True
                 analysis["po_adjustment"] -= 5
                 analysis["recommendation"] = "Wait for consolidation after spike"
-        
+
         return analysis
-    
+
     def adjust_expiry_for_po(self, asset, base_expiry, market_conditions):
         """Adjust expiry for Pocket Option behavior"""
         asset_info = OTC_ASSETS.get(asset, {})
         volatility = asset_info.get('volatility', 'Medium')
-        
+
         # PO-specific expiry rules
         if market_conditions.get('high_volatility', False):
             # In high vol, use ultra-short expiries
@@ -1389,28 +1439,28 @@ class PocketOptionSpecialist:
                 return "1", "High volatility - use 1 minute expiry"
             elif base_expiry == "5":
                 return "2", "High volatility - use 2 minutes expiry"
-        
+
         # For very high volatility assets
         if volatility in ["High", "Very High"]:
             if base_expiry in ["2", "5"]:
                 return "1", f"{volatility} asset - use 1 minute expiry"
-        
+
         # Default: Shorter expiries for PO
         expiry_map = {
             "5": "2",
-            "2": "1", 
+            "2": "1",
             "1": "30",
             "30": "30"
         }
-        
+
         new_expiry = expiry_map.get(base_expiry, base_expiry)
-        
+
         # Use clean unit helper for display
         new_expiry_display = _get_clean_expiry_unit(new_expiry)
-        
+
         if new_expiry != base_expiry:
             return new_expiry, f"Pocket Option optimized: shorter expiry ({new_expiry_display})"
-        
+
         return base_expiry, f"Standard expiry ({new_expiry_display})"
 
 # Initialize PO specialist
@@ -1422,7 +1472,7 @@ po_specialist = PocketOptionSpecialist()
 
 class PocketOptionStrategies:
     """Special strategies for Pocket Option"""
-    
+
     def get_po_strategy(self, asset, market_conditions=None):
         """Get PO-specific trading strategy"""
         strategies = {
@@ -1473,7 +1523,7 @@ class PocketOptionStrategies:
                 "success_rate": "70-80%"
             }
         }
-        
+
         # Fallback to default if no conditions provided
         if not market_conditions:
             return strategies['default']
@@ -1487,7 +1537,7 @@ class PocketOptionStrategies:
             return strategies["session_breakout"]
         else:
             return strategies["support_resistance"]
-    
+
     def analyze_po_market_conditions(self, asset):
         """Analyze current PO market conditions"""
         conditions = {
@@ -1497,11 +1547,11 @@ class PocketOptionStrategies:
             'volatility_level': random.choice(['Low', 'Medium', 'High']),
             'trend_strength': random.randint(30, 80)
         }
-        
+
         current_hour = datetime.utcnow().hour
         if current_hour in [7, 12, 16, 21]:  # Session boundaries
             conditions['session_boundary'] = True
-        
+
         return conditions
 
 # Initialize PO strategies
@@ -1513,28 +1563,28 @@ po_strategies = PocketOptionStrategies()
 
 class PlatformAdaptiveGenerator:
     """Generate signals adapted to each platform's behavior"""
-    
+
     def __init__(self):
         self.platform_history = {}
         self.asset_platform_performance = {}
         self.real_verifier = RealSignalVerifier()
-        
+
     def generate_platform_signal(self, asset, platform="quotex"):
         """Generate signal optimized for specific platform"""
         # Get base signal from real analysis
         direction, confidence = self.real_verifier.get_real_direction(asset)
-        
+
         # Apply platform-specific adjustments
         platform_key = platform.lower().replace(' ', '_')
         platform_cfg = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-        
+
         # 🎯 PLATFORM-SPECIFIC ADJUSTMENTS
         adjusted_direction = direction
         adjusted_confidence = confidence
-        
+
         # 1. Confidence adjustment
         adjusted_confidence += platform_cfg["confidence_bias"]
-        
+
         # 2. Trend weight adjustment (for PO, trust trends less)
         if platform_key == "pocket_option":
             # PO: Trends are less reliable, mean reversion more common
@@ -1543,46 +1593,46 @@ class PlatformAdaptiveGenerator:
                 # Reduce confidence for this forced reversal, but not too low
                 adjusted_confidence = max(55, adjusted_confidence - 8)
                 logger.info(f"🟠 PO Reversal Adjustment: {direction} → {adjusted_direction}")
-        
+
         # 3. Volatility penalty
         asset_info = OTC_ASSETS.get(asset, {})
         volatility = asset_info.get('volatility', 'Medium')
-        
+
         if volatility in ["High", "Very High"]:
             adjusted_confidence += platform_cfg["volatility_penalty"]
-        
+
         # 4. Fakeout adjustment (especially for PO)
         adjusted_confidence += platform_cfg["fakeout_adjustment"]
-        
+
         # 5. Ensure minimum confidence
         adjusted_confidence = max(50, min(95, adjusted_confidence))
-        
+
         # 6. Time-based adjustments
         current_hour = datetime.utcnow().hour
-        
+
         if platform_key == "pocket_option":
             # PO: Be extra careful during volatile hours
             if 12 <= current_hour < 16:  # NY/London overlap
                 adjusted_confidence = max(55, adjusted_confidence - 5)
             elif 7 <= current_hour < 10:  # London morning
                 adjusted_confidence = max(55, adjusted_confidence - 3)
-        
+
         logger.info(f"🎮 Platform Signal: {asset} on {platform} | "
                    f"Direction: {adjusted_direction} | "
                    f"Confidence: {confidence}% → {adjusted_confidence}%")
-        
+
         return adjusted_direction, round(adjusted_confidence)
-    
+
     def get_platform_recommendation(self, asset, platform):
         """Get trading recommendation for platform-asset pair"""
-        
+
         # Use a more generic default for new platforms
         default_recs = "Standard - Follow system signals"
 
         recommendations = {
             "quotex": {
                 "EUR/USD": "Excellent - Clean trends",
-                "GBP/USD": "Very Good - Follows technicals", 
+                "GBP/USD": "Very Good - Follows technicals",
                 "USD/JPY": "Good - Asian session focus",
                 "BTC/USD": "Good - Volatile but predictable",
                 "XAU/USD": "Very Good - Strong trends"
@@ -1608,19 +1658,19 @@ class PlatformAdaptiveGenerator:
                 "BTC/USD": "Caution - High volatility"
             }
         }
-        
+
         # Normalize platform key
         platform_key = platform.lower().replace(' ', '_')
 
         platform_recs = recommendations.get(platform_key, recommendations.get("quotex"))
         return platform_recs.get(asset, default_recs)
-    
+
     def get_optimal_expiry(self, asset, platform):
         """Get optimal expiry for platform-asset combo"""
-        
+
         # Normalize platform key
         platform_key = platform.lower().replace(' ', '_')
-        
+
         # Use a more generic default for new platforms
         default_expiry = "2min"
 
@@ -1628,7 +1678,7 @@ class PlatformAdaptiveGenerator:
             "quotex": {
                 "EUR/USD": "2-5min",
                 "GBP/USD": "2-5min",
-                "USD/JPY": "2-5min", 
+                "USD/JPY": "2-5min",
                 "BTC/USD": "1-2min",
                 "XAU/USD": "2-5min"
             },
@@ -1653,7 +1703,7 @@ class PlatformAdaptiveGenerator:
                 "BTC/USD": "1-2min"
             }
         }
-        
+
         platform_expiries = expiry_recommendations.get(platform_key, expiry_recommendations["quotex"])
         return platform_expiries.get(asset, default_expiry)
 
@@ -1666,7 +1716,7 @@ platform_generator = PlatformAdaptiveGenerator()
 
 class IntelligentSignalGenerator:
     """Intelligent signal generation with weighted probabilities"""
-    
+
     def __init__(self):
         self.performance_history = {}
         self.session_biases = {
@@ -1685,7 +1735,7 @@ class IntelligentSignalGenerator:
             'USD/CAD': {'CALL': 49, 'PUT': 51},
             'NZD/USD': {'CALL': 51, 'PUT': 49},
             'EUR/GBP': {'CALL': 50, 'PUT': 50},
-            
+
             # FOREX MINORS & CROSSES
             'GBP/JPY': {'CALL': 47, 'PUT': 53},
             'EUR/JPY': {'CALL': 49, 'PUT': 51},
@@ -1693,12 +1743,12 @@ class IntelligentSignalGenerator:
             'EUR/AUD': {'CALL': 51, 'PUT': 49},
             'GBP/AUD': {'CALL': 49, 'PUT': 51},
             'AUD/NZD': {'CALL': 50, 'PUT': 50},
-            
+
             # EXOTIC PAIRS
             'USD/CNH': {'CALL': 51, 'PUT': 49},
             'USD/SGD': {'CALL': 50, 'PUT': 50},
             'USD/ZAR': {'CALL': 47, 'PUT': 53},
-            
+
             # CRYPTOCURRENCIES
             'BTC/USD': {'CALL': 47, 'PUT': 53},
             'ETH/USD': {'CALL': 48, 'PUT': 52},
@@ -1706,12 +1756,12 @@ class IntelligentSignalGenerator:
             'ADA/USD': {'CALL': 50, 'PUT': 50},
             'DOT/USD': {'CALL': 49, 'PUT': 51},
             'LTC/USD': {'CALL': 48, 'PUT': 52},
-            
+
             # COMMODITIES
             'XAU/USD': {'CALL': 53, 'PUT': 47},
             'XAG/USD': {'CALL': 52, 'PUT': 48},
             'OIL/USD': {'CALL': 51, 'PUT': 49},
-            
+
             # INDICES
             'US30': {'CALL': 52, 'PUT': 48},
             'SPX500': {'CALL': 53, 'PUT': 47},
@@ -1742,11 +1792,11 @@ class IntelligentSignalGenerator:
             "ai_trend_filter_breakout": {'CALL': 53, 'PUT': 47} # NEW STRATEGY - Slight CALL bias for strong breakouts
         }
         self.real_verifier = RealSignalVerifier() # Ensure access to verifier
-    
+
     def get_current_session(self):
         """Determine current trading session"""
         current_hour = datetime.utcnow().hour
-        
+
         if 22 <= current_hour or current_hour < 6:
             return 'asian'
         elif 7 <= current_hour < 16:
@@ -1757,16 +1807,16 @@ class IntelligentSignalGenerator:
             return 'overlap'
         else:
             return 'asian'  # Default to asian
-    
+
     def get_enhanced_confidence(self, asset, platform):
         """
         NEW FIX 3: Get enhanced, variable confidence using multi-method calculation.
         This replaces the fixed confidence issue.
         """
-        
+
         # Multi-method confidence calculation
         confidences = []
-        
+
         # Method 1: Real technical analysis
         try:
             # Use get_real_analysis for full data
@@ -1777,7 +1827,7 @@ class IntelligentSignalGenerator:
         except Exception as e:
             logger.error(f"❌ Conf M1 (Real TA) failed: {e}")
             confidences.append(random.randint(65, 85))
-        
+
         # Method 2: Platform generator
         try:
             # Note: We only get confidence here, direction is used later
@@ -1786,7 +1836,7 @@ class IntelligentSignalGenerator:
         except Exception as e:
             logger.error(f"❌ Conf M2 (Platform) failed: {e}")
             confidences.append(random.randint(60, 90))
-        
+
         # Method 3: Consensus engine
         try:
             direction3, conf3 = consensus_engine.get_consensus_signal(asset)
@@ -1804,47 +1854,47 @@ class IntelligentSignalGenerator:
         except Exception as e:
             logger.error(f"❌ Conf M4 (Historical) failed: {e}")
             confidences.append(random.randint(68, 88))
-        
+
         # Calculate average with weights
         weights = [1.2, 1.0, 1.1, 0.9]  # Weights for each method
-        
+
         weighted_sum = sum(c * w for c, w in zip(confidences, weights))
         total_weight = sum(weights)
-        
+
         final_confidence = weighted_sum / total_weight
-        
+
         # Add randomness to avoid fixed values
         random_variation = random.randint(-7, 7)
         final_confidence = max(60, min(95, final_confidence + random_variation))
-        
+
         # Round to nearest 5 for cleaner display
         final_confidence = round(final_confidence / 5) * 5
-        
+
         return int(final_confidence)
-    
+
     def generate_intelligent_signal(self, asset, strategy=None, platform="quotex"):
         """Generate signal with platform-specific intelligence"""
-        
+
         # 🎯 Step 1: Get Direction and Dynamic Base Confidence (FIX 3)
         # Use platform adaptive generator for direction, as it includes reversal logic
         direction, base_confidence = platform_generator.generate_platform_signal(asset, platform)
-        
+
         # Replace base_confidence with the dynamically calculated one (FIX 3)
         dynamic_confidence = self.get_enhanced_confidence(asset, platform)
-        
+
         confidence = dynamic_confidence
 
         # Get platform configuration
         platform_key = platform.lower().replace(' ', '_')
         platform_cfg = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-        
+
         # Apply session bias
         current_session = self.get_current_session()
         session_bias = self.session_biases.get(current_session, {'CALL': 50, 'PUT': 50})
-        
+
         # Adjust based on asset bias
         asset_bias = self.asset_biases.get(asset, {'CALL': 50, 'PUT': 50})
-        
+
         # Combine biases with platform signal
         if direction == "CALL":
             bias_factor = (session_bias['CALL'] + asset_bias['CALL']) / 200
@@ -1852,7 +1902,7 @@ class IntelligentSignalGenerator:
         else:
             bias_factor = (session_bias['PUT'] + asset_bias['PUT']) / 200
             confidence = min(95, confidence * (0.8 + 0.4 * bias_factor))
-        
+
         # Apply strategy bias if specified
         if strategy:
             strategy_bias = self.strategy_biases.get(strategy.lower().replace(' ', '_'), {'CALL': 50, 'PUT': 50})
@@ -1860,55 +1910,55 @@ class IntelligentSignalGenerator:
                 strategy_factor = strategy_bias['CALL'] / 100
             else:
                 strategy_factor = strategy_bias['PUT'] / 100
-            
+
             confidence = min(95, confidence * (0.9 + 0.2 * strategy_factor))
-        
+
         # 🎯 POCKET OPTION SPECIAL ADJUSTMENTS (Redundant due to PlatformAdaptiveGenerator, but kept for robustness)
         if platform_key == "pocket_option":
             # PO: Lower confidence threshold
             confidence = max(55, confidence - 5)
-            
+
             # PO: More conservative during high volatility
             asset_info = OTC_ASSETS.get(asset, {})
             if asset_info.get('volatility', 'Medium') in ['High', 'Very High']:
                 confidence = max(55, confidence - 8)
-            
+
             # PO: Shorter timeframe bias
             current_hour = datetime.utcnow().hour
             if 12 <= current_hour < 16:  # Overlap session
                 confidence = max(55, confidence - 3)
-        
+
         # Apply accuracy boosters
         # 1. Advanced validation
         validated_confidence, validation_score = advanced_validator.validate_signal(
             asset, direction, confidence
         )
-        
+
         # 2. Volatility adjustment
         volatility_adjusted_confidence, current_volatility = volatility_analyzer.get_volatility_adjustment(
             asset, validated_confidence
         )
-        
+
         # 3. Session boundary boost
         session_boost, session_name = session_analyzer.get_session_momentum_boost()
         session_adjusted_confidence = min(95, volatility_adjusted_confidence + session_boost)
-        
+
         # 4. Historical accuracy adjustment
         final_confidence, historical_accuracy = accuracy_tracker.get_confidence_adjustment(
             asset, direction, session_adjusted_confidence
         )
-        
+
         # 🎯 FINAL PLATFORM ADJUSTMENT
         final_confidence = max(
             SAFE_TRADING_RULES["min_confidence"],
             min(95, final_confidence + platform_cfg["confidence_bias"])
         )
-        
+
         logger.info(f"🎯 Platform-Optimized Signal: {asset} on {platform} | "
                    f"Direction: {direction} | "
                    f"Confidence: {dynamic_confidence}% → {final_confidence}% | "
                    f"Platform Bias: {platform_cfg['confidence_bias']}")
-        
+
         return direction, round(final_confidence)
 
 # Initialize intelligent signal generator
@@ -1920,7 +1970,7 @@ intelligent_generator = IntelligentSignalGenerator()
 
 class TwelveDataOTCIntegration:
     """TwelveData integration optimized for OTC binary options context"""
-    
+
     def __init__(self):
         self.api_keys = [key for key in TWELVEDATA_API_KEYS if key]  # Filter out None values
         self.current_key_index = 0
@@ -1928,38 +1978,38 @@ class TwelveDataOTCIntegration:
         self.last_request_time = 0
         self.min_request_interval = 0.3  # Conservative rate limiting for OTC
         self.otc_correlation_data = {}
-        
+
     def get_current_api_key(self):
         """Get current API key with rotation"""
         if not self.api_keys:
             return None
         return self.api_keys[self.current_key_index]
-    
+
     def rotate_api_key(self):
         """Rotate to next API key"""
         if len(self.api_keys) > 1:
             self.current_key_index = (self.current_key_index + 1) % len(self.api_keys)
             logger.info(f"🔄 Rotated to TwelveData API key {self.current_key_index + 1}")
-    
+
     def make_request(self, endpoint, params=None):
         """Make API request with rate limiting and key rotation"""
         if not self.api_keys:
             return None
-            
+
         # Rate limiting for OTC context
         current_time = time.time()
         time_since_last = current_time - self.last_request_time
         if time_since_last < self.min_request_interval:
             time.sleep(self.min_request_interval - time_since_last)
-        
+
         try:
             url = f"{self.base_url}/{endpoint}"
             request_params = params or {}
             request_params['apikey'] = self.get_current_api_key()
-            
+
             response = requests.get(url, params=request_params, timeout=15)  # Longer timeout for OTC
             self.last_request_time = time.time()
-            
+
             if response.status_code == 200:
                 data = response.json()
                 if 'code' in data and data['code'] == 429:  # Rate limit hit
@@ -1970,12 +2020,12 @@ class TwelveDataOTCIntegration:
             else:
                 logger.error(f"❌ TwelveData API error: {response.status_code}")
                 return None
-                
+
         except Exception as e:
             logger.error(f"❌ TwelveData request error: {e}")
             self.rotate_api_key()
             return None
-    
+
     def get_market_context(self, symbol):
         """Get market context for OTC correlation analysis"""
         try:
@@ -1987,17 +2037,17 @@ class TwelveDataOTCIntegration:
                 "outputsize": 10,
                 "format": "JSON"
             })
-            
+
             context = {
                 'symbol': symbol,
                 'timestamp': datetime.now().isoformat(),
                 'real_market_available': False
             }
-            
+
             if price_data and 'price' in price_data:
                 context['current_price'] = float(price_data['price'])
                 context['real_market_available'] = True
-            
+
             if time_series and 'values' in time_series:
                 values = time_series['values'][:5]  # Last 5 periods
                 if values:
@@ -2007,13 +2057,13 @@ class TwelveDataOTCIntegration:
                         price_change = ((closes[0] - closes[-1]) / closes[-1]) * 100
                         context['price_momentum'] = round(price_change, 2)
                         context['trend_context'] = "up" if price_change > 0 else "down"
-            
+
             return context
-            
+
         except Exception as e:
             logger.error(f"❌ Market context error for {symbol}: {e}")
             return {'symbol': symbol, 'real_market_available': False, 'error': str(e)}
-    
+
     def get_otc_correlation_analysis(self, otc_asset):
         """Get correlation analysis between real market and OTC patterns"""
         symbol_map = {
@@ -2023,7 +2073,7 @@ class TwelveDataOTCIntegration:
             "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
             "SPX500": "SPX", "NAS100": "NDX"
         }
-        
+
         symbol = symbol_map.get(otc_asset)
         if not symbol:
             # Handle Deriv synthetic assets or other non-standard symbols
@@ -2037,9 +2087,9 @@ class TwelveDataOTCIntegration:
                     'market_alignment': 'N/A'
                 }
             return None
-        
+
         context = self.get_market_context(symbol)
-        
+
         # For OTC, we use real market data as context, not direct signals
         correlation_analysis = {
             'otc_asset': otc_asset,
@@ -2047,7 +2097,7 @@ class TwelveDataOTCIntegration:
             'market_context_available': context['real_market_available'],
             'analysis_timestamp': datetime.now().isoformat()
         }
-        
+
         if context['real_market_available']:
             # Add market context for OTC pattern correlation
             correlation_analysis.update({
@@ -2056,7 +2106,7 @@ class TwelveDataOTCIntegration:
                 'trend_context': context.get('trend_context', 'neutral'),
                 'market_alignment': random.choice(["High", "Medium", "Low"])  # Simulated OTC-market correlation
             })
-        
+
         return correlation_analysis
 
 # Initialize TwelveData OTC Integration
@@ -2068,20 +2118,20 @@ twelvedata_otc = TwelveDataOTCIntegration()
 
 class EnhancedOTCAnalysis:
     """Enhanced OTC analysis using market context from TwelveData"""
-    
+
     def __init__(self):
         self.analysis_cache = {}
         self.cache_duration = 120  # 2 minutes cache for OTC
-        
+
     def analyze_otc_signal(self, asset, strategy=None, platform="quotex"):
         """Generate OTC signal with market context - FIXED VERSION with PLATFORM BALANCING"""
         try:
             cache_key = f"otc_{asset}_{strategy}_{platform}"
             cached = self.analysis_cache.get(cache_key)
-            
+
             if cached and (time.time() - cached['timestamp']) < self.cache_duration:
                 return cached['analysis']
-            
+
             # Get market context for correlation with error handling
             market_context = {}
             try:
@@ -2089,26 +2139,26 @@ class EnhancedOTCAnalysis:
             except Exception as context_error:
                 logger.error(f"❌ Market context error: {context_error}")
                 market_context = {'market_context_available': False}
-            
+
             # 🚨 CRITICAL FIX: Use intelligent generator instead of safe generator for platform optimization
             direction, confidence = intelligent_generator.generate_intelligent_signal(asset, strategy, platform)
-            
+
             # Generate OTC-specific analysis (not direct market signals)
             analysis = self._generate_otc_analysis(asset, market_context, direction, confidence, strategy, platform)
-            
+
             # Cache the results
             self.analysis_cache[cache_key] = {
                 'analysis': analysis,
                 'timestamp': time.time()
             }
-            
+
             return analysis
-            
+
         except Exception as e:
             logger.error(f"❌ OTC signal analysis failed: {e}")
             # Return a basic but valid analysis using intelligent generator as fallback
             direction, confidence = intelligent_generator.generate_intelligent_signal(asset, platform="quotex") # Fallback to quotex logic
-                
+
             return {
                 'asset': asset,
                 'analysis_type': 'OTC_BINARY',
@@ -2124,14 +2174,14 @@ class EnhancedOTCAnalysis:
                 'analysis_notes': 'General OTC binary options analysis',
                 'platform': platform
             }
-        
+
     def _generate_otc_analysis(self, asset, market_context, direction, confidence, strategy, platform):
         """Generate OTC-specific trading analysis with PLATFORM BALANCING"""
         asset_info = OTC_ASSETS.get(asset, {})
-        
+
         # Normalize platform key
         platform_key = platform.lower().replace(' ', '_')
-        
+
         # OTC-specific pattern analysis (not direct market following)
         base_analysis = {
             'asset': asset,
@@ -2143,7 +2193,7 @@ class EnhancedOTCAnalysis:
             'confidence': confidence,
             'platform': platform
         }
-        
+
         # ===== APPLY PLATFORM BALANCER =====
         platform_cfg = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
 
@@ -2158,9 +2208,9 @@ class EnhancedOTCAnalysis:
 
         # Adjust direction stability for spiky markets (Pocket Option)
         if platform_key == "pocket_option":
-            # This is a high-level adjustment for display purposes, 
+            # This is a high-level adjustment for display purposes,
             # the core directional adjustment is handled in PlatformAdaptiveGenerator
-            if platform_cfg['behavior'] == "mean_reversion" and random.random() < 0.15: 
+            if platform_cfg['behavior'] == "mean_reversion" and random.random() < 0.15:
                 base_analysis['otc_pattern'] = "Spike Reversal Pattern"
             else:
                 base_analysis['otc_pattern'] = "Mean Reversion Pattern"
@@ -2172,7 +2222,7 @@ class EnhancedOTCAnalysis:
             base_analysis['risk_level'] = "Medium"
         else:
             base_analysis['risk_level'] = "Low-Medium"
-        
+
         # Add strategy-specific enhancements
         if strategy:
             strategy_analysis = self._apply_otc_strategy(asset, strategy, market_context, platform)
@@ -2181,9 +2231,9 @@ class EnhancedOTCAnalysis:
             # Default OTC analysis
             default_analysis = self._default_otc_analysis(asset, market_context, platform)
             base_analysis.update(default_analysis)
-        
+
         return base_analysis
-    
+
     def _apply_otc_strategy(self, asset, strategy, market_context, platform):
         """Apply specific OTC trading strategy with platform adjustments"""
         # OTC strategies are designed for binary options patterns
@@ -2200,12 +2250,12 @@ class EnhancedOTCAnalysis:
             "Spike Fade Strategy": self._otc_spike_fade_analysis, # NEW STRATEGY
             "AI Trend Filter + Breakout": self._otc_ai_trend_filter_breakout # NEW STRATEGY
         }
-        
+
         if strategy in strategy_methods:
             return strategy_methods[strategy](asset, market_context, platform)
         else:
             return self._default_otc_analysis(asset, market_context, platform)
-    
+
     def _otc_scalping_analysis(self, asset, market_context, platform):
         """1-Minute Scalping for OTC"""
         return {
@@ -2216,7 +2266,7 @@ class EnhancedOTCAnalysis:
             'entry_timing': 'Immediate execution',
             'analysis_notes': f'OTC scalping optimized for {platform}'
         }
-    
+
     def _otc_trend_analysis(self, asset, market_context, platform):
         """5-Minute Trend for OTC"""
         return {
@@ -2226,7 +2276,7 @@ class EnhancedOTCAnalysis:
             'otc_pattern': 'Trend continuation',
             'analysis_notes': f'OTC trend following adapted for {platform}'
         }
-    
+
     def _otc_sr_analysis(self, asset, market_context, platform):
         """Support & Resistance for OTC"""
         return {
@@ -2236,7 +2286,7 @@ class EnhancedOTCAnalysis:
             'otc_pattern': 'Key level reaction',
             'analysis_notes': f'OTC S/R optimized for {platform} volatility'
         }
-    
+
     def _otc_price_action_analysis(self, asset, market_context, platform):
         """Price Action Master for OTC"""
         return {
@@ -2246,7 +2296,7 @@ class EnhancedOTCAnalysis:
             'otc_pattern': 'Pure pattern recognition',
             'analysis_notes': f'OTC price action adapted for {platform}'
         }
-    
+
     def _otc_ma_analysis(self, asset, market_context, platform):
         """MA Crossovers for OTC"""
         return {
@@ -2256,7 +2306,7 @@ class EnhancedOTCAnalysis:
             'otc_pattern': 'Moving average convergence',
             'analysis_notes': f'OTC MA crossovers optimized for {platform}'
         }
-    
+
     def _otc_momentum_analysis(self, asset, market_context, platform):
         """AI Momentum Scan for OTC"""
         return {
@@ -2266,7 +2316,7 @@ class EnhancedOTCAnalysis:
             'otc_pattern': 'Momentum acceleration',
             'analysis_notes': f'AI momentum scanning for {platform}'
         }
-    
+
     def _otc_quantum_analysis(self, asset, market_context, platform):
         """Quantum AI Mode for OTC"""
         return {
@@ -2276,7 +2326,7 @@ class EnhancedOTCAnalysis:
             'otc_pattern': 'Quantum pattern prediction',
             'analysis_notes': f'Advanced AI optimized for {platform}'
         }
-    
+
     def _otc_consensus_analysis(self, asset, market_context, platform):
         """AI Consensus for OTC"""
         return {
@@ -2286,7 +2336,7 @@ class EnhancedOTCAnalysis:
             'otc_pattern': 'Multi-engine agreement',
             'analysis_notes': f'AI consensus adapted for {platform}'
         }
-    
+
     def _otc_ai_trend_confirmation(self, asset, market_context, platform):
         """NEW: AI Trend Confirmation Strategy"""
         return {
@@ -2303,7 +2353,7 @@ class EnhancedOTCAnalysis:
             'risk_reward': '1:2 minimum',
             'confidence_threshold': '75% minimum'
         }
-    
+
     def _otc_spike_fade_analysis(self, asset, market_context, platform):
         """NEW: Spike Fade Strategy (Best for Pocket Option)"""
         return {
@@ -2317,7 +2367,7 @@ class EnhancedOTCAnalysis:
             'best_for': 'Experienced traders with fast execution',
             'entry_condition': 'Sharp move against the main trend, hit a key S/R level',
         }
-    
+
     def _otc_ai_trend_filter_breakout(self, asset, market_context, platform):
         """NEW: AI Trend Filter + Breakout Strategy (Hybrid)"""
         return {
@@ -2333,7 +2383,7 @@ class EnhancedOTCAnalysis:
             'risk_reward': '1:2 minimum',
             'confidence_threshold': '70% minimum'
         }
-    
+
     def _default_otc_analysis(self, asset, market_context, platform):
         """Default OTC analysis with platform info"""
         return {
@@ -2362,7 +2412,7 @@ OTC_ASSETS = {
     "USD/CAD": {"type": "Forex", "volatility": "Medium", "session": "London/NY"},
     "NZD/USD": {"type": "Forex", "volatility": "High", "session": "Asian/London"},
     "EUR/GBP": {"type": "Forex", "volatility": "Medium", "session": "London"},
-    
+
     # FOREX MINORS & CROSSES (12 pairs)
     "GBP/JPY": {"type": "Forex", "volatility": "Very High", "session": "London"},
     "EUR/JPY": {"type": "Forex", "volatility": "High", "session": "London"},
@@ -2376,7 +2426,7 @@ OTC_ASSETS = {
     "GBP/CAD": {"type": "Forex", "volatility": "High", "session": "London/NY"},
     "AUD/CAD": {"type": "Forex", "volatility": "Medium", "session": "Asian/London"},
     "AUD/NZD": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
-    
+
     # EXOTIC PAIRS (6 pairs)
     "USD/CNH": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
     "USD/SGD": {"type": "Forex", "volatility": "Medium", "session": "Asian"},
@@ -2384,7 +2434,7 @@ OTC_ASSETS = {
     "USD/MXN": {"type": "Forex", "volatility": "High", "session": "NY/London"},
     "USD/ZAR": {"type": "Forex", "volatility": "Very High", "session": "London/NY"},
     "USD/TRY": {"type": "Forex", "volatility": "Very High", "session": "London"},
-    
+
     # CRYPTOCURRENCIES (8 pairs)
     "BTC/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7"},
     "ETH/USD": {"type": "Crypto", "volatility": "Very High", "session": "24/7"},
@@ -2394,7 +2444,7 @@ OTC_ASSETS = {
     "LTC/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
     "LINK/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
     "MATIC/USD": {"type": "Crypto", "volatility": "High", "session": "24/7"},
-    
+
     # COMMODITIES (6 pairs)
     "XAU/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
     "XAG/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
@@ -2402,7 +2452,7 @@ OTC_ASSETS = {
     "OIL/USD": {"type": "Commodity", "volatility": "High", "session": "London/NY"},
     "GAS/USD": {"type": "Commodity", "volatility": "Very High", "session": "London/NY"},
     "COPPER/USD": {"type": "Commodity", "volatility": "Medium", "session": "London/NY"},
-    
+
     # INDICES (6 indices)
     "US30": {"type": "Index", "volatility": "High", "session": "NY"},
     "SPX500": {"type": "Index", "volatility": "Medium", "session": "NY"},
@@ -2430,38 +2480,38 @@ AI_ENGINES = {
     "NeuralMomentum AI": "Real-time momentum detection",
     "VolatilityMatrix AI": "Multi-timeframe volatility assessment",
     "PatternRecognition AI": "Advanced chart pattern detection",
-    
+
     # Market Structure
     "SupportResistance AI": "Dynamic S/R level calculation",
     "MarketProfile AI": "Volume profile and price action analysis",
     "LiquidityFlow AI": "Order book and liquidity analysis",
     "OrderBlock AI": "Institutional order block identification",
-    
+
     # Advanced Mathematical Models
     "Fibonacci AI": "Golden ratio level prediction",
     "HarmonicPattern AI": "Geometric pattern recognition",
     "CorrelationMatrix AI": "Inter-market correlation analysis",
-    
+
     # Sentiment & News
     "SentimentAnalyzer AI": "Market sentiment analysis",
     "NewsSentiment AI": "Real-time news impact analysis",
-    
+
     # Adaptive Systems
     "RegimeDetection AI": "Market regime identification",
     "Seasonality AI": "Time-based pattern recognition",
     "AdaptiveLearning AI": "Self-improving machine learning model",
-    
+
     # NEW PREMIUM ENGINES
     "MarketMicrostructure AI": "Advanced order book and market depth analysis",
     "VolatilityForecast AI": "Predict volatility changes and breakouts",
-    "CycleAnalysis AI": "Time cycle and seasonal pattern detection", 
+    "CycleAnalysis AI": "Time cycle and seasonal pattern detection",
     "SentimentMomentum AI": "Combine market sentiment with momentum analysis",
     "PatternProbability AI": "Pattern success rate and probability scoring",
     "InstitutionalFlow AI": "Track smart money and institutional positioning",
-    
+
     # NEW: AI TREND CONFIRMATION ENGINE
     "TrendConfirmation AI": "Multi-timeframe trend confirmation analysis - The trader's best friend today",
-    
+
     # NEW: AI Consensus Voting Engine
     "ConsensusVoting AI": "Multiple AI engine voting system for maximum accuracy"
 }
@@ -2470,15 +2520,15 @@ AI_ENGINES = {
 TRADING_STRATEGIES = {
     # NEW: AI TREND CONFIRMATION STRATEGY - The trader's best friend today
     "AI Trend Confirmation": "AI analyzes 3 timeframes, generates probability-based trend, enters only if all confirm same direction",
-    
+
     # NEW: AI TREND FILTER + BREAKOUT STRATEGY (Hybrid)
     "AI Trend Filter + Breakout": "AI detects market direction, trader marks S/R levels, enter only on confirmed breakout in AI direction (Hybrid Approach)",
-    
+
     # TREND FOLLOWING
     "Quantum Trend": "AI-confirmed trend following",
     "Momentum Breakout": "Volume-powered breakout trading",
     "AI Momentum Breakout": "AI tracks trend strength, volatility, dynamic levels for clean breakout entries",
-    
+
     # NEW STRATEGY ADDED: SPIKE FADE
     "Spike Fade Strategy": "Fade sharp spikes (reversal trading) in Pocket Option for quick profit.",
 
@@ -2491,33 +2541,33 @@ TRADING_STRATEGIES = {
     "AI Momentum Scan": "AI-powered momentum scanning across multiple timeframes",
     "Quantum AI Mode": "Advanced quantum-inspired AI analysis",
     "AI Consensus": "Combined AI engine consensus signals",
-    
+
     # MEAN REVERSION
     "Mean Reversion": "Price reversal from statistical extremes",
     "Support/Resistance": "Key level bounce trading",
-    
+
     # VOLATILITY BASED
     "Volatility Squeeze": "Compression/expansion patterns",
     "Session Breakout": "Session opening momentum capture",
-    
+
     # MARKET STRUCTURE
     "Liquidity Grab": "Institutional liquidity pool trading",
     "Order Block Strategy": "Smart money order flow",
     "Market Maker Move": "Follow market maker manipulations",
-    
+
     # PATTERN BASED
     "Harmonic Pattern": "Precise geometric pattern trading",
     "Fibonacci Retracement": "Golden ratio level trading",
-    
+
     # MULTI-TIMEFRAME
     "Multi-TF Convergence": "Multiple timeframe alignment",
     "Timeframe Synthesis": "Integrated multi-TF analysis",
-    
+
     # SESSION & NEWS
     "Session Overlap": "High volatility period trading",
     "News Impact": "Economic event volatility trading",
     "Correlation Hedge": "Cross-market confirmation",
-    
+
     # PREMIUM STRATEGIES
     "Smart Money Concepts": "Follow institutional order flow and smart money",
     "Market Structure Break": "Trade structural level breaks with volume confirmation",
@@ -2535,13 +2585,13 @@ class AITrendConfirmationEngine:
     """🤖 AI is the trader's best friend today💸
     AI Trend Confirmation Strategy - Analyzes 3 timeframes, generates probability-based trend,
     enters only if all confirm same direction"""
-    
+
     def __init__(self):
         self.timeframes = ['fast', 'medium', 'slow']  # 3 timeframes
         self.confirmation_threshold = 75  # 75% minimum confidence
         self.recent_analyses = {}
         self.real_verifier = RealSignalVerifier()
-        
+
     def analyze_timeframe(self, asset, timeframe):
         """Analyze specific timeframe for trend direction"""
         # Simulate different timeframe analysis
@@ -2550,37 +2600,37 @@ class AITrendConfirmationEngine:
             direction, confidence = self.real_verifier.get_real_direction(asset)
             confidence = max(60, confidence - random.randint(0, 10))  # Fast TFs less reliable
             timeframe_label = "1-2min (Fast)"
-            
+
         elif timeframe == 'medium':
             # 5-10 minute timeframe - medium trends
             direction, confidence = self.real_verifier.get_real_direction(asset)
             confidence = max(65, confidence - random.randint(0, 5))  # Medium reliability
             timeframe_label = "5-10min (Medium)"
-            
+
         else:  # slow
             # 15-30 minute timeframe - strong trends
             direction, confidence = self.real_verifier.get_real_direction(asset)
             confidence = max(70, confidence + random.randint(0, 5))  # Slow TFs more reliable
             timeframe_label = "15-30min (Slow)"
-        
+
         return {
             'timeframe': timeframe_label,
             'direction': direction,
             'confidence': confidence,
             'analysis_time': datetime.now().isoformat()
         }
-    
+
     def get_trend_confirmation(self, asset):
         """Get AI Trend Confirmation analysis"""
         cache_key = f"trend_conf_{asset}"
         current_time = datetime.now()
-        
+
         # Check cache (5 minute cache)
         if cache_key in self.recent_analyses:
             cached = self.recent_analyses[cache_key]
             if (current_time - cached['timestamp']).seconds < 300:
                 return cached['analysis']
-        
+
         # Analyze all 3 timeframes
         timeframe_analyses = []
         for timeframe in self.timeframes:
@@ -2588,31 +2638,31 @@ class AITrendConfirmationEngine:
             timeframe_analyses.append(analysis)
             # Small delay between analyses
             time.sleep(0.1)
-        
+
         # Determine if all timeframes confirm same direction
         directions = [analysis['direction'] for analysis in timeframe_analyses]
         confidences = [analysis['confidence'] for analysis in timeframe_analyses]
-        
+
         all_call = all(d == 'CALL' for d in directions)
         all_put = all(d == 'PUT' for d in directions)
-        
+
         if all_call:
             final_direction = 'CALL'
             confirmation_strength = min(95, sum(confidences) / len(confidences) + 15)
             confirmation_status = "✅ STRONG CONFIRMATION - All 3 timeframes agree"
             entry_recommended = True
-            
+
         elif all_put:
             final_direction = 'PUT'
             confirmation_strength = min(95, sum(confidences) / len(confidences) + 15)
             confirmation_status = "✅ STRONG CONFIRMATION - All 3 timeframes agree"
             entry_recommended = True
-            
+
         else:
             # Mixed signals - find majority
             call_count = directions.count('CALL')
             put_count = directions.count('PUT')
-            
+
             if call_count > put_count:
                 final_direction = 'CALL'
                 confirmation_strength = max(65, sum(confidences) / len(confidences) - 10)
@@ -2623,7 +2673,7 @@ class AITrendConfirmationEngine:
                 confirmation_strength = max(65, sum(confidences) / len(confidences) - 10)
                 confirmation_status = f"⚠️ PARTIAL CONFIRMATION - {put_count}/3 timeframes agree"
                 entry_recommended = confirmation_strength >= self.confirmation_threshold
-        
+
         # Generate detailed analysis
         analysis = {
             'asset': asset,
@@ -2643,16 +2693,16 @@ class AITrendConfirmationEngine:
             'win_rate_estimate': '78-85%',
             'best_for': 'Conservative traders seeking high accuracy'
         }
-        
+
         # Cache the analysis
         self.recent_analyses[cache_key] = {
             'analysis': analysis,
             'timestamp': current_time
         }
-        
+
         logger.info(f"🤖 AI Trend Confirmation: {asset} → {final_direction} {round(confirmation_strength)}% | "
                    f"Aligned: {all_call or all_put} | Entry: {entry_recommended}")
-        
+
         return analysis
 
 # Initialize AI Trend Confirmation Engine
@@ -2666,7 +2716,7 @@ class PerformanceAnalytics:
     def __init__(self):
         self.user_performance = {}
         self.trade_history = {}
-    
+
     def get_user_performance_analytics(self, chat_id):
         """Comprehensive performance tracking"""
         if chat_id not in self.user_performance:
@@ -2689,12 +2739,12 @@ class PerformanceAnalytics:
                 "accuracy_rating": f"{random.randint(3, 5)}/5 stars"
             }
         return self.user_performance[chat_id]
-    
+
     def update_trade_history(self, chat_id, trade_data):
         """Update trade history with new trade"""
         if chat_id not in self.trade_history:
             self.trade_history[chat_id] = []
-        
+
         trade_record = {
             'timestamp': datetime.now().isoformat(),
             'asset': trade_data.get('asset', 'Unknown'),
@@ -2707,18 +2757,18 @@ class PerformanceAnalytics:
             'strategy': trade_data.get('strategy', 'AI Trend Confirmation'),
             'platform': trade_data.get('platform', 'quotex')
         }
-        
+
         self.trade_history[chat_id].append(trade_record)
-        
+
         # 🎯 NEW: Record outcome for accuracy tracking
         accuracy_tracker.record_signal_outcome(
-            chat_id, 
+            chat_id,
             trade_data.get('asset', 'Unknown'),
             trade_data.get('direction', 'CALL'),
             trade_data.get('confidence', 0),
             trade_data.get('outcome', 'win')
         )
-        
+
         # 🚨 CRITICAL FIX: Record outcome for profit-loss tracker
         profit_loss_tracker.record_trade(
             chat_id,
@@ -2727,15 +2777,15 @@ class PerformanceAnalytics:
             trade_data.get('confidence', 0),
             trade_data.get('outcome', 'win')
         )
-        
+
         # Keep only last 100 trades
         if len(self.trade_history[chat_id]) > 100:
             self.trade_history[chat_id] = self.trade_history[chat_id][-100:]
-    
+
     def get_daily_report(self, chat_id):
         """Generate daily performance report"""
         stats = self.get_user_performance_analytics(chat_id)
-        
+
         report = f"""
 📊 **DAILY PERFORMANCE REPORT**
 
@@ -2758,48 +2808,48 @@ class PerformanceAnalytics:
 
 class RiskManagementSystem:
     """Advanced risk management and scoring for OTC"""
-    
+
     def calculate_risk_score(self, signal_data):
         """Calculate comprehensive risk score 0-100 (higher = better) for OTC"""
         score = 100
-        
+
         # OTC-specific risk factors
         volatility = signal_data.get('volatility', 'Medium')
         if volatility == "Very High":
             score -= 15  # Less penalty for OTC high volatility
         elif volatility == "High":
             score -= 8
-        
+
         # Confidence adjustment
         confidence = signal_data.get('confidence', 0)
         if confidence < 75:
             score -= 12
         elif confidence < 80:
             score -= 6
-        
+
         # OTC pattern strength
         otc_pattern = signal_data.get('otc_pattern', '')
         strong_patterns = ['Quick momentum reversal', 'Trend continuation', 'Momentum acceleration']
         if otc_pattern in strong_patterns:
             score += 5
-        
+
         # Session timing for OTC
         if not self.is_optimal_otc_session_time():
             score -= 8
-        
+
         # Platform-specific adjustment
         platform = signal_data.get('platform', 'quotex').lower().replace(' ', '_')
         platform_cfg = PLATFORM_SETTINGS.get(platform, PLATFORM_SETTINGS["quotex"])
         score += platform_cfg.get('fakeout_adjustment', 0)
-        
+
         return max(40, min(100, score))  # OTC allows slightly lower minimum
-    
+
     def is_optimal_otc_session_time(self):
         """Check if current time is optimal for OTC trading"""
         current_hour = datetime.utcnow().hour
         # OTC trading is more flexible but still better during active hours
         return 6 <= current_hour < 22
-    
+
     def get_risk_recommendation(self, risk_score):
         """Get OTC trading recommendation based on risk score"""
         if risk_score >= 80:
@@ -2810,34 +2860,34 @@ class RiskManagementSystem:
             return "🟠 LOW CONFIDENCE - Caution advised for OTC"
         else:
             return "🔴 HIGH RISK - Avoid OTC trade or use minimal size"
-    
+
     def apply_smart_filters(self, signal_data):
         """Apply intelligent filters to OTC signals"""
         filters_passed = 0
         total_filters = 5
-        
+
         # OTC-specific filters
         if signal_data.get('confidence', 0) >= 75:
             filters_passed += 1
-        
+
         # Risk score filter
         risk_score = self.calculate_risk_score(signal_data)
         if risk_score >= 55:  # Lower threshold for OTC
             filters_passed += 1
-        
+
         # Session timing filter
         if self.is_optimal_otc_session_time():
             filters_passed += 1
-        
+
         # OTC pattern strength
         otc_pattern = signal_data.get('otc_pattern', '')
         if otc_pattern:  # Any identified OTC pattern is good
             filters_passed += 1
-        
+
         # Market context availability (bonus)
         if signal_data.get('market_context_used', False):
             filters_passed += 1
-        
+
         return {
             'passed': filters_passed >= 3,  # Require 3/5 filters for OTC
             'score': filters_passed,
@@ -2846,10 +2896,10 @@ class RiskManagementSystem:
 
 class BacktestingEngine:
     """Advanced backtesting system"""
-    
+
     def __init__(self):
         self.backtest_results = {}
-    
+
     def backtest_strategy(self, strategy, asset, period="30d"):
         """Backtest any strategy on historical data"""
         if "trend_confirmation" in strategy.lower():
@@ -2884,7 +2934,7 @@ class BacktestingEngine:
             # Default performance
             win_rate = random.randint(70, 85)
             profit_factor = round(random.uniform(1.7, 3.0), 2)
-        
+
         results = {
             "strategy": strategy,
             "asset": asset,
@@ -2900,20 +2950,20 @@ class BacktestingEngine:
             "consistency_score": random.randint(70, 95),
             "expectancy": round(random.uniform(0.4, 1.2), 3)
         }
-        
+
         # Store results
         key = f"{strategy}_{asset}_{period}"
         self.backtest_results[key] = results
-        
+
         return results
 
 class SmartNotifications:
     """Intelligent notification system"""
-    
+
     def __init__(self):
         self.user_preferences = {}
         self.notification_history = {}
-    
+
     def send_smart_alert(self, chat_id, alert_type, data=None):
         """Send intelligent notifications"""
         alerts = {
@@ -2926,19 +2976,19 @@ class SmartNotifications:
             "trend_confirmation": f"🤖 AI TREND CONFIRMATION: {data.get('asset', 'Unknown')} - All 3 timeframes aligned! High probability setup",
             "ai_breakout_alert": f"🎯 BREAKOUT ALERT: {data.get('asset', 'Unknown')} - AI Direction {data.get('direction', 'CALL')} - Wait for level break!" # NEW
         }
-        
+
         message = alerts.get(alert_type, "📢 System Notification")
-        
+
         # Store notification
         if chat_id not in self.notification_history:
             self.notification_history[chat_id] = []
-        
+
         self.notification_history[chat_id].append({
             'type': alert_type,
             'message': message,
             'timestamp': datetime.now().isoformat()
         })
-        
+
         logger.info(f"📢 Smart Alert for {chat_id}: {message}")
         return message
 
@@ -2954,47 +3004,47 @@ smart_notifications = SmartNotifications()
 
 class UserBroadcastSystem:
     """System to send messages to all users"""
-    
+
     def __init__(self, bot_instance):
         self.bot = bot_instance
         self.broadcast_history = []
-        
+
     def send_broadcast(self, message, parse_mode="Markdown", exclude_users=None):
         """Send message to all registered users"""
         exclude_users = exclude_users or []
         sent_count = 0
         failed_count = 0
-        
+
         logger.info(f"📢 Starting broadcast to {len(user_tiers)} users")
-        
+
         for chat_id in list(user_tiers.keys()):
             try:
                 # Skip excluded users
                 if chat_id in exclude_users:
                     continue
-                    
+
                 # Skip if not a valid Telegram ID (some might be strings in testing)
                 if not isinstance(chat_id, (int, str)):
                     continue
-                
+
                 # Convert to int if possible
                 try:
                     chat_id_int = int(chat_id)
                 except:
                     chat_id_int = chat_id
-                
+
                 # Send message
                 self.bot.send_message(chat_id_int, message, parse_mode=parse_mode)
                 sent_count += 1
-                
+
                 # Rate limiting to avoid Telegram limits
                 if sent_count % 20 == 0:
                     time.sleep(1)
-                
+
             except Exception as e:
                 logger.error(f"❌ Broadcast failed for {chat_id}: {e}")
                 failed_count += 1
-                
+
                 # If "bot was blocked" error, remove user
                 if "bot was blocked" in str(e).lower() or "user is deactivated" in str(e).lower():
                     try:
@@ -3002,7 +3052,7 @@ class UserBroadcastSystem:
                         logger.info(f"🗑️ Removed blocked user: {chat_id}")
                     except:
                         pass
-        
+
         # Record broadcast
         broadcast_record = {
             'timestamp': datetime.now().isoformat(),
@@ -3011,11 +3061,11 @@ class UserBroadcastSystem:
             'message_preview': message[:100] + "..." if len(message) > 100 else message
         }
         self.broadcast_history.append(broadcast_record)
-        
+
         # Keep only last 20 broadcasts
         if len(self.broadcast_history) > 20:
             self.broadcast_history = self.broadcast_history[-20:]
-        
+
         logger.info(f"📢 Broadcast complete: {sent_count} sent, {failed_count} failed")
         return {
             'success': True,
@@ -3023,7 +3073,7 @@ class UserBroadcastSystem:
             'failed': failed_count,
             'total_users': len(user_tiers)
         }
-    
+
     def send_safety_update(self):
         """Send the critical safety update to all users"""
         safety_message = """
@@ -3032,7 +3082,7 @@ class UserBroadcastSystem:
 We've upgraded our signal system with REAL technical analysis to stop losses:
 
 ✅ **NEW: Real Technical Analysis** - Uses EMA, RSI & Price Action (More responsive!)
-✅ **NEW: Stop Loss Protection** - Auto-stops after 3 consecutive losses  
+✅ **NEW: Stop Loss Protection** - Auto-stops after 3 consecutive losses
 ✅ ✅ **NEW: Profit-Loss Tracking** - Monitors your performance in real-time
 ✅ **NEW: Asset Filtering** - Avoids poor-performing assets automatically
 ✅ **NEW: Cooldown Periods** - Prevents overtrading
@@ -3040,7 +3090,7 @@ We've upgraded our signal system with REAL technical analysis to stop losses:
 
 **🚨 IMMEDIATE ACTION REQUIRED:**
 1️⃣ Start with **EUR/USD 5min** signals only
-2️⃣ Maximum **2% risk** per trade  
+2️⃣ Maximum **2% risk** per trade
 3️⃣ Stop after **2 consecutive losses**
 4️⃣ Use **demo account** first to test new system
 5️⃣ Report all results via `/feedback`
@@ -3052,7 +3102,7 @@ We've upgraded our signal system with REAL technical analysis to stop losses:
 
 **🎯 NEW SIGNAL FEATURES:**
 • Real EMA (5/10 period) analysis (More responsive trend!)
-• RSI overbought/oversold detection  
+• RSI overbought/oversold detection
 • Price momentum confirmation
 • Multi-timeframe alignment
 • Platform-specific optimization
@@ -3064,9 +3114,9 @@ This upgrade fixes the random guessing issue. Signals now use REAL market analys
 
 ⚠️ **Note:** If you experience any issues, contact @LekzyDevX immediately.
 """
-        
+
         return self.send_broadcast(safety_message, parse_mode="Markdown")
-    
+
     def send_urgent_alert(self, alert_type, details=""):
         """Send urgent alerts to users"""
         alerts = {
@@ -3078,15 +3128,15 @@ This upgrade fixes the random guessing issue. Signals now use REAL market analys
             "trend_confirmation": f"🤖 **NEW: AI TREND CONFIRMATION**\n\n{details}\n\nAI analyzes 3 timeframes, enters only if all confirm same direction!",
             "breakout_strategy": f"🎯 **NEW: AI TREND FILTER + BREAKOUT**\n\n{details}\n\nAI gives direction, you choose the entry. Perfect for structured trading!"
         }
-        
+
         message = alerts.get(alert_type, f"📢 **SYSTEM NOTIFICATION**\n\n{details}")
         return self.send_broadcast(message, parse_mode="Markdown")
-    
+
     def get_broadcast_stats(self):
         """Get broadcast statistics"""
         total_sent = sum(b['sent_to'] for b in self.broadcast_history)
         total_failed = sum(b['failed'] for b in self.broadcast_history)
-        
+
         return {
             'total_broadcasts': len(self.broadcast_history),
             'total_messages_sent': total_sent,
@@ -3101,7 +3151,7 @@ This upgrade fixes the random guessing issue. Signals now use REAL market analys
 
 class ManualPaymentSystem:
     """Simple manual payment system for admin upgrades"""
-    
+
     def __init__(self):
         self.pending_upgrades = {}
         self.payment_methods = {
@@ -3118,15 +3168,15 @@ class ManualPaymentSystem:
                 "email": "your-paypal@email.com"
             },
             "wise": {
-                "name": "🏦 Wise/Bank Transfer", 
+                "name": "🏦 Wise/Bank Transfer",
                 "details": "Contact for banking info"
             }
         }
-    
+
     def get_upgrade_instructions(self, tier):
         """Get upgrade instructions for a tier"""
         tier_info = USER_TIERS[tier]
-        
+
         instructions = f"""
 💎 **UPGRADE TO {tier_info['name']}**
 
@@ -3138,12 +3188,12 @@ class ManualPaymentSystem:
 """
         for feature in tier_info['features']:
             instructions += f"• {feature}\n"
-        
+
         instructions += f"""
 
 **PAYMENT METHODS:**
 • Cryptocurrency (BTC, ETH, USDT)
-• PayPal 
+• PayPal
 • Wise/Bank Transfer
 
 **PROCESS:**
@@ -3156,7 +3206,7 @@ class ManualPaymentSystem:
 ⏱️ **Activation Time:** 5-15 minutes
 
 *Start trading like a pro!* 🚀"""
-        
+
         return instructions
 
 # Initialize payment system
@@ -3166,19 +3216,19 @@ payment_system = ManualPaymentSystem()
 # SEMI-STRICT AI TREND FILTER V2
 # ================================
 def ai_trend_filter(direction, trend_direction, trend_strength, momentum, volatility, spike_detected):
-    """ 
-    Balanced trend filter. It only blocks extremely bad setups, but still allows reversals 
+    """
+    Balanced trend filter. It only blocks extremely bad setups, but still allows reversals
     and spike-fades to work correctly.
-    
-    Note: In a real system, trend_direction, trend_strength, momentum, and spike_detected 
-    would be outputs of dedicated AI/TA modules. Here, we rely on approximations 
+
+    Note: In a real system, trend_direction, trend_strength, momentum, and spike_detected
+    would be outputs of dedicated AI/TA modules. Here, we rely on approximations
     from the RealSignalVerifier and VolatilityAnalyzer.
     """
-    
+
     # 1️⃣ Extremely weak trend → block
     if trend_strength < 30:
         return False, "Weak Trend (<30%)"
-    
+
     # 2️⃣ Opposite direction trades allowed ONLY if spike detected (reversal logic)
     # Spike detection is a key part of the 'Spike Fade Strategy'
     if direction != trend_direction:
@@ -3196,11 +3246,11 @@ def ai_trend_filter(direction, trend_direction, trend_strength, momentum, volati
     if volatility > 85:
         # Warning only, trade is allowed
         return True, "High Volatility - Increase Expiry"
-    
+
     # 4️⃣ Momentum very low → block
     if momentum < 20:
         return False, "Low Momentum (<20)"
-        
+
     # If everything is good:
     return True, "Trend Confirmed"
 
@@ -3209,30 +3259,30 @@ def ai_trend_filter(direction, trend_direction, trend_strength, momentum, volati
 # =============================================================================
 def validate_30s_trade(asset, platform, confidence):
     """Validate if 30s trade should be allowed"""
-    
+
     # NEVER allow 30s for these conditions:
     if confidence < 75:
         return False, "30s requires >75% confidence"
-    
+
     # These platforms are too volatile/spike-prone for 30s
     if platform in ["expert_option", "pocket_option"]:
         return False, f"30s not recommended on {platform} (Too volatile/spike-prone)"
-    
+
     asset_info = OTC_ASSETS.get(asset, {})
     asset_volatility = asset_info.get('volatility', 'Medium')
     if asset_volatility in ["Very High", "High"]:
         return False, f"30s too risky for {asset_volatility} volatility assets"
-    
+
     # Check time (avoid exact minute marks)
     current_second = datetime.utcnow().second
-    
+
     # Avoid trading 10 seconds before and 10 seconds after the exact minute mark (00 and 30 seconds)
     # This avoids potential broker manipulation at exact expiry points
     if (0 <= current_second <= 10) or (20 <= current_second <= 40) or (50 <= current_second <= 59):
         # Allow a small window around 15s and 45s for fast execution
         if not (10 < current_second < 20 or 40 < current_second < 50):
             return False, f"Avoid 30s trade around minute/half-minute expiry marks (current second: {current_second})"
-        
+
     return True, "30s trade validated"
 
 
@@ -3255,14 +3305,14 @@ def get_user_tier(chat_id):
                 'count': 0
             }
         return 'admin'
-    
+
     if chat_id in user_tiers:
         tier_data = user_tiers[chat_id]
         # Check if trial expired
         if tier_data['tier'] == 'free_trial' and datetime.now() > tier_data['expires']:
             return 'free_trial_expired'
         return tier_data['tier']
-    
+
     # New user - give free trial
     user_tiers[chat_id] = {
         'tier': 'free_trial',
@@ -3276,48 +3326,48 @@ def get_user_tier(chat_id):
 def can_generate_signal(chat_id):
     """Check if user can generate signal based on tier"""
     tier = get_user_tier(chat_id)
-    
+
     if tier == 'free_trial_expired':
         return False, "Free trial expired. Contact admin to upgrade."
-    
+
     # Admin and Pro users have unlimited access
     if tier in ['admin', 'pro']:
         # Still track usage but don't limit
         today = datetime.now().date().isoformat()
         if chat_id not in user_tiers:
             user_tiers[chat_id] = {'date': today, 'count': 0}
-        
+
         user_data = user_tiers[chat_id]
         if user_data.get('date') != today:
             user_data['date'] = today
             user_data['count'] = 0
-        
+
         user_data['count'] = user_data.get('count', 0) + 1
         return True, f"{USER_TIERS[tier]['name']}: Unlimited access"
-    
+
     tier_info = USER_TIERS.get(tier, USER_TIERS['free_trial'])
-    
+
     # Reset daily counter if new day
     today = datetime.now().date().isoformat()
     if chat_id not in user_tiers:
         user_tiers[chat_id] = {'date': today, 'count': 0}
-    
+
     user_data = user_tiers[chat_id]
-    
+
     if user_data.get('date') != today:
         user_data['date'] = today
         user_data['count'] = 0
-    
+
     if user_data.get('count', 0) >= tier_info['signals_daily']:
         return False, f"Daily limit reached ({tier_info['signals_daily']} signals)"
-    
+
     user_data['count'] = user_data.get('count', 0) + 1
     return True, f"{tier_info['name']}: {user_data['count']}/{tier_info['signals_daily']} signals"
 
 def get_user_stats(chat_id):
     """Get user statistics"""
     tier = get_user_tier(chat_id)
-    
+
     # Ensure all users are properly initialized in user_tiers
     if chat_id not in user_tiers:
         if tier == 'admin':
@@ -3332,9 +3382,9 @@ def get_user_stats(chat_id):
                 'date': datetime.now().date().isoformat(),
                 'count': 0
             }
-    
+
     tier_info = USER_TIERS.get(tier, USER_TIERS['free_trial'])
-    
+
     today = datetime.now().date().isoformat()
     if user_tiers[chat_id].get('date') == today:
         count = user_tiers[chat_id].get('count', 0)
@@ -3343,7 +3393,7 @@ def get_user_stats(chat_id):
         user_tiers[chat_id]['date'] = today
         user_tiers[chat_id]['count'] = 0
         count = 0
-    
+
     return {
         'tier': tier,
         'tier_name': tier_info['name'],
@@ -3369,12 +3419,12 @@ def multi_timeframe_convergence_analysis(asset):
     try:
         # Use OTC-optimized analysis with proper error handling
         analysis = otc_analysis.analyze_otc_signal(asset)
-        
+
         direction = analysis['direction']
         confidence = analysis['confidence']
-        
+
         return direction, confidence / 100.0
-        
+
     except Exception as e:
         logger.error(f"❌ OTC analysis error, using fallback: {e}")
         # Robust fallback to safe signal generator
@@ -3426,7 +3476,7 @@ def get_optimal_strategy_for_regime(regime):
 # NEW: Auto-Detect Expiry System with 30s support (FIXED)
 class AutoExpiryDetector:
     """Intelligent expiry time detection system with 30s support"""
-    
+
     def __init__(self):
         # UPDATED: Added display names to mapping
         self.expiry_mapping = {
@@ -3438,23 +3488,23 @@ class AutoExpiryDetector:
             "30": {"best_for": "Strong sustained trends", "conditions": ["strong_trend", "sustained"], "display": "30 minutes"},
             "60": {"best_for": "Major trend following", "conditions": ["major_trend", "long_term"], "display": "60 minutes"}
         }
-    
+
     def detect_optimal_expiry(self, asset, market_conditions, platform="quotex"):
         """Auto-detect best expiry based on market analysis - MODIFIED FOR CLEAN DISPLAY"""
         asset_info = OTC_ASSETS.get(asset, {})
         volatility = asset_info.get('volatility', 'Medium')
-        
+
         # Normalize platform key
         platform_key = platform.lower().replace(' ', '_')
-        
+
         # 🎯 Apply platform-specific expiry multiplier (kept for original logic structure)
         platform_cfg = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
         expiry_multiplier = platform_cfg.get("expiry_multiplier", 1.0)
-        
+
         # Base expiry logic (prioritizes trend strength and market type)
         base_expiry = "2"
         reason = "Standard market conditions - 2 minutes expiry optimal"
-        
+
         if market_conditions.get('trend_strength', 0) > 85:
             if market_conditions.get('momentum', 0) > 80:
                 base_expiry = "30"
@@ -3465,7 +3515,7 @@ class AutoExpiryDetector:
             else:
                 base_expiry = "15"
                 reason = "Strong trend detected - 15 minutes expiry recommended"
-        
+
         elif market_conditions.get('ranging_market', False):
             if market_conditions.get('volatility', 'Medium') == 'Very High':
                 base_expiry = "30"
@@ -3476,26 +3526,26 @@ class AutoExpiryDetector:
             else:
                 base_expiry = "2"
                 reason = "Fast ranging market - 2 minutes expiry for quick reversals"
-        
+
         elif volatility == "Very High":
             base_expiry = "30"
             reason = "Very high volatility - 30 seconds expiry for quick profits"
-        
+
         elif volatility == "High":
             base_expiry = "1"
             reason = "High volatility - 1 minute expiry for trend capture"
-        
+
         # 🎯 Pocket Option specific expiry adjustment
         if platform_key == "pocket_option":
             base_expiry, po_reason = po_specialist.adjust_expiry_for_po(asset, base_expiry, market_conditions)
             reason = po_reason
-        
+
         # 🚨 NEW FIX: Use adjust_for_deriv which now uses the clean unit helper
         final_expiry_display = adjust_for_deriv(platform, base_expiry)
-        
+
         return base_expiry, reason, market_conditions, final_expiry_display
 
-    
+
     def get_expiry_recommendation(self, asset, platform="quotex"):
         """Get expiry recommendation with analysis"""
         # Simulate market analysis
@@ -3506,30 +3556,30 @@ class AutoExpiryDetector:
             'volatility': random.choice(['Low', 'Medium', 'High', 'Very High']),
             'sustained_trend': random.random() > 0.7
         }
-        
+
         base_expiry, reason, market_conditions, final_expiry_display = self.detect_optimal_expiry(asset, market_conditions, platform)
         return base_expiry, reason, market_conditions, final_expiry_display
 
 # NEW: AI Momentum Breakout Strategy Implementation
 class AIMomentumBreakout:
     """AI Momentum Breakout Strategy - Simple and powerful with clean entries"""
-    
+
     def __init__(self):
         self.strategy_name = "AI Momentum Breakout"
         self.description = "AI tracks trend strength, volatility, and dynamic levels for clean breakout entries"
         self.real_verifier = RealSignalVerifier()
-    
+
     def analyze_breakout_setup(self, asset):
         """Analyze breakout conditions using AI"""
         # Use real verifier for direction
         direction, confidence = self.real_verifier.get_real_direction(asset)
-        
+
         # Simulate AI analysis
         trend_strength = random.randint(70, 95)
         volatility_score = random.randint(65, 90)
         volume_power = random.choice(["Strong", "Very Strong", "Moderate"])
         support_resistance_quality = random.randint(75, 95)
-        
+
         # Determine breakout level based on direction
         if direction == "CALL":
             breakout_level = f"Resistance at dynamic AI level"
@@ -3537,10 +3587,10 @@ class AIMomentumBreakout:
         else:
             breakout_level = f"Support at dynamic AI level"
             entry_signal = "Break below support with volume confirmation"
-        
+
         # Enhance confidence based on analysis factors
         enhanced_confidence = min(95, (confidence + trend_strength + volatility_score + support_resistance_quality) // 4)
-        
+
         return {
             'direction': direction,
             'confidence': enhanced_confidence,
@@ -3557,38 +3607,38 @@ class AIMomentumBreakout:
 # NEW: AI Trend Filter + Breakout Strategy Implementation (FIX 2)
 class AITrendFilterBreakoutStrategy:
     """🤖 AI Trend Filter + Breakout Strategy
-    
+
     How it works:
     1. AI analyzes volume, candlestick patterns, and volatility
     2. Gives clear signal: UP 📈, DOWN 📉, or SIDEWAYS ➖
     3. Trader marks support/resistance levels
     4. Enter only when breakout happens in AI-predicted direction
-    
+
     Benefits:
     • Removes chaos - AI gives direction, trader chooses entry
     • Perfect for structured, disciplined trading
     • Combines AI analysis with trader skill
     """
-    
+
     def __init__(self):
         self.strategy_name = "AI Trend Filter + Breakout"
         self.real_verifier = RealSignalVerifier()
         self.volatility_analyzer = RealTimeVolatilityAnalyzer()
-        
+
     def analyze_market_direction(self, asset):
         """Step 1: AI determines market direction"""
         # Use multiple analysis methods
         direction, confidence = self.real_verifier.get_real_direction(asset)
-        
+
         # Check volume patterns (simulated)
         volume_pattern = self._analyze_volume_patterns(asset)
-        
+
         # Check candlestick patterns
         candle_pattern = self._analyze_candlestick_patterns(asset)
-        
+
         # Check volatility
         volatility = self.volatility_analyzer.get_real_time_volatility(asset)
-        
+
         # Determine market state
         if confidence < 60 or volatility > 80:
             market_state = "SIDEWAYS"
@@ -3596,7 +3646,7 @@ class AITrendFilterBreakoutStrategy:
             confidence = max(50, confidence - 10)
         else:
             market_state = "TRENDING"
-        
+
         return {
             'direction': direction,
             'market_state': market_state,
@@ -3606,24 +3656,24 @@ class AITrendFilterBreakoutStrategy:
             'volatility': volatility,
             'entry_rule': f"Mark S/R levels, wait for breakout in {direction} direction"
         }
-    
+
     def _analyze_volume_patterns(self, asset):
         """Simulate volume analysis"""
-        patterns = ["High volume breakout", "Low volume consolidation", 
+        patterns = ["High volume breakout", "Low volume consolidation",
                    "Volume increasing with trend", "Volume divergence"]
         return random.choice(patterns)
-    
+
     def _analyze_candlestick_patterns(self, asset):
         """Simulate candlestick pattern analysis"""
         patterns = ["Bullish engulfing", "Bearish engulfing", "Doji indecision",
                    "Hammer reversal", "Shooting star", "Inside bar"]
         return random.choice(patterns)
-    
+
     def generate_signal(self, asset, trader_levels=None):
         """Generate complete AI Trend Filter + Breakout signal"""
         # Step 1: Get AI direction
         market_analysis = self.analyze_market_direction(asset)
-        
+
         # Step 2: If trader provided levels, validate them
         if trader_levels:
             level_validation = self._validate_trader_levels(asset, trader_levels, market_analysis['direction'])
@@ -3633,10 +3683,10 @@ class AITrendFilterBreakoutStrategy:
                 'message': 'Trader needs to mark S/R levels',
                 'recommended_levels': self._suggest_key_levels(asset)
             }
-        
+
         # Step 3: Determine breakout conditions
         breakout_conditions = self._determine_breakout_conditions(asset, market_analysis)
-        
+
         signal = {
             'strategy': self.strategy_name,
             'asset': asset,
@@ -3666,9 +3716,9 @@ class AITrendFilterBreakoutStrategy:
             ],
             'timestamp': datetime.now().isoformat()
         }
-        
+
         return signal
-    
+
     def _validate_trader_levels(self, asset, levels, ai_direction):
         """Validate trader-marked levels"""
         return {
@@ -3678,7 +3728,7 @@ class AITrendFilterBreakoutStrategy:
             'validation': 'Levels accepted - wait for breakout',
             'entry_condition': f"Price must break level in {ai_direction} direction"
         }
-    
+
     def _suggest_key_levels(self, asset):
         """Suggest key levels for the asset"""
         # This would integrate with real data in production
@@ -3689,7 +3739,7 @@ class AITrendFilterBreakoutStrategy:
             'XAU/USD': ['2180', '2170', '2190', '2200']
         }
         return suggestions.get(asset, ['Recent High', 'Recent Low', 'Round Number'])
-    
+
     def _determine_breakout_conditions(self, asset, market_analysis):
         """Determine optimal breakout conditions"""
         if market_analysis['direction'] == 'CALL':
@@ -3724,13 +3774,13 @@ ai_trend_filter_breakout_strategy = AITrendFilterBreakoutStrategy() # NEW Strate
 
 class OTCTradingBot:
     """OTC Binary Trading Bot with Enhanced Features"""
-    
+
     def __init__(self):
         self.token = TELEGRAM_TOKEN
         self.base_url = f"https://api.telegram.org/bot{self.token}"
         self.user_sessions = {}
         self.auto_mode = {}  # Track auto/manual mode per user
-        
+
     def _simulate_live_market_data(self, platform):
         """Simulate real-time data for asset ranking"""
         best_assets = get_best_assets(platform)
@@ -3743,7 +3793,7 @@ class OTCTradingBot:
                 "volatility": random.randint(20, 80) # Simulated normalized volatility
             })
         return live_data
-        
+
     def send_message(self, chat_id, text, parse_mode=None, reply_markup=None):
         """Send message synchronously"""
         try:
@@ -3752,20 +3802,20 @@ class OTCTradingBot:
                 "chat_id": chat_id,
                 "text": text
             }
-            
+
             if parse_mode:
                 data["parse_mode"] = parse_mode
-                
+
             if reply_markup:
                 data["reply_markup"] = reply_markup
-                
+
             response = requests.post(url, json=data, timeout=10)
             return response.json()
-            
+
         except Exception as e:
             logger.error(f"❌ Send message error: {e}")
             return None
-    
+
     def edit_message_text(self, chat_id, message_id, text, parse_mode=None, reply_markup=None):
         """Edit message synchronously"""
         try:
@@ -3775,20 +3825,20 @@ class OTCTradingBot:
                 "message_id": message_id,
                 "text": text
             }
-            
+
             if parse_mode:
                 data["parse_mode"] = parse_mode
-                
+
             if reply_markup:
                 data["reply_markup"] = reply_markup
-                
+
             response = requests.post(url, json=data, timeout=10)
             return response.json()
-            
+
         except Exception as e:
             logger.error(f"❌ Edit message error: {e}")
             return None
-    
+
     def answer_callback_query(self, callback_query_id, text=None):
         """Answer callback query synchronously"""
         try:
@@ -3803,27 +3853,27 @@ class OTCTradingBot:
         except Exception as e:
             logger.error(f"❌ Answer callback error: {e}")
             return None
-    
+
     def process_update(self, update_data):
         """Process update synchronously"""
         try:
             logger.info(f"🔄 Processing update: {update_data.get('update_id', 'unknown')}")
-            
+
             if 'message' in update_data:
                 self._process_message(update_data['message'])
-                
+
             elif 'callback_query' in update_data:
                 self._process_callback_query(update_data['callback_query'])
-                
+
         except Exception as e:
             logger.error(f"❌ Update processing error: {e}")
-    
+
     def _process_message(self, message):
         """Process message update"""
         try:
             chat_id = message['chat']['id']
             text = message.get('text', '').strip()
-            
+
             if text == '/start':
                 self._handle_start(chat_id, message)
             elif text == '/help':
@@ -3862,25 +3912,25 @@ class OTCTradingBot:
                 self._handle_po_debug(chat_id, text)
             else:
                 self._handle_unknown(chat_id)
-                
+
         except Exception as e:
             logger.error(f"❌ Message processing error: {e}")
-    
+
     def _process_callback_query(self, callback_query):
         """Process callback query"""
         try:
             # Answer callback first
             self.answer_callback_query(callback_query['id'])
-            
+
             chat_id = callback_query['message']['chat']['id']
             message_id = callback_query['message']['message_id']
             data = callback_query.get('data', '')
-            
+
             self._handle_button_click(chat_id, message_id, data, callback_query)
-            
+
         except Exception as e:
             logger.error(f"❌ Callback processing error: {e}")
-    
+
     def _handle_start(self, chat_id, message):
         """Handle /start command"""
         try:
@@ -3888,9 +3938,9 @@ class OTCTradingBot:
             user_id = user.get('id', 0)
             username = user.get('username', 'unknown')
             first_name = user.get('first_name', 'User')
-            
+
             logger.info(f"👤 User started: {user_id} - {first_name}")
-            
+
             # Show legal disclaimer
             disclaimer_text = """
 ⚠️ **OTC BINARY TRADING - RISK DISCLOSURE**
@@ -3931,18 +3981,18 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     [{"text": "❌ DECLINE & EXIT", "callback_data": "disclaimer_declined"}]
                 ]
             }
-            
+
             self.send_message(
-                chat_id, 
-                disclaimer_text, 
+                chat_id,
+                disclaimer_text,
                 parse_mode="Markdown",
                 reply_markup=keyboard
             )
-            
+
         except Exception as e:
             logger.error(f"❌ Start handler error: {e}")
             self.send_message(chat_id, "🤖 OTC Binary Pro - Use /help for commands")
-    
+
     def _handle_help(self, chat_id):
         """Handle /help command"""
         help_text = """
@@ -3963,7 +4013,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 **QUICK ACCESS BUTTONS:**
 🎯 **Signals** - Live trading signals
-📊 **Assets** - All 35+ instruments  
+📊 **Assets** - All 35+ instruments
 🚀 **Strategies** - 34 trading approaches (NEW!)
 🤖 **AI Engines** - Advanced analysis
 💼 **Account** - Your dashboard
@@ -3985,7 +4035,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • 🔄 **Platform Balancing** - Signals optimized for each broker (NEW!)
 • 🎯 **ACCURACY BOOSTERS** - Consensus Voting, Real-time Volatility, Session Boundaries
 • 🚨 **SAFETY FEATURES** - Real technical analysis, Stop loss protection, Profit-loss tracking
-• 🤖 **NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
+• **🤖 NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
 • **🎯 NEW: AI TREND FILTER + BREAKOUT** - AI direction, manual S/R entry
 • **🛠️ EMA FIX:** More responsive trend analysis using EMA!
 
@@ -4015,7 +4065,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Real technical analysis (NEW!)
 • Stop loss protection (NEW!)
 • Profit-loss tracking (NEW!)"""
-        
+
         # Create quick access buttons for all commands
         keyboard = {
             "inline_keyboard": [
@@ -4040,54 +4090,54 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 ]
             ]
         }
-        
+
         self.send_message(chat_id, help_text, parse_mode="Markdown", reply_markup=keyboard)
-    
+
     def _handle_signals(self, chat_id):
         """Handle /signals command"""
         self._show_platform_selection(chat_id)
-    
+
     def _show_platform_selection(self, chat_id, message_id=None):
         """NEW: Show platform selection menu (Expanded to 7 Platforms)"""
-        
+
         # Get current platform preference
         current_platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
-        
+
         # Generate the list of buttons dynamically
         all_platforms = PLATFORM_SETTINGS.keys()
         keyboard_rows = []
         temp_row = []
         for i, plat_key in enumerate(all_platforms):
             platform_info = PLATFORM_SETTINGS[plat_key]
-            
+
             # Use platform_info for emoji and name
             emoji = platform_info.get("emoji", "❓")
             name = platform_info.get("name", plat_key.replace('_', ' ').title())
 
             button_text = f"{'✅' if current_platform == plat_key else emoji} {name}"
             button_data = f"platform_{plat_key}"
-            
+
             temp_row.append({"text": button_text, "callback_data": button_data})
-            
+
             # Create a row of two buttons
             if len(temp_row) == 2 or i == len(all_platforms) - 1:
                 keyboard_rows.append(temp_row)
                 temp_row = []
-        
+
         # Add the action buttons at the end
         keyboard_rows.append([{"text": "🎯 CONTINUE WITH SIGNALS", "callback_data": "signal_menu_start"}])
         keyboard_rows.append([{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}])
-        
+
         keyboard = {"inline_keyboard": keyboard_rows}
-        
+
         platform_key = current_platform.lower().replace(' ', '_')
         platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-        
+
         # --- NEW: Best Asset Right Now Section ---
         live_data = self._simulate_live_market_data(platform_info['name'])
         best_asset_message = recommend_asset(platform_info['name'], live_data)
         # --- END NEW ---
-        
+
         text = f"""
 🎮 **SELECT YOUR TRADING PLATFORM**
 
@@ -4097,7 +4147,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 ---
 *Each platform receives signals optimized for its specific market behavior.*
 *Select a platform or tap CONTINUE to proceed with **{platform_info['name']}**.*"""
-        
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -4108,19 +4158,19 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
+
     def _handle_assets(self, chat_id):
         """Handle /assets command"""
         self._show_assets_menu(chat_id)
-    
+
     def _handle_strategies(self, chat_id):
         """Handle /strategies command"""
         self._show_strategies_menu(chat_id)
-    
+
     def _handle_ai_engines(self, chat_id):
         """Handle AI engines command"""
         self._show_ai_engines_menu(chat_id)
-    
+
     def _handle_status(self, chat_id):
         """Handle /status command"""
         status_text = """
@@ -4145,7 +4195,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 **ENHANCED OTC FEATURES:**
 • QuantumTrend AI: ✅ Active
-• NeuralMomentum AI: ✅ Active  
+• NeuralMomentum AI: ✅ Active
 • LiquidityFlow AI: ✅ Active
 • Multi-Timeframe Analysis: ✅ Active
 • Performance Analytics: ✅ Active
@@ -4165,9 +4215,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • All Systems: ✅ Optimal
 
 *Ready for advanced OTC binary trading*"""
-        
+
         self.send_message(chat_id, status_text, parse_mode="Markdown")
-    
+
     def _handle_quickstart(self, chat_id):
         """Handle /quickstart command"""
         quickstart_text = """
@@ -4177,7 +4227,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 1. **🎮 CHOOSE PLATFORM** - Select from 7 supported platforms (NEW!)
 2. **📊 CHOOSE ASSET** - Select from 35+ OTC instruments
-3. **⏰ SELECT EXPIRY** - Use AUTO DETECT or choose manually (Incl. Deriv Ticks)  
+3. **⏰ SELECT EXPIRY** - Use AUTO DETECT or choose manually (Incl. Deriv Ticks)
 4. **🤖 GET ENHANCED SIGNAL** - Advanced AI analysis with market context
 
 **NEW PLATFORM BALANCING:**
@@ -4252,21 +4302,21 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • AI Trend Filter + Breakout (NEW!)
 
 *Start with /signals now!*"""
-        
+
         self.send_message(chat_id, quickstart_text, parse_mode="Markdown")
-    
+
     def _handle_account(self, chat_id):
         """Handle /account command"""
         self._show_account_dashboard(chat_id)
-    
+
     def _handle_sessions(self, chat_id):
         """Handle /sessions command"""
         self._show_sessions_dashboard(chat_id)
-    
+
     def _handle_limits(self, chat_id):
         """Handle /limits command"""
         self._show_limits_dashboard(chat_id)
-    
+
     def _handle_feedback(self, chat_id, text):
         """Handle user feedback"""
         try:
@@ -4275,14 +4325,14 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 feedback_msg = text[9:].strip()
             else:
                 feedback_msg = text.strip()
-            
+
             if not feedback_msg:
-                self.send_message(chat_id, 
+                self.send_message(chat_id,
                     "Please provide your feedback after /feedback command\n"
                     "Example: /feedback The signals are very accurate!",
                     parse_mode="Markdown")
                 return
-            
+
             # Store feedback (in a real system, save to database)
             feedback_record = {
                 'user_id': chat_id,
@@ -4290,9 +4340,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 'feedback': feedback_msg,
                 'user_tier': get_user_tier(chat_id)
             }
-            
+
             logger.info(f"📝 Feedback from {chat_id}: {feedback_msg[:50]}...")
-            
+
             # Try to notify admin
             try:
                 for admin_id in ADMIN_IDS:
@@ -4306,7 +4356,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     )
             except Exception as admin_error:
                 logger.error(f"❌ Failed to notify admin: {admin_error}")
-            
+
             self.send_message(chat_id,
                 "✅ **THANK YOU FOR YOUR FEEDBACK!**\n\n"
                 "Your input helps us improve the system.\n"
@@ -4314,11 +4364,11 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 "Continue trading with `/signals`",
                 parse_mode="Markdown"
             )
-            
+
         except Exception as e:
             logger.error(f"❌ Feedback handler error: {e}")
             self.send_message(chat_id, "❌ Error processing feedback. Please try again.", parse_mode="Markdown")
-    
+
     def _handle_unknown(self, chat_id):
         """Handle unknown commands"""
         text = "🤖 Enhanced OTC Binary Pro: Use /help for trading commands or /start to begin.\n\n**NEW:** Try /performance for analytics or /backtest for strategy testing!\n**NEW:** Auto expiry detection now available!\n**NEW:** TwelveData market context integration!\n**NEW:** Intelligent probability system active (10-15% accuracy boost)!\n**NEW:** Multi-platform support (Quotex, Pocket Option, Binomo, Olymp Trade, Expert Option, IQ Option, Deriv)!\n**🎯 NEW:** Accuracy boosters active (Consensus Voting, Real-time Volatility, Session Boundaries)!\n**🚨 NEW:** Safety systems active (Real analysis, Stop loss, Profit tracking)!\n**🤖 NEW:** AI Trend Confirmation strategy available!\n**🛠️ EMA FIX:** Now using EMA for more responsive trend analysis!"
@@ -4340,7 +4390,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 ]
             ]
         }
-        
+
         self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
     # =========================================================================
@@ -4353,10 +4403,10 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             stats = performance_analytics.get_user_performance_analytics(chat_id)
             user_stats = get_user_stats(chat_id)
             daily_report = performance_analytics.get_daily_report(chat_id)
-            
+
             # Get real performance data from profit-loss tracker
             real_stats = profit_loss_tracker.get_user_stats(chat_id)
-            
+
             text = f"""
 📊 **ENHANCED PERFORMANCE ANALYTICS**
 
@@ -4389,7 +4439,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **Trend Filter:** Note: Signals now use **EMA** for faster trend detection (EMA FIX 🛠️)
 
 *Track your progress and improve continuously*"""
-            
+
             keyboard = {
                 "inline_keyboard": [
                     [
@@ -4403,12 +4453,12 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
                 ]
             }
-            
+
             if message_id:
                 self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
             else:
                 self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
-                
+
         except Exception as e:
             logger.error(f"❌ Performance handler error: {e}")
             self.send_message(chat_id, "❌ Error loading performance analytics. Please try again.")
@@ -4429,7 +4479,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **Note:** EMA is now used for more accurate trend calculations in real-time signals.
 
 *Select a strategy to backtest*"""
-            
+
             keyboard = {
                 "inline_keyboard": [
                     [
@@ -4455,12 +4505,12 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
                 ]
             }
-            
+
             if message_id:
                 self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
             else:
                 self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
-                
+
         except Exception as e:
             logger.error(f"❌ Backtest handler error: {e}")
             self.send_message(chat_id, "❌ Error loading backtesting. Please try again.")
@@ -4474,7 +4524,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         try:
             user_stats = get_user_stats(chat_id)
             current_tier = user_stats['tier']
-            
+
             if tier == current_tier:
                 self.edit_message_text(
                     chat_id, message_id,
@@ -4482,9 +4532,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     parse_mode="Markdown"
                 )
                 return
-            
+
             instructions = payment_system.get_upgrade_instructions(tier)
-            
+
             keyboard = {
                 "inline_keyboard": [
                     [{"text": "📞 CONTACT ADMIN NOW", "url": f"https://t.me/{ADMIN_USERNAME.replace('@', '')}"}],
@@ -4492,9 +4542,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
                 ]
             }
-            
+
             self.edit_message_text(chat_id, message_id, instructions, parse_mode="Markdown", reply_markup=keyboard)
-            
+
         except Exception as e:
             logger.error(f"❌ Upgrade flow error: {e}")
             self.edit_message_text(chat_id, message_id, "❌ Upgrade system error. Please try again.", parse_mode="Markdown")
@@ -4505,20 +4555,20 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             if chat_id not in ADMIN_IDS:
                 self.send_message(chat_id, "❌ Admin access required.", parse_mode="Markdown")
                 return
-            
+
             # Format: /upgrade USER_ID TIER
             parts = text.split()
             if len(parts) == 3:
                 target_user = int(parts[1])
                 tier = parts[2].lower()
-                
+
                 if tier not in ['basic', 'pro']:
                     self.send_message(chat_id, "❌ Invalid tier. Use: basic or pro", parse_mode="Markdown")
                     return
-                
+
                 # Upgrade user
                 success = upgrade_user_tier(target_user, tier)
-                
+
                 if success:
                     # Notify user
                     try:
@@ -4534,14 +4584,14 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                         )
                     except Exception as e:
                         logger.error(f"❌ User notification failed: {e}")
-                    
+
                     self.send_message(chat_id, f"✅ Upgraded user {target_user} to {tier.upper()}")
                     logger.info(f"👑 Admin upgraded user {target_user} to {tier}")
                 else:
                     self.send_message(chat_id, f"❌ Failed to upgrade user {target_user}")
             else:
                 self.send_message(chat_id, "Usage: /upgrade USER_ID TIER\nTiers: basic, pro")
-                
+
         except Exception as e:
             logger.error(f"❌ Admin upgrade error: {e}")
             self.send_message(chat_id, f"❌ Upgrade error: {e}")
@@ -4552,12 +4602,12 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             if chat_id not in ADMIN_IDS:
                 self.send_message(chat_id, "❌ Admin access required.", parse_mode="Markdown")
                 return
-            
+
             # Format: /broadcast TYPE [MESSAGE]
             parts = text.split(maxsplit=2)
-            
+
             if len(parts) < 2:
-                self.send_message(chat_id, 
+                self.send_message(chat_id,
                     "Usage:\n"
                     "/broadcast safety - Send safety update\n"
                     "/broadcast urgent TYPE MESSAGE - Send urgent alert\n"
@@ -4565,33 +4615,33 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     "/broadcast stats - Show broadcast statistics",
                     parse_mode="Markdown")
                 return
-            
+
             command = parts[1].lower()
-            
+
             if command == "safety":
                 # Send safety update
                 result = broadcast_system.send_safety_update()
-                self.send_message(chat_id, 
+                self.send_message(chat_id,
                     f"✅ Safety update sent to {result['sent']} users\n"
                     f"Failed: {result['failed']}\n"
                     f"Total users: {result['total_users']}",
                     parse_mode="Markdown")
-                
+
             elif command == "urgent" and len(parts) >= 4:
                 alert_type = parts[2]
                 message = parts[3]
                 result = broadcast_system.send_urgent_alert(alert_type, message)
-                self.send_message(chat_id, 
+                self.send_message(chat_id,
                     f"✅ Urgent alert sent to {result['sent']} users",
                     parse_mode="Markdown")
-                
+
             elif command == "custom" and len(parts) >= 3:
                 message = text.split(maxsplit=2)[2]
                 result = broadcast_system.send_broadcast(message)
-                self.send_message(chat_id, 
+                self.send_message(chat_id,
                     f"✅ Custom message sent to {result['sent']} users",
                     parse_mode="Markdown")
-                
+
             elif command == "stats":
                 stats = broadcast_system.get_broadcast_stats()
                 stats_text = f"""
@@ -4604,27 +4654,27 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Success Rate: {stats['success_rate']}
 
 **Recent Broadcasts:**"""
-                
+
                 for i, broadcast in enumerate(stats['recent_broadcasts'], 1):
                     stats_text += f"\n{i}. {broadcast['timestamp']} - {broadcast['sent_to']} users"
-                
+
                 stats_text += f"\n\n**Total Users:** {len(user_tiers)}"
-                
+
                 self.send_message(chat_id, stats_text, parse_mode="Markdown")
-                
+
             else:
                 self.send_message(chat_id, "Invalid broadcast command. Use /broadcast safety", parse_mode="Markdown")
-                
+
         except Exception as e:
             logger.error(f"❌ Broadcast handler error: {e}")
             self.send_message(chat_id, f"❌ Broadcast error: {e}", parse_mode="Markdown")
-    
+
     def _handle_po_debug(self, chat_id, text):
         """Debug Pocket Option issues"""
         if chat_id not in ADMIN_IDS:
             self.send_message(chat_id, "❌ Admin access required.", parse_mode="Markdown")
             return
-        
+
         parts = text.split()
         if len(parts) < 2:
             self.send_message(chat_id,
@@ -4635,22 +4685,22 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 "/podebug compare ASSET - Compare platforms",
                 parse_mode="Markdown")
             return
-        
+
         command = parts[1].lower()
-        
+
         if command == "test" and len(parts) >= 3:
             asset = parts[2].upper()
-            
+
             # --- Get PLATFORM-ADAPTIVE Signals ---
             po_direction, po_confidence = platform_generator.generate_platform_signal(asset, "pocket option")
             q_direction, q_confidence = platform_generator.generate_platform_signal(asset, "quotex")
             b_direction, b_confidence = platform_generator.generate_platform_signal(asset, "binomo")
-            
+
             # --- Get Expiry Recs ---
             po_expiry = platform_generator.get_optimal_expiry(asset, "pocket option")
             q_expiry = platform_generator.get_optimal_expiry(asset, "quotex")
             b_expiry = platform_generator.get_optimal_expiry(asset, "binomo")
-            
+
             self.send_message(chat_id,
                 f"🔍 **PLATFORM COMPARISON - {asset}**\n\n"
                 f"🟠 **Pocket Option (PO):**\n"
@@ -4664,14 +4714,14 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 f"  Rec Expiry: {b_expiry}\n\n"
                 f"PO Confidence Adjustment (vs QX): {po_confidence - q_confidence}%",
                 parse_mode="Markdown")
-                
+
         elif command == "analyze":
             # Simulated historical data for PO analysis
             simulated_historical_data = [
                 random.uniform(1.0800, 1.0900) for _ in range(10)
             ]
             analysis = po_specialist.analyze_po_behavior("EUR/USD", simulated_historical_data[0], simulated_historical_data)
-            
+
             self.send_message(chat_id,
                 f"📊 **PO BEHAVIOR ANALYSIS**\n\n"
                 f"Detected Patterns: {', '.join(analysis['detected_patterns']) or 'None'}\n"
@@ -4680,7 +4730,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 f"Recommendation: {analysis['recommendation']}\n\n"
                 f"Spike Warning: {'✅ YES' if analysis['spike_warning'] else '❌ NO'}",
                 parse_mode="Markdown")
-                
+
         elif command == "settings":
             po_settings = PLATFORM_SETTINGS["pocket_option"]
             self.send_message(chat_id,
@@ -4692,13 +4742,13 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 f"Fakeout Adjustment: {po_settings['fakeout_adjustment']}\n\n"
                 f"Behavior: {po_settings['behavior']}",
                 parse_mode="Markdown")
-                
+
         elif command == "compare" and len(parts) >= 3:
             asset = parts[2].upper()
             # Simulate market conditions for strategy rec
             market_conditions = po_strategies.analyze_po_market_conditions(asset)
             strategies = po_strategies.get_po_strategy(asset, market_conditions)
-            
+
             self.send_message(chat_id,
                 f"🤖 **PO STRATEGIES FOR {asset}**\n\n"
                 f"Recommended: {strategies['name']}\n"
@@ -4719,7 +4769,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     def _show_main_menu(self, chat_id, message_id=None):
         """Show main OTC trading menu"""
         stats = get_user_stats(chat_id)
-        
+
         # Create optimized button layout with new features including EDUCATION
         keyboard_rows = [
             [{"text": "🎯 GET ENHANCED SIGNALS", "callback_data": "menu_signals"}],
@@ -4744,23 +4794,23 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 {"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}
             ]
         ]
-        
+
         # Add admin panel for admins
         if stats['is_admin']:
             keyboard_rows.append([{"text": "👑 ADMIN PANEL", "callback_data": "admin_panel"}])
-        
+
         keyboard = {"inline_keyboard": keyboard_rows}
-        
+
         # Format account status - FIXED FOR ADMIN
         if stats['daily_limit'] == 9999:
             signals_text = "UNLIMITED"
         else:
             signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
-        
+
         # Get user safety status
         can_trade, trade_reason = profit_loss_tracker.should_user_trade(chat_id)
         safety_status = "🟢 SAFE TO TRADE" if can_trade else f"🔴 {trade_reason}"
-        
+
         text = f"""
 🏦 **ENHANCED OTC BINARY TRADING PRO** 🤖
 
@@ -4790,7 +4840,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🛡️ **SAFETY STATUS:** {safety_status}
 
 *Select your advanced trading tool below*"""
-        
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -4801,19 +4851,19 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
+
     def _show_signals_menu(self, chat_id, message_id=None):
         """Show signals menu with all assets"""
         # Get user's platform preference
         platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
         platform_key = platform.lower().replace(' ', '_')
         platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-        
+
         # Get final expiry display for the quick button
         default_expiry_base = platform_info['default_expiry']
         # 🚨 NEW FIX: Use adjust_for_deriv for clean unit display
         default_expiry_display = adjust_for_deriv(platform_info['name'], default_expiry_base)
-        
+
         keyboard = {
             "inline_keyboard": [
                 [{"text": f"⚡ QUICK SIGNAL (EUR/USD {default_expiry_display})", "callback_data": f"truth_signal_EUR/USD_{default_expiry_base}"}], # Changed to truth_signal
@@ -4834,7 +4884,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         text = f"""
 🎯 **ENHANCED OTC BINARY SIGNALS - ALL ASSETS**
 
@@ -4848,7 +4898,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 **POPULAR OTC ASSETS:**
 • Forex Majors (EUR/USD, GBP/USD, USD/JPY)
-• Cryptocurrencies (BTC/USD, ETH/USD)  
+• Cryptocurrencies (BTC/USD, ETH/USD)
 • Commodities (XAU/USD, XAG/USD)
 • Indices (US30, SPX500, NAS100)
 • Deriv Synthetics (Volatility 10, Crash 500) (NEW!)
@@ -4872,7 +4922,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **🛠️ EMA FIX:** More responsive trend analysis using EMA!
 
 *Select asset or quick signal*"""
-        
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -4883,7 +4933,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
+
     def _show_assets_menu(self, chat_id, message_id=None):
         """Show all 35+ trading assets in organized categories (Includes Synthetics)"""
         keyboard = {
@@ -4916,21 +4966,21 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                     {"text": "₿ DOT/USD", "callback_data": "asset_DOT/USD"},
                     {"text": "₿ LTC/USD", "callback_data": "asset_LTC/USD"}
                 ],
-                
+
                 # COMMODITIES
                 [
                     {"text": "🟡 XAU/USD", "callback_data": "asset_XAU/USD"},
                     {"text": "🟡 XAG/USD", "callback_data": "asset_XAG/USD"},
                     {"text": "🛢 OIL/USD", "callback_data": "asset_OIL/USD"}
                 ],
-                
+
                 # INDICES
                 [
                     {"text": "📈 US30", "callback_data": "asset_US30"},
                     {"text": "📈 SPX500", "callback_data": "asset_SPX500"},
                     {"text": "📈 NAS100", "callback_data": "asset_NAS100"}
                 ],
-                
+
                 # DERIV SYNTHETICS (NEW!)
                 [
                     {"text": "⚪ Vola 10", "callback_data": "asset_Volatility 10"},
@@ -4940,7 +4990,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         text = """
 📊 **OTC TRADING ASSETS - 35+ INSTRUMENTS**
 
@@ -4965,7 +5015,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Volatility Indices, Boom & Crash Indices - Stable 24/7 trading on Deriv
 
 *Click any asset to generate enhanced signal*"""
-        
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -4976,21 +5026,21 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
+
     def _show_asset_expiry(self, chat_id, message_id, asset):
         """Show expiry options for asset - UPDATED WITH 30s SUPPORT AND DERIV LOGIC"""
         asset_info = OTC_ASSETS.get(asset, {})
         asset_type = asset_info.get('type', 'Forex')
         volatility = asset_info.get('volatility', 'Medium')
-        
+
         # Check if user has auto mode enabled
         auto_mode = self.auto_mode.get(chat_id, False)
-        
+
         # Get user's platform for default expiry
         platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
         platform_key = platform.lower().replace(' ', '_')
         platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-        
+
         # 🚨 NEW FIX: Use clean unit helper for buttons
         expiry_30s = _get_clean_expiry_unit("30")
         expiry_1min = _get_clean_expiry_unit("1")
@@ -4998,7 +5048,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         expiry_5min = _get_clean_expiry_unit("5")
         expiry_15min = _get_clean_expiry_unit("15")
         expiry_30min = _get_clean_expiry_unit("30")
-        
+
         keyboard = {
             "inline_keyboard": [
                 [
@@ -5022,9 +5072,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         mode_text = "**🔄 AUTO DETECT MODE:** AI will automatically select the best expiry based on market analysis" if auto_mode else "**⚡ MANUAL MODE:** You select expiry manually"
-        
+
         # Adjust button and display text for Deriv synthetics and tick expiries
         expiry_unit = "MINUTES"
         if asset_type == "Synthetic" or platform_key == "deriv":
@@ -5034,7 +5084,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 keyboard["inline_keyboard"][1][0]["text"] = "⚪ 5 TICKS (30s)"
                 keyboard["inline_keyboard"][1][1]["text"] = "⚪ 10 TICKS (1min)"
 
-        
+
         text = f"""
 📊 **{asset} - ENHANCED OTC BINARY OPTIONS**
 
@@ -5050,7 +5100,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 *Choose Expiry Time ({expiry_unit}):*
 
 ⚡ **{expiry_30s}-{expiry_2min}** - Ultra-fast OTC trades, instant results
-📈 **{expiry_5min}-{expiry_15min}** - More analysis time, higher accuracy  
+📈 **{expiry_5min}-{expiry_15min}** - More analysis time, higher accuracy
 📊 **{expiry_30min}** - Swing trading, trend following
 
 **Recommended for {asset}:**
@@ -5058,22 +5108,22 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **Trend Filter:** Now using **EMA** for faster trend detection (EMA FIX 🛠️)
 
 *Advanced AI will analyze current OTC market conditions*"""
-        
+
         self.edit_message_text(
             chat_id, message_id,
             text, parse_mode="Markdown", reply_markup=keyboard
         )
-    
+
     def _show_strategies_menu(self, chat_id, message_id=None):
         """Show all 34 trading strategies - UPDATED"""
         keyboard = {
             "inline_keyboard": [
                 # NEW: AI TREND CONFIRMATION STRATEGY - First priority
                 [{"text": "🤖 AI TREND CONFIRMATION", "callback_data": "strategy_ai_trend_confirmation"}],
-                
+
                 # NEW: AI TREND FILTER + BREAKOUT STRATEGY - Second priority
                 [{"text": "🎯 AI TREND FILTER + BREAKOUT", "callback_data": "strategy_ai_trend_filter_breakout"}],
-                
+
                 # NEW STRATEGY ADDED: SPIKE FADE
                 [{"text": "⚡ SPIKE FADE (PO)", "callback_data": "strategy_spike_fade"}],
 
@@ -5145,7 +5195,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         text = """
 🚀 **ENHANCED OTC TRADING STRATEGIES - 34 PROFESSIONAL APPROACHES**
 
@@ -5174,7 +5224,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 **🤖 ADVANCED AI OTC STRATEGIES:**
 • AI Momentum Scan - AI OTC momentum detection
-• Quantum AI Mode - Quantum OTC analysis  
+• Quantum AI Mode - Quantum OTC analysis
 • AI Consensus - Multi-engine OTC consensus
 
 **PLUS ALL ORIGINAL STRATEGIES:**
@@ -5185,7 +5235,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • And many more...
 
 *Each strategy uses OTC-optimized pattern recognition*"""
-        
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -5196,7 +5246,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
+
     def _show_strategy_detail(self, chat_id, message_id, strategy):
         """Show detailed strategy information - UPDATED WITH NEW STRATEGIES"""
         strategy_details = {
@@ -5444,9 +5494,9 @@ Captures emerging trends on the 2-minute chart with confirmation from higher tim
             "fair_value": "Detailed analysis of Fair Value Gap Strategy...",
             "liquidity_void": "Detailed analysis of Liquidity Void Strategy...",
             "delta_divergence": "Detailed analysis of Delta Divergence Strategy...",
-            
+
         }
-        
+
         detail = strategy_details.get(strategy, f"""
 **{strategy.replace('_', ' ').title()} STRATEGY**
 
@@ -5469,12 +5519,12 @@ Complete strategy guide with enhanced AI analysis coming soon.
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         self.edit_message_text(
             chat_id, message_id,
             detail, parse_mode="Markdown", reply_markup=keyboard
         )
-    
+
     def _show_ai_engines_menu(self, chat_id, message_id=None):
         """Show all 23 AI engines - UPDATED"""
         keyboard = {
@@ -5530,7 +5580,7 @@ Complete strategy guide with enhanced AI analysis coming soon.
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         text = """
 🤖 **ENHANCED AI TRADING ENGINES - 23 QUANTUM TECHNOLOGIES**
 
@@ -5578,7 +5628,7 @@ Complete strategy guide with enhanced AI analysis coming soon.
 • InstitutionalFlow AI - Smart money tracking
 
 *Each engine specializes in different market aspects for maximum accuracy*"""
-        
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -5589,7 +5639,7 @@ Complete strategy guide with enhanced AI analysis coming soon.
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
+
     def _show_ai_engine_detail(self, chat_id, message_id, engine):
         """Show detailed AI engine information"""
         engine_details = {
@@ -5701,7 +5751,7 @@ Identifies and confirms market trends using quantum-inspired algorithms and mult
 - Spike Fade Strategy (for extreme reversal detection)
 - Medium to long expiries (2-15min)
 - Major currency pairs (EUR/USD, GBP/USD)""",
-            
+
             # Placeholder for other AI engine details
             "neuralmomentum": "Detailed analysis of NeuralMomentum AI Engine...",
             "volatilitymatrix": "Detailed analysis of VolatilityMatrix AI Engine...",
@@ -5726,7 +5776,7 @@ Identifies and confirms market trends using quantum-inspired algorithms and mult
             "institutionalflow": "Detailed analysis of InstitutionalFlow AI Engine...",
 
         }
-        
+
         detail = engine_details.get(engine, f"""
 **{engine.replace('_', ' ').title()} AI ENGINE**
 
@@ -5749,16 +5799,16 @@ Complete technical specifications and capabilities available.
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         self.edit_message_text(
             chat_id, message_id,
             detail, parse_mode="Markdown", reply_markup=keyboard
         )
-    
+
     def _show_account_dashboard(self, chat_id, message_id=None):
         """Show account dashboard"""
         stats = get_user_stats(chat_id)
-        
+
         # Format signals text - FIXED FOR ADMIN
         if stats['daily_limit'] == 9999:
             signals_text = "UNLIMITED"
@@ -5766,11 +5816,11 @@ Complete technical specifications and capabilities available.
         else:
             signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
             status_emoji = "🟢" if stats['signals_today'] < stats['daily_limit'] else "🔴"
-        
+
         # Get user safety status
         can_trade, trade_reason = profit_loss_tracker.should_user_trade(chat_id)
         safety_status = "🟢 SAFE TO TRADE" if can_trade else f"🔴 {trade_reason}"
-        
+
         keyboard = {
             "inline_keyboard": [
                 [
@@ -5785,7 +5835,7 @@ Complete technical specifications and capabilities available.
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         text = f"""
 💼 **ENHANCED ACCOUNT DASHBOARD**
 
@@ -5796,12 +5846,12 @@ Complete technical specifications and capabilities available.
 
 **ENHANCED FEATURES INCLUDED:**
 """
-        
+
         for feature in stats['features']:
             text += f"✓ {feature}\n"
-        
+
         text += "\n*Manage your enhanced account below*"
-        
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -5812,11 +5862,11 @@ Complete technical specifications and capabilities available.
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
+
     def _show_limits_dashboard(self, chat_id, message_id=None):
         """Show trading limits dashboard"""
         stats = get_user_stats(chat_id)
-        
+
         keyboard = {
             "inline_keyboard": [
                 [{"text": "💎 UPGRADE TO PREMIUM", "callback_data": "account_upgrade"}],
@@ -5826,14 +5876,14 @@ Complete technical specifications and capabilities available.
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         if stats['daily_limit'] == 9999:
             signals_text = "∞ UNLIMITED"
             remaining_text = "∞"
         else:
             signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
             remaining_text = f"{stats['daily_limit'] - stats['signals_today']}"
-        
+
         text = f"""
 ⚡ **ENHANCED TRADING LIMITS DASHBOARD**
 
@@ -5843,12 +5893,12 @@ Complete technical specifications and capabilities available.
 
 **YOUR ENHANCED PLAN: {stats['tier_name']}**
 """
-        
+
         for feature in stats['features']:
             text += f"• {feature}\n"
-        
+
         text += "\n*Contact admin for enhanced plan upgrades*"
-        
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -5859,7 +5909,7 @@ Complete technical specifications and capabilities available.
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
+
     def _show_upgrade_options(self, chat_id, message_id):
         """Show account upgrade options"""
         keyboard = {
@@ -5871,7 +5921,7 @@ Complete technical specifications and capabilities available.
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         text = f"""
 💎 **ENHANCED PREMIUM ACCOUNT UPGRADE**
 
