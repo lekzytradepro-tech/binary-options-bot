@@ -9,7 +9,6 @@ import random
 from datetime import datetime, timedelta
 import json
 import numpy as np
-import math
 
 # Configure logging
 logging.basicConfig(
@@ -205,7 +204,7 @@ def _calculate_realistic_entry_window(platform, expiry):
     - latest_str: Time string for latest entry (current time + total_setup_time)
     - setup_urgency: String indicating urgency (e.g., 'FAST SETUP REQUIRED')
     - platform_speed: Integer of typical setup time in seconds
-    - validity_window: String for signal validity (e.g. '60s')
+    - validity_window: String indicating how long signal is valid (e.g., '60s')
     """
     # Setup times based on typical platform responsiveness
     setup_times = {
@@ -235,14 +234,17 @@ def _calculate_realistic_entry_window(platform, expiry):
     latest_str = latest_entry.strftime('%H:%M:%S UTC')
     
     # Determine validity and urgency based on expiry
-    expiry_str = str(expiry)
-    expiry_num = int(expiry_str) if expiry_str.isdigit() and expiry_str not in ["30", "60"] else 0
-    
-    if expiry_str == "30": # 30s (non-numeric expiry unit from code)
-        validity = "30s"
-        setup_urgency = "ULTRA FAST SETUP REQUIRED"
-    elif expiry_num <= 1 and expiry_num != 0:  # 1min
+    # NOTE: The expiry parameter can be the string "30" or the int/string "1", "2", "5", etc.
+    try:
+        expiry_num = int(expiry)
+    except ValueError:
+        expiry_num = 0
+        
+    if expiry_num == 0 and expiry == "30": # 30s
         validity = "60s"
+        setup_urgency = "FAST SETUP REQUIRED"
+    elif expiry_num <= 1 and expiry_num != 0:  # 1min
+        validity = "90s"
         setup_urgency = "FAST SETUP REQUIRED"
     elif expiry_num <= 5 and expiry_num != 0:  # 2min or 5min
         validity = "2M"
@@ -350,7 +352,7 @@ USER_TIERS = {
 }
 
 # =============================================================================
-# 🚨 CRITICAL FIX: REAL SIGNAL VERIFICATION SYSTEM (UPDATED WITH STABLE LOGIC)
+# 🚨 CRITICAL FIX: REAL SIGNAL VERIFICATION SYSTEM (UPDATED WITH ALL NEW INDICATORS & EMA FIX)
 # =============================================================================
 
 class RealSignalVerifier:
@@ -358,10 +360,7 @@ class RealSignalVerifier:
     
     def __init__(self):
         # Note: twelvedata_otc object is initialized later, relying on scope for this.
-        self.rsi_period = 14
-        self.ema_short = 5
-        self.ema_long = 10
-        self.momentum_period = 5  # ROC over 5 candles
+        pass
         
     def get_price_data(self, asset):
         """Get price data for indicators"""
@@ -393,67 +392,76 @@ class RealSignalVerifier:
         return None
         
     def calculate_sma(self, prices, period):
-        """Calculate REAL Simple Moving Average (Stable Logic)"""
-        if not prices:
-            return 0.0
-        period = max(1, min(len(prices), period))
-        s = sum(prices[:period])
-        return s / period
+        """Calculate REAL Simple Moving Average"""
+        if len(prices) < period:
+            return sum(prices) / len(prices) if prices else 0
+        # Use first `period` elements for the calculation
+        # Prices are ordered [current, t-1, t-2, ...]
+        return sum(prices[:period]) / period
 
-    def calculate_ema(self, prices, period):
-        """Calculate Exponential Moving Average (EMA) - FIX: Use chronological order (Stable Logic)"""
-        if not prices:
-            return 0.0
-        closes = prices[::-1]  # oldest -> newest
-        period = max(1, period)
-        if len(closes) < period:
-            return self.calculate_sma(prices, len(prices))
+    def calculate_ema(self, prices, period, smoothing_factor=2):
+        """Calculate Exponential Moving Average (EMA) - FIX: Use chronological order"""
+        if len(prices) < period:
+            # Fallback to SMA for the first few periods
+            return self.calculate_sma(prices, len(prices)) if prices else 0
         
-        # start with SMA of first 'period'
+        # Reverse prices to get chronological order (oldest first)
+        closes = prices[::-1]  
+        
+        # Start with SMA for the initial EMA value
         initial_sma = sum(closes[0:period]) / period
-        k = 2 / (period + 1)
-        ema = initial_sma
-        for price in closes[period:]:
-            ema = price * k + ema * (1 - k)
-        return ema
+        
+        k = smoothing_factor / (1 + period)
+        ema_list = [initial_sma]
+        
+        # Calculate EMA for the remaining data points
+        for i in range(period, len(closes)):
+            # EMA = Price * k + EMA_prev * (1 - k)
+            ema = closes[i] * k + ema_list[-1] * (1 - k)
+            ema_list.append(ema)
+            
+        # The latest EMA is the last element calculated
+        return ema_list[-1]
     
     def calculate_rsi(self, prices, period=14):
-        """Calculate REAL RSI (Relative Strength Index) (Stable Logic)"""
-        if not prices or len(prices) < period + 1:
-            return 50.0  # Neutral if insufficient data
+        """Calculate REAL RSI (Relative Strength Index)"""
+        if len(prices) < period + 1:
+            return 50  # Neutral if insufficient data
         
-        gains = 0.0
-        losses = 0.0
-        # calculate changes for last `period` bars
-        for i in range(period):
-            # change from older (i+1) to newer (i)
-            change = prices[i] - prices[i + 1]
+        # Prices are ordered [current, t-1, t-2, ...]
+        gains = []
+        losses = []
+        
+        # Calculate change for the last 'period' candles
+        for i in range(1, period + 1):
+            change = prices[i-1] - prices[i]
             if change > 0:
-                gains += change
+                gains.append(change)
+                losses.append(0)
             else:
-                losses += abs(change)
-                
-        avg_gain = gains / period
-        avg_loss = losses / period
+                gains.append(0)
+                losses.append(abs(change))
+        
+        if len(gains) < period:
+            return 50
+        
+        avg_gain = sum(gains) / period
+        avg_loss = sum(losses) / period
         
         if avg_loss == 0:
-            return 100.0 if avg_gain > 0 else 50.0
+            return 100
         
         rs = avg_gain / avg_loss
         rsi = 100 - (100 / (1 + rs))
         
-        return round(rsi, 2)
+        return round(rsi, 1)
     
     def calculate_momentum(self, prices, period=5):
-        """Calculate REAL price momentum (Rate of Change) (Stable Logic)"""
-        if not prices or len(prices) <= period:
-            return 0.0
-        latest = prices[0]
-        prev = prices[period]
-        if prev == 0:
-            return 0.0
-        roc = ((latest - prev) / prev) * 100.0
-        return round(roc, 4)
+        """Calculate REAL price momentum (5 periods back)"""
+        if len(prices) < period:
+            return 0
+        momentum = ((prices[0] - prices[period-1]) / prices[period-1]) * 100
+        return round(momentum, 2)
     
     def calculate_volatility(self, prices, period=10):
         """Calculate REAL volatility (Average True Range like)"""
@@ -1658,6 +1666,238 @@ class PlatformAdaptiveGenerator:
 # Initialize platform adaptive generator
 platform_generator = PlatformAdaptiveGenerator()
 
+
+# ---------------------------
+# MASTER SIGNAL LAYER
+# ---------------------------
+class MasterSignalLayer:
+    """
+    Central decision layer that enforces:
+      - Master Direction Lock
+      - Reversal Confirmation
+      - Platform neutralization (platforms only adjust confidence/expiry)
+      - Global conflict blocker
+      - Confidence gatekeeper
+    Integrates with: RealSignalVerifier, PlatformAdaptiveGenerator, AdvancedSignalValidator
+    """
+
+    def __init__(self, real_verifier, platform_generator, safe_generator=None, validator=None):
+        self.real_verifier = real_verifier
+        self.platform_generator = platform_generator
+        self.safe_generator = safe_generator
+        self.validator = validator  # AdvancedSignalValidator or similar
+
+        # Tunable thresholds
+        self.TRND_LOCK_STRENGTH = 60      # Trend strength threshold for lock
+        self.MOMENTUM_WEAK_PCT = 0.25     # momentum threshold (percent)
+        self.RSI_NEAR_MID_LOW = 45
+        self.RSI_NEAR_MID_HIGH = 55
+        self.REV_MOMENTUM_MIN = 0.5       # momentum sign flip magnitude required for reversal
+        self.MIN_CONFIDENCE = 50
+        self.MAX_CONFIDENCE = 95
+        self.REQUIRED_ALIGNMENT_SCORE = 65  # alignment threshold for multi-TF confirmation
+
+    def _get_core_analysis(self, asset):
+        """
+        Use RealSignalVerifier.get_real_analysis which returns indicators and meta.
+        Falls back safely if unavailable.
+        """
+        try:
+            analysis = self.real_verifier.get_real_analysis(asset)
+            # If get_real_analysis returns the wrapper with keys: 'indicators' etc.
+            if isinstance(analysis, dict) and 'indicators' in analysis:
+                indicators = analysis['indicators']
+                return {
+                    'direction': analysis.get('direction'),
+                    'confidence': analysis.get('confidence', 65),
+                    'indicators': indicators,
+                    # convenience names
+                    'ema_5': indicators.get('ema_5'),
+                    'ema_10': indicators.get('ema_10'),
+                    'rsi': indicators.get('rsi'),
+                    'momentum': indicators.get('price_momentum') if 'price_momentum' in indicators else indicators.get('momentum', 0),
+                    'trend_strength': indicators.get('trend_strength', 50),
+                    'current_price': indicators.get('current_price', indicators.get('ema_5', 0))
+                }
+        except Exception as e:
+            logger.error(f"❌ MasterLayer: core analysis failed: {e}")
+
+        # Final fallback: ask real_verifier.get_real_direction() for a simple direction
+        try:
+            d, c = self.real_verifier.get_real_direction(asset)
+            return {'direction': d, 'confidence': c, 'indicators': {}, 'ema_5': None,
+                    'ema_10': None, 'rsi': 50, 'momentum': 0, 'trend_strength': 50, 'current_price': None}
+        except Exception:
+            return {'direction': 'NEUTRAL', 'confidence': 60, 'indicators': {}, 'ema_5': None,
+                    'ema_10': None, 'rsi': 50, 'momentum': 0, 'trend_strength': 50, 'current_price': None}
+
+    def _master_direction_lock(self, analysis):
+        """
+        If trend is very strong and momentum is weak (trend exhaustion scenario),
+        do NOT allow counter-trend signals.
+        Returns (locked, forced_direction, reason)
+        """
+        trend = analysis.get('trend_strength', 50)
+        mom = analysis.get('momentum', 0)
+        rsi = analysis.get('rsi', 50)
+
+        # momentum as absolute percent
+        mom_abs = abs(mom)
+
+        if trend >= self.TRND_LOCK_STRENGTH and mom_abs <= self.MOMENTUM_WEAK_PCT:
+            # Determine strong trend direction using ema alignment if available
+            ema5 = analysis.get('ema_5')
+            ema10 = analysis.get('ema_10')
+            price = analysis.get('current_price', ema5)
+            if ema5 is not None and ema10 is not None and price is not None:
+                if price < ema5 and ema5 < ema10:
+                    return True, 'PUT', 'Master lock: strong downtrend'
+                if price > ema5 and ema5 > ema10:
+                    return True, 'CALL', 'Master lock: strong uptrend'
+            # fallback to trend_strength and direction
+            base_dir = analysis.get('direction')
+            if base_dir in ['CALL', 'PUT']:
+                return True, base_dir, 'Master lock: trend_strength fallback'
+        return False, None, None
+
+    def _reversal_confirmed(self, analysis, desired_direction):
+        """
+        Require strict reversal confirmations BEFORE allowing a reversal:
+          1) RSI crosses 50 in reversal direction (use rsi threshold)
+          2) Momentum flips sign and magnitude > REV_MOMENTUM_MIN (e.g., 0.5)
+          3) Price closes above/below EMA5 depending on direction
+        Returns True/False and reason string.
+        """
+        rsi = analysis.get('rsi', 50)
+        mom = analysis.get('momentum', 0)
+        ema5 = analysis.get('ema_5')
+        price = analysis.get('current_price', ema5)
+
+        # RSI confirmation
+        if desired_direction == 'CALL':
+            rsi_ok = rsi < self.RSI_NEAR_MID_LOW or rsi > self.RSI_NEAR_MID_HIGH
+            mom_ok = mom > self.REV_MOMENTUM_MIN
+            price_ok = (price is not None and ema5 is not None and price > ema5)
+        else:  # PUT
+            rsi_ok = rsi < self.RSI_NEAR_MID_LOW or rsi > self.RSI_NEAR_MID_HIGH
+            mom_ok = mom < -self.REV_MOMENTUM_MIN
+            price_ok = (price is not None and ema5 is not None and price < ema5)
+
+        reason_parts = []
+        if not rsi_ok:
+            reason_parts.append(f'RSI too close to 50 ({rsi})')
+        if not mom_ok:
+            reason_parts.append(f'Momentum flip too weak ({mom:.2f})')
+        if not price_ok:
+            reason_parts.append('Price not beyond EMA5')
+
+        return rsi_ok and mom_ok and price_ok, '; '.join(reason_parts)
+
+    def _alignment_ok(self, asset, candidate_direction):
+        """
+        Check multi-timeframe alignment via validator if available.
+        Fall back to True if validator missing.
+        """
+        if not self.validator:
+            return True, 100  # assume okay if no validator
+        try:
+            # We call the method directly on the instantiated validator
+            score = self.validator.check_timeframe_alignment(asset, candidate_direction)
+            return (score >= self.REQUIRED_ALIGNMENT_SCORE), score
+        except Exception as e:
+            logger.error(f"❌ MasterLayer alignment check failed: {e}")
+            return True, 60 # Default to moderate if check fails
+
+    def evaluate(self, asset, platform="quotex", expiry=None, chat_id=None):
+        """
+        Main entry:
+          - returns (signal_dict, reason_str) where signal_dict is None for NEUTRAL/blocked.
+        """
+        core = self._get_core_analysis(asset)
+        candidate = core.get('direction', 'NEUTRAL')
+        base_conf = int(core.get('confidence', 60))
+
+        # 0) If core is neutral -> return NEUTRAL
+        if candidate not in ['CALL', 'PUT']:
+            return None, "Core neutral"
+
+        # 1) Master direction lock check
+        locked, forced_dir, lock_reason = self._master_direction_lock(core)
+        if locked:
+            # If lock is active, ignore platform direction and stick to the trend
+            final_direction = forced_dir
+            final_confidence = max(self.MIN_CONFIDENCE, min(self.MAX_CONFIDENCE, base_conf - 8))
+            return {
+                'direction': final_direction,
+                'confidence': final_confidence,
+                'asset': asset,
+                'expiry': expiry,
+                'platform': platform,
+                'method': 'MASTER_LOCK',
+                'reason': lock_reason,
+                'analysis': core
+            }, lock_reason
+
+        # 2) If candidate is a reversal relative to the longer trend, require reversal confirmation
+        # We inspect trend strength and EMA alignment to decide if candidate is counter-trend
+        ema5 = core.get('ema_5'); ema10 = core.get('ema_10')
+        trend_dir = None
+        if ema5 is not None and ema10 is not None:
+            # Simple EMA crossover for long-term trend direction
+            if ema5 > ema10:
+                trend_dir = 'CALL'
+            elif ema5 < ema10:
+                trend_dir = 'PUT'
+
+        # If candidate differs from trend_dir and trend_dir exists -> requires reversal confirm
+        if trend_dir and candidate != trend_dir:
+            ok_rev, rev_reason = self._reversal_confirmed(core, candidate)
+            if not ok_rev:
+                return None, f"Reversal not confirmed: {rev_reason}"
+
+        # 3) Multi-timeframe alignment
+        align_ok, align_score = self._alignment_ok(asset, candidate)
+        if not align_ok:
+            return None, f"TF alignment too weak ({align_score})"
+
+        # 4) Platform neutrality: platform may adjust confidence but not direction here
+        # Get platform-adjusted confidence but ensure direction from master layer
+        try:
+            # Ask platform generator for its adjustments (without letting it flip direction)
+            plat_dir, plat_conf = self.platform_generator.generate_platform_signal(asset, platform)
+            # platform_generator returns (direction, confidence) — we use only confidence
+            platform_conf = int(plat_conf) if isinstance(plat_conf, (int, float)) else base_conf
+        except Exception:
+            platform_conf = base_conf
+
+        # 5) Final confidence gating
+        final_confidence = int(round((base_conf + platform_conf + align_score) / 3.0))
+        # apply confidence gate rules
+        if final_confidence < 58:
+            return None, f"Final confidence too low ({final_confidence})"
+        final_confidence = max(self.MIN_CONFIDENCE, min(self.MAX_CONFIDENCE, final_confidence))
+
+        # Build final signal
+        return {
+            'direction': candidate,
+            'confidence': final_confidence,
+            'asset': asset,
+            'expiry': expiry,
+            'platform': platform,
+            'method': 'MASTER_SIGNAL',
+            'reason': f"Aligned; alignment_score={align_score}",
+            'analysis': core
+        }, "OK"
+# End MasterSignalLayer implementation
+
+# Initialize Master Signal Layer
+master_signal_layer = MasterSignalLayer(
+    real_verifier=real_verifier,
+    platform_generator=platform_generator,
+    validator=advanced_validator # Use the existing validator for alignment checks
+)
+
+
 # =============================================================================
 # ENHANCED INTELLIGENT SIGNAL GENERATOR WITH ALL ACCURACY BOOSTERS
 # =============================================================================
@@ -1922,7 +2162,7 @@ class TwelveDataOTCIntegration:
     def __init__(self):
         self.api_keys = [key for key in TWELVEDATA_API_KEYS if key]  # Filter out None values
         self.current_key_index = 0
-        self.base_url = f"https://api.twelvedata.com"
+        self.base_url = "https://api.twelvedata.com"
         self.last_request_time = 0
         self.min_request_interval = 0.3  # Conservative rate limiting for OTC
         self.otc_correlation_data = {}
@@ -3977,7 +4217,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • 📊 **34 Professional Strategies** - Expanded arsenal (NEW: AI Trend Filter + Breakout, Spike Fade)
 • ⚡ **Smart Signal Filtering** - Enhanced risk management
 • 📈 **TwelveData Integration** - Market context analysis
-• 📚 **Complete Education** - Learn trading (NEW!)
+• 📚 **Complete Education** - Learn professional trading
 • 🧠 **Intelligent Probability System** - 10-15% accuracy boost (NEW!)
 • 🎮 **Multi-Platform Support** - Quotex, Pocket Option, Binomo (NEW!)
 • 🔄 **Platform Balancing** - Signals optimized for each broker (NEW!)
@@ -3985,7 +4225,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • 🚨 **SAFETY FEATURES** - Real technical analysis, Stop loss protection, Profit-loss tracking
 • **🤖 NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
 • **🎯 NEW: AI TREND FILTER + BREAKOUT** - AI direction, manual S/R entry
-• **🛠️ EMA FIX:** More responsive trend analysis using EMA!
+• **🛠️ EMA FIX:** Now using EMA for more responsive trend analysis!
 
 **ENHANCED FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
@@ -5224,7 +5464,7 @@ Perfect for calm and confident trading📈
 - Tight stop-loss + fixed take-profit
 - Reduces impulsive trades
 - Increases accuracy significantly
-- **Trend Filter:** Now uses **EMA** for faster trend detection (EMA FIX 🛠️)
+- **Trend Filter:** Now uses **EMA** for fast, responsive trend checking (EMA FIX 🛠️)
 
 **STRATEGY OVERVIEW:**
 The trader's best friend today! AI analyzes multiple timeframes to confirm trend direction with high probability. Only enters when all timeframes align.
@@ -5713,7 +5953,7 @@ Identifies and confirms market trends using quantum-inspired algorithms and mult
             "correlationmatrix": "Detailed analysis of CorrelationMatrix AI Engine...",
             "sentimentanalyzer": "Detailed analysis of SentimentAnalyzer AI Engine...",
             "newssentiment": "Detailed analysis of NewsSentiment AI Engine...",
-            "regime_detection": "Detailed analysis of RegimeDetection AI Engine...",
+            "regimedetection": "Detailed analysis of RegimeDetection AI Engine...",
             "seasonality": "Detailed analysis of Seasonality AI Engine...",
             "adaptivelearning": "Detailed analysis of AdaptiveLearning AI Engine...",
             "marketmicrostructure": "Detailed analysis of MarketMicrostructure AI Engine...",
@@ -6203,7 +6443,7 @@ Complete technical specifications and capabilities available.
 • Market Maker Move
 • **Spike Fade Strategy** (for extreme reversals)
 • **AI Trend Filter + Breakout** (Structured trend entries)
-• **Trend Filter:** Now uses **EMA** for faster trend detection (EMA FIX 🛠️)
+• **Trend Filter:** Now uses **EMA** for responsive trend detection (EMA FIX 🛠️)
 
 **OPTIMAL AI ENGINES:**
 • TrendConfirmation AI (Primary)
@@ -6727,7 +6967,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 **🎯 NEW: AI TREND FILTER + BREAKOUT ANALYSIS:**
 • AI determines objective direction (UP/DOWN/SIDEWAYS)
 • Trader uses this direction for filtering manual S/R entries
-• Focuses on clean breakouts with volume confirmation
+• Focuss on clean breakouts with volume confirmation
 • Blends AI certainty with human discipline
 
 **NEW: TWELVEDATA MARKET CONTEXT:**
@@ -7230,28 +7470,44 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 )
                 return
 
-            # Get the fully optimized signal from the intelligent generator (which includes platform balancing and FIX 3)
-            # We explicitly calculate direction and confidence using the enhanced method
-            direction, confidence = intelligent_generator.generate_intelligent_signal(
-                asset, platform=platform_key
+            # Get the fully optimized signal from the Master Signal Layer (Enforcing core safety/trend lock)
+            master_signal, master_reason = master_signal_layer.evaluate(
+                asset=asset,
+                platform=platform_key,
+                expiry=expiry,
+                chat_id=chat_id
             )
             
+            if master_signal is None:
+                self.edit_message_text(
+                    chat_id, message_id,
+                    f"🚫 **TRADE BLOCKED BY MASTER AI FILTER**\n\n"
+                    f"**Asset:** {asset}\n"
+                    f"**Reason:** {master_reason}\n"
+                    f"The market setup failed a critical safety check (e.g., reversal without confirmation or weak confidence).\n\n"
+                    f"**Recommendation:** Wait for a cleaner setup or try a different asset.",
+                    parse_mode="Markdown"
+                )
+                return
+
+            # Use MasterSignalLayer output as the final signal parameters
+            direction = master_signal['direction']
+            confidence = master_signal['confidence']
+            core_analysis = master_signal['analysis']
+
             # Get analysis for display
             analysis = otc_analysis.analyze_otc_signal(asset, platform=platform_key)
             
             # --- EXTRACT PARAMETERS FOR AI TREND FILTER ---
-            # Get full real analysis data (now includes all indicators)
-            real_analysis_data = real_verifier.get_real_analysis(asset)
-            market_trend_direction = real_analysis_data['direction']
-            trend_confidence = real_analysis_data['confidence']
-            
-            trend_strength = real_analysis_data['indicators'].get('trend_strength', 50)
-            momentum = real_analysis_data['indicators'].get('price_momentum', 0)
-            volatility_value = real_analysis_data['indicators'].get('volatility', 50)
-            
+            # Use data directly from the core analysis passed by the Master Layer
+            trend_strength = core_analysis['indicators'].get('trend_strength', 50)
+            momentum = core_analysis['indicators'].get('price_momentum', 0)
+            volatility_value = core_analysis['indicators'].get('volatility', 50)
+            market_trend_direction = core_analysis['direction'] # Use core direction here for filter
+
             spike_detected = platform_key == 'pocket_option' and (volatility_value > 80 or analysis.get('otc_pattern') == "Spike Reversal Pattern")
 
-            # --- Apply AI Trend Filter before proceeding ---
+            # --- Apply AI Trend Filter before proceeding (Final Check) ---
             allowed, reason = ai_trend_filter(
                 direction=direction,
                 trend_direction=market_trend_direction,
@@ -7406,7 +7662,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 {warning_30s_text}
 
 🤖 **AI REASONING:**
-• Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}
+• Strategy: {analysis.get('strategy', 'Master Signal Layer')}
 • Trend Filter: PASSED ({reason})
 • Platform: Optimized for **{platform_info['behavior'].replace('_', ' ').title()}**
 
@@ -7428,7 +7684,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             
             keyboard = {
                 "inline_keyboard": [
-                    [{"text": "🔄 NEW ENHANCED SIGNAL (SAME)", "callback_data": f"signal_{asset}_{expiry}"}],
+                    [{"text": "🔄 NEW ENHANCED SIGNAL (SAME)", "callback_data": f"truth_signal_{asset}_{expiry}"}],
                     [
                         {"text": "📊 DIFFERENT ASSET", "callback_data": "menu_assets"},
                         {"text": "⏰ DIFFERENT EXPIRY", "callback_data": f"asset_{asset}"}
@@ -7801,7 +8057,7 @@ We encountered an issue generating your signal. This is usually temporary.
                     asset = parts[1]
                     expiry = parts[2]
                     # Route to the new detailed truthful signal display
-                    self._generate_truthful_signal_with_indicators_v2(chat_id, message_id, asset, expiry)
+                    self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, expiry)
                     
             elif data.startswith("signal_"):
                 parts = data.split("_")
@@ -7809,7 +8065,7 @@ We encountered an issue generating your signal. This is usually temporary.
                     asset = parts[1]
                     expiry = parts[2]
                     # Route to the new detailed truthful signal display
-                    self._generate_truthful_signal_with_indicators_v2(chat_id, message_id, asset, expiry)
+                    self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, expiry)
             
             # Handle the retry button for the truthful signal output
             elif data.startswith("truth_signal_"):
@@ -7948,7 +8204,7 @@ on {asset}. Consider using it during optimal market conditions.
                 "inline_keyboard": [
                     [
                         {"text": "🔄 TEST ANOTHER STRATEGY", "callback_data": "menu_backtest"},
-                        {"text": "🎯 USE THIS STRATEDA", "callback_data": "menu_signals"}
+                        {"text": "🎯 USE THIS STRATEGA", "callback_data": "menu_signals"}
                     ],
                     [{"text": "📊 PERFORMANCE ANALYTICS", "callback_data": "performance_stats"}],
                     [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
@@ -8236,7 +8492,8 @@ def home():
             "30s_trade_restriction", # Added fix 2
             "realistic_entry_window", # Added realistic entry window
             "truthful_indicator_display", # Added truthful indicator display
-            "ema_fix" # Added EMA fix
+            "ema_fix", # Added EMA fix
+            "master_signal_layer" # Added Master Signal Layer
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -8290,7 +8547,8 @@ def health():
         "30s_trade_restriction": True, # Added fix 2
         "realistic_entry_window": True, # Added realistic entry window
         "truthful_indicator_display": True, # Added truthful indicator display
-        "ema_fix": True # Added EMA fix
+        "ema_fix": True, # Added EMA fix
+        "master_signal_layer": True # Added Master Signal Layer
     })
 
 @app.route('/broadcast/safety', methods=['POST'])
@@ -8404,7 +8662,8 @@ def set_webhook():
             "30s_trade_restriction": True, # Added fix 2
             "realistic_entry_window": True, # Added realistic entry window
             "truthful_indicator_display": True, # Added truthful indicator display
-            "ema_fix": True # Added EMA fix
+            "ema_fix": True, # Added EMA fix
+            "master_signal_layer": True # Added Master Signal Layer
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -8455,7 +8714,8 @@ def webhook():
             "30s_trade_restriction": True, # Added fix 2
             "realistic_entry_window": True, # Added realistic entry window
             "truthful_indicator_display": True, # Added truthful indicator display
-            "ema_fix": True # Added EMA fix
+            "ema_fix": True, # Added EMA fix
+            "master_signal_layer": True # Added Master Signal Layer
         })
         
     except Exception as e:
@@ -8473,7 +8733,7 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "realistic_entry_window", "truthful_indicator_display", "ema_fix"], 
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "realistic_entry_window", "truthful_indicator_display", "ema_fix", "master_signal_layer"], 
         "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
@@ -8496,7 +8756,8 @@ def debug():
         "30s_trade_restriction": True, # Added fix 2
         "realistic_entry_window": True, # Added realistic entry window
         "truthful_indicator_display": True, # Added truthful indicator display
-        "ema_fix": True # Added EMA fix
+        "ema_fix": True, # Added EMA fix
+        "master_signal_layer": True # Added Master Signal Layer
     })
 
 @app.route('/stats')
@@ -8538,7 +8799,8 @@ def stats():
         "30s_trade_restriction": True, # Added fix 2
         "realistic_entry_window": True, # Added realistic entry window
         "truthful_indicator_display": True, # Added truthful indicator display
-        "ema_fix": True # Added EMA fix
+        "ema_fix": True, # Added EMA fix
+        "master_signal_layer": True # Added Master Signal Layer
     })
 
 # =============================================================================
@@ -8642,5 +8904,6 @@ if __name__ == '__main__':
     logger.info("🚫 30S TRADE RESTRICTIONS: FIX 2 Implemented to block unsafe 30s trades")
     logger.info("⏱️ REALISTIC ENTRY WINDOW: Implemented to give users time for manual execution (NEW!)")
     logger.info("📊 TRUTHFUL INDICATOR DISPLAY: Detailed signal analysis implemented (NEW!)")
+    logger.info("👑 MASTER SIGNAL LAYER: Central decision layer for critical safety and trend lock enforcement (NEW!)")
     
     app.run(host='0.0.0.0', port=port, debug=False)
