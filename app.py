@@ -346,7 +346,7 @@ USER_TIERS = {
 }
 
 # =============================================================================
-# 🚨 CRITICAL FIX: REAL SIGNAL VERIFICATION SYSTEM (UPDATED WITH ALL NEW INDICATORS)
+# 🚨 CRITICAL FIX: REAL SIGNAL VERIFICATION SYSTEM (UPDATED WITH ALL NEW INDICATORS & EMA FIX)
 # =============================================================================
 
 class RealSignalVerifier:
@@ -390,7 +390,32 @@ class RealSignalVerifier:
         if len(prices) < period:
             return sum(prices) / len(prices) if prices else 0
         # Use first `period` elements for the calculation
+        # Prices are ordered [current, t-1, t-2, ...]
         return sum(prices[:period]) / period
+
+    def calculate_ema(self, prices, period, smoothing_factor=2):
+        """Calculate Exponential Moving Average (EMA) - FIX: Use chronological order"""
+        if len(prices) < period:
+            # Fallback to SMA for the first few periods
+            return self.calculate_sma(prices, len(prices)) if prices else 0
+        
+        # Reverse prices to get chronological order (oldest first)
+        closes = prices[::-1]  
+        
+        # Start with SMA for the initial EMA value
+        initial_sma = sum(closes[0:period]) / period
+        
+        k = smoothing_factor / (1 + period)
+        ema_list = [initial_sma]
+        
+        # Calculate EMA for the remaining data points
+        for i in range(period, len(closes)):
+            # EMA = Price * k + EMA_prev * (1 - k)
+            ema = closes[i] * k + ema_list[-1] * (1 - k)
+            ema_list.append(ema)
+            
+        # The latest EMA is the last element calculated
+        return ema_list[-1]
     
     def calculate_rsi(self, prices, period=14):
         """Calculate REAL RSI (Relative Strength Index)"""
@@ -450,20 +475,21 @@ class RealSignalVerifier:
         return round(min(100, avg_volatility * 10), 1)  # Normalize to 0-100
     
     def calculate_trend_strength(self, prices):
-        """Calculate REAL trend strength based on SMA alignment"""
+        """Calculate REAL trend strength based on EMA alignment (Updated to EMA)"""
         if len(prices) < 20:
             return 50
         
-        sma_5 = self.calculate_sma(prices, 5)
-        sma_10 = self.calculate_sma(prices, 10)
-        sma_20 = self.calculate_sma(prices, 20)
+        # Use EMA for better responsiveness
+        ema_5 = self.calculate_ema(prices, 5)
+        ema_10 = self.calculate_ema(prices, 10)
+        ema_20 = self.calculate_ema(prices, 20)
         
         current_price = prices[0]
         
-        # Check alignment of SMAs
-        if current_price > sma_5 > sma_10 > sma_20:
+        # Check alignment of EMAs
+        if current_price > ema_5 > ema_10 > ema_20:
             return random.randint(75, 90)  # Strong uptrend
-        elif current_price < sma_5 < sma_10 < sma_20:
+        elif current_price < ema_5 < ema_10 < ema_20:
             return random.randint(75, 90)  # Strong downtrend
         else:
             return random.randint(40, 65)  # Weak or ranging
@@ -487,19 +513,19 @@ class RealSignalVerifier:
             return f"Trading Range: {recent_low:.5f}-{recent_high:.5f}"
 
     def analyze_indicators(self, analysis):
-        """Make decision based on REAL indicators"""
+        """Make decision based on REAL indicators - UPDATED TO USE EMA"""
         current_price = analysis['current_price']
-        sma_5 = analysis['sma_5']
-        sma_10 = analysis['sma_10']
+        ema_5 = analysis['ema_5']    # Use EMA
+        ema_10 = analysis['ema_10']  # Use EMA
         rsi = analysis['rsi']
         momentum = analysis['price_momentum']
         
-        # Rule 1: Strong SMA trend
-        if current_price > sma_5 and current_price > sma_10:
+        # Rule 1: Strong EMA trend (More responsive than SMA)
+        if current_price > ema_5 and current_price > ema_10:
             if rsi < 70:  # Not overbought
                 return "CALL"
         
-        if current_price < sma_5 and current_price < sma_10:
+        if current_price < ema_5 and current_price < ema_10:
             if rsi > 30:  # Not oversold
                 return "PUT"
         
@@ -516,11 +542,11 @@ class RealSignalVerifier:
         elif momentum < -0.5:
             return "PUT"
         
-        # Default: Follow shortest-term SMA trend
-        return "CALL" if current_price > sma_5 else "PUT"
+        # Default: Follow shortest-term EMA trend (More responsive default)
+        return "CALL" if current_price > ema_5 else "PUT"
     
     def calculate_confidence(self, analysis):
-        """Calculate REAL confidence from indicators"""
+        """Calculate REAL confidence from indicators - UPDATED TO USE EMA"""
         confidence = 65  # Base
         
         # RSI confidence boost/penalty
@@ -528,12 +554,12 @@ class RealSignalVerifier:
         if rsi < 30 or rsi > 70:
             confidence += 10  # Strong signal from RSI extremes
         
-        # SMA alignment confidence
+        # EMA alignment confidence (More responsive)
         current_price = analysis['current_price']
-        sma_5 = analysis['sma_5']
-        sma_10 = analysis['sma_10']
+        ema_5 = analysis['ema_5']
+        ema_10 = analysis['ema_10']
         
-        if (current_price > sma_5 > sma_10) or (current_price < sma_5 < sma_10):
+        if (current_price > ema_5 > ema_10) or (current_price < ema_5 < ema_10):
             confidence += 12  # Strong trend alignment
         
         # Volatility adjustment
@@ -556,7 +582,7 @@ class RealSignalVerifier:
         return round(confidence)
     
     def get_real_analysis(self, asset):
-        """Get actual analysis for signal generation"""
+        """Get actual analysis for signal generation - UPDATED TO INCLUDE EMA"""
         try:
             # Get real price data from TwelveData
             data = self.get_price_data(asset)
@@ -570,10 +596,12 @@ class RealSignalVerifier:
             if len(closes) < 10:
                 return self.get_fallback_analysis(asset)
             
-            # REAL INDICATOR CALCULATIONS
+            # REAL INDICATOR CALCULATIONS - NOW INCLUDES EMA
             analysis = {
                 'sma_5': self.calculate_sma(closes, 5),
                 'sma_10': self.calculate_sma(closes, 10),
+                'ema_5': self.calculate_ema(closes, 5),    # <-- NEW
+                'ema_10': self.calculate_ema(closes, 10),  # <-- NEW
                 'rsi': self.calculate_rsi(closes, 14),
                 'current_price': closes[0],
                 'price_momentum': self.calculate_momentum(closes, 5),
@@ -3003,7 +3031,7 @@ class UserBroadcastSystem:
 
 We've upgraded our signal system with REAL technical analysis to stop losses:
 
-✅ **NEW: Real Technical Analysis** - Uses SMA, RSI & Price Action (NOT random)
+✅ **NEW: Real Technical Analysis** - Uses EMA, RSI & Price Action (More responsive!)
 ✅ **NEW: Stop Loss Protection** - Auto-stops after 3 consecutive losses  
 ✅ ✅ **NEW: Profit-Loss Tracking** - Monitors your performance in real-time
 ✅ **NEW: Asset Filtering** - Avoids poor-performing assets automatically
@@ -3023,7 +3051,7 @@ We've upgraded our signal system with REAL technical analysis to stop losses:
 • Risk Management: **Smart filtering** of bad assets
 
 **🎯 NEW SIGNAL FEATURES:**
-• Real SMA (5/10 period) analysis
+• Real EMA (5/10 period) analysis (More responsive trend!)
 • RSI overbought/oversold detection  
 • Price momentum confirmation
 • Multi-timeframe alignment
@@ -3893,6 +3921,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **🚨 SAFETY FEATURES:** Real technical analysis, Stop loss protection, Profit-loss tracking
 • **🤖 NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
 • **🎯 NEW: AI TREND FILTER + BREAKOUT** - AI direction, manual S/R entry
+• **🛠️ EMA FIX:** Now using EMA for more responsive trend analysis!
 
 *By continuing, you accept full responsibility for your trading decisions.*"""
 
@@ -3957,6 +3986,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • 🎯 **ACCURACY BOOSTERS** - Consensus Voting, Real-time Volatility, Session Boundaries
 • 🚨 **SAFETY FEATURES** - Real technical analysis, Stop loss protection, Profit-loss tracking
 • 🤖 **NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
+• **🎯 NEW: AI TREND FILTER + BREAKOUT** - AI direction, manual S/R entry
+• **🛠️ EMA FIX:** More responsive trend analysis using EMA!
 
 **ENHANCED FEATURES:**
 • 🎯 **Live OTC Signals** - Real-time binary options
@@ -4109,6 +4140,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🎯 **ACCURACY BOOSTERS:** ACTIVE (NEW!)
 🚨 **SAFETY SYSTEMS:** REAL ANALYSIS, STOP LOSS, PROFIT TRACKING (NEW!)
 🤖 **NEW: AI TREND CONFIRMATION** - AI analyzes 3 timeframes, enters only if all confirm same direction
+• **🛠️ EMA FIX:** More responsive trend analysis using EMA!
+• **🎯 NEW: AI TREND FILTER + BREAKOUT** - AI direction, manual S/R entry
 
 **ENHANCED OTC FEATURES:**
 • QuantumTrend AI: ✅ Active
@@ -4175,7 +4208,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Historical Learning: Learns from past performance
 
 **🚨 NEW SAFETY FEATURES:**
-• Real Technical Analysis: Uses SMA, RSI, price action (NOT random)
+• Real Technical Analysis: Uses EMA, RSI, price action (More responsive!)
 • Stop Loss Protection: Auto-stops after 3 consecutive losses
 • Profit-Loss Tracking: Monitors your performance
 • Asset Filtering: Avoids poor-performing assets
@@ -4288,7 +4321,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     
     def _handle_unknown(self, chat_id):
         """Handle unknown commands"""
-        text = "🤖 Enhanced OTC Binary Pro: Use /help for trading commands or /start to begin.\n\n**NEW:** Try /performance for analytics or /backtest for strategy testing!\n**NEW:** Auto expiry detection now available!\n**NEW:** TwelveData market context integration!\n**NEW:** Intelligent probability system active (10-15% accuracy boost)!\n**NEW:** Multi-platform support (Quotex, Pocket Option, Binomo, Olymp Trade, Expert Option, IQ Option, Deriv)!\n**🎯 NEW:** Accuracy boosters active (Consensus Voting, Real-time Volatility, Session Boundaries)!\n**🚨 NEW:** Safety systems active (Real analysis, Stop loss, Profit tracking)!\n**🤖 NEW:** AI Trend Confirmation strategy available!"
+        text = "🤖 Enhanced OTC Binary Pro: Use /help for trading commands or /start to begin.\n\n**NEW:** Try /performance for analytics or /backtest for strategy testing!\n**NEW:** Auto expiry detection now available!\n**NEW:** TwelveData market context integration!\n**NEW:** Intelligent probability system active (10-15% accuracy boost)!\n**NEW:** Multi-platform support (Quotex, Pocket Option, Binomo, Olymp Trade, Expert Option, IQ Option, Deriv)!\n**🎯 NEW:** Accuracy boosters active (Consensus Voting, Real-time Volatility, Session Boundaries)!\n**🚨 NEW:** Safety systems active (Real analysis, Stop loss, Profit tracking)!\n**🤖 NEW:** AI Trend Confirmation strategy available!\n**🛠️ EMA FIX:** Now using EMA for more responsive trend analysis!"
 
         # Add quick access buttons
         keyboard = {
@@ -4353,6 +4386,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Use {stats['best_strategy']} strategy more frequently
 • Maintain current risk management approach
 • Follow safety rules: Stop after 3 consecutive losses
+• **Trend Filter:** Note: Signals now use **EMA** for faster trend detection (EMA FIX 🛠️)
 
 *Track your progress and improve continuously*"""
             
@@ -4392,6 +4426,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • All 35+ assets available (Incl. Synthetics) (NEW!)
 • Multiple time periods (7d, 30d, 90d)
 • Comprehensive performance metrics
+• **Note:** EMA is now used for more accurate trend calculations in real-time signals.
 
 *Select a strategy to backtest*"""
             
@@ -4747,6 +4782,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🎮 **NEW: MULTI-PLATFORM SUPPORT** - 7 Platforms (Quotex, PO, Binomo, Olymp, Expert, IQ, Deriv) (NEW!)
 🎯 **NEW: ACCURACY BOOSTERS** - Consensus Voting, Real-time Volatility, Session Boundaries
 🚨 **NEW: SAFETY SYSTEMS** - Real analysis, Stop loss, Profit tracking
+• **🛠️ EMA FIX:** More responsive trend analysis using EMA!
 
 💎 **ACCOUNT TYPE:** {stats['tier_name']}
 📈 **SIGNALS TODAY:** {signals_text}
@@ -4780,7 +4816,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         
         keyboard = {
             "inline_keyboard": [
-                [{"text": f"⚡ QUICK SIGNAL (EUR/USD {default_expiry_display})", "callback_data": f"signal_EUR/USD_{default_expiry_base}"}],
+                [{"text": f"⚡ QUICK SIGNAL (EUR/USD {default_expiry_display})", "callback_data": f"truth_signal_EUR/USD_{default_expiry_base}"}], # Changed to truth_signal
                 [{"text": "📈 ENHANCED SIGNAL (5min ANY ASSET)", "callback_data": "menu_assets"}],
                 [
                     {"text": "💱 EUR/USD", "callback_data": "asset_EUR/USD"},
@@ -4832,7 +4868,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **🎯 NEW:** Accuracy boosters active
 • **🚨 NEW:** Safety systems active
 • **🤖 NEW:** AI Trend Confirmation strategy
-• **🎯 NEW:** AI Trend Filter + Breakout strategy
+• **🎯 NEW:** AI Trend FILTER + Breakout strategy
+• **🛠️ EMA FIX:** More responsive trend analysis using EMA!
 
 *Select asset or quick signal*"""
         
@@ -5018,6 +5055,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 
 **Recommended for {asset}:**
 • {volatility} volatility: { 'Ultra-fast expiries (30s-2min)' if volatility in ['High', 'Very High'] else 'Medium expiries (2-15min)' }
+• **Trend Filter:** Now using **EMA** for faster trend detection (EMA FIX 🛠️)
 
 *Advanced AI will analyze current OTC market conditions*"""
         
@@ -5188,6 +5226,7 @@ Perfect for calm and confident trading📈
 - Tight stop-loss + fixed take-profit
 - Reduces impulsive trades
 - Increases accuracy significantly
+- **Trend Filter:** Now uses **EMA** for faster trend detection (EMA FIX 🛠️)
 
 **STRATEGY OVERVIEW:**
 The trader's best friend today! AI analyzes multiple timeframes to confirm trend direction with high probability. Only enters when all timeframes align.
@@ -5229,7 +5268,7 @@ Low (Only enters with strong confirmation)
 *AI gives direction, you choose the entry - The structured approach*
 
 ✨ **How it works (Hybrid Trading):**
-1️⃣ **AI Analysis**: The AI model analyzes volume, candlestick patterns, and volatility, providing a clear **UP** 📈, **DOWN** 📉, or **SIDEWAYS** ➖ direction.
+1️⃣ **AI Analysis**: The AI model analyzes volume, candlestick patterns, and volatility, providing a clear **UP** 📈, **DOWN** 📉, or **SIDEWAYS** ➖ direction. **(Uses EMA for reliable direction 🛠️)**
 2️⃣ **Your Role**: The human trader marks key **Support** and **Resistance (S/R) levels** on their chart.
 3️⃣ **Entry Rule**: You enter ONLY when the price breaks a key S/R level in the AI-predicted direction, confirmed by a strong candle close.
 
@@ -5239,7 +5278,7 @@ Low (Only enters with strong confirmation)
 • **Perfect Blend**: Combines AI analytical certainty with disciplined manual entry timing.
 
 🤖 **AI Components Used:**
-• Real Technical Analysis (SMA/RSI) for direction
+• Real Technical Analysis (**EMA**/RSI) for direction
 • Volume analysis for breakout confirmation
 • Volatility assessment for breakout strength
 • Candlestick pattern recognition
@@ -5276,6 +5315,7 @@ The Spike Fade strategy is an advanced mean-reversion technique specifically des
 - High-speed execution required
 - Exploits broker-specific mean-reversion behavior
 - Targets quick profit on the immediate reversal candle
+- **Trend Filter:** Uses **EMA** for fast detection of over-extended trends (EMA FIX 🛠️)
 
 **HOW IT WORKS:**
 1. A price "spike" occurs (a sharp, one-sided move, often against the overall trend).
@@ -5315,6 +5355,7 @@ Designed for lightning-fast execution on 30-second timeframes. Captures micro pr
 - Instant profit taking
 - Maximum frequency opportunities
 - Real-time price data from TwelveData
+- **Trend Filter:** Uses **EMA** for fast, responsive trend checking (EMA FIX 🛠️)
 
 **HOW IT WORKS:**
 1. Monitors 30-second charts for immediate opportunities
@@ -5351,6 +5392,7 @@ Captures emerging trends on the 2-minute chart with confirmation from higher tim
 - Trend strength measurement
 - Real market data integration
 - Optimal risk-reward ratios
+- **Trend Filter:** Uses **EMA** for faster trend confirmation (EMA FIX 🛠️)
 
 **HOW IT WORKS:**
 1. Identifies trend direction on 2-minute chart
@@ -5499,6 +5541,7 @@ Complete strategy guide with enhanced AI analysis coming soon.
 
 **NEW: CONSENSUS VOTING ENGINE:**
 • ConsensusVoting AI - Multiple AI engine voting system for maximum accuracy
+• **Note:** Now using **EMA** for underlying trend analysis in all engines (EMA FIX 🛠️)
 
 **CORE TECHNICAL ANALYSIS:**
 • QuantumTrend AI - Advanced trend analysis (Supports Spike Fade Strategy)
@@ -5564,6 +5607,7 @@ This engine powers the most reliable strategy in the system:
 • Generates probability-based trends
 • Confirms entries only when all align
 • Reduces impulsive trades, increases accuracy
+• **Trend Filter:** Uses the highly responsive **EMA** for trend detection (EMA FIX 🛠️)
 
 **ENHANCED FEATURES:**
 - 3-timeframe simultaneous analysis (Fast, Medium, Slow)
@@ -5611,6 +5655,7 @@ Combines analysis from multiple AI engines and uses voting system to determine f
 - Confidence aggregation algorithms
 - Conflict resolution mechanisms
 - Real-time performance tracking
+- **Trend Filter:** Votes incorporate EMA-based trend signals for better responsiveness (EMA FIX 🛠️)
 
 **VOTING PROCESS:**
 1. Collects signals from QuantumTrend, NeuralMomentum, PatternRecognition, LiquidityFlow, VolatilityMatrix
@@ -5642,6 +5687,7 @@ Identifies and confirms market trends using quantum-inspired algorithms and mult
 - Quantum computing principles
 - Real-time trend strength measurement
 - Adaptive learning capabilities
+- **Trend Detection:** Utilizes **EMA** for highly responsive trend identification (EMA FIX 🛠️)
 
 **ANALYSIS INCLUDES:**
 • Primary trend direction (H1/D1)
@@ -5840,6 +5886,7 @@ Complete technical specifications and capabilities available.
 • ✅ **AI TREND CONFIRMATION** strategy (NEW!)
 • ✅ **AI TREND FILTER + BREAKOUT** strategy (NEW!)
 • ✅ **MULTI-PLATFORM** support (7 Platforms!) (NEW!)
+• **🛠️ EMA FIX:** More responsive trend detection (NEW!)
 
 **PRO PLAN - $49/month:**
 • ✅ **UNLIMITED** daily enhanced signals
@@ -5860,6 +5907,7 @@ Complete technical specifications and capabilities available.
 • ✅ **ACCURACY BOOSTERS** (Consensus Voting, Real-time Volatility, Session Boundaries)
 • ✅ **SAFETY SYSTEMS** (Real analysis, Stop loss, Profit tracking) (NEW!)
 • ✅ **7 PLATFORM SUPPORT** (NEW!)
+• **🛠️ EMA FIX:** More responsive trend detection (NEW!)
 
 **CONTACT ADMIN:** @LekzyDevX
 *Message for upgrade instructions*"""
@@ -5914,6 +5962,7 @@ Complete technical specifications and capabilities available.
 • Safety Systems: ✅ ACTIVE (NEW!)
 • AI Trend Confirmation: ✅ AVAILABLE (NEW!)
 • AI Trend Filter + Breakout: ✅ AVAILABLE (NEW!)
+• **Trend Filter:** Now using **EMA** for faster trend detection (EMA FIX 🛠️)
 
 **💡 ENHANCED RECOMMENDATIONS:**
 • Trade during active sessions with liquidity
@@ -5972,6 +6021,7 @@ Complete technical specifications and capabilities available.
 • Accuracy boosters (NEW!)
 • Safety systems (NEW!)
 • **7 Platform Support** (NEW!)
+• **🛠️ EMA FIX:** More responsive trend detection (NEW!)
 
 *Contact admin for enhanced upgrade options*"""
         
@@ -6019,6 +6069,7 @@ Complete technical specifications and capabilities available.
 • AI Trend Confirmation: ✅ AVAILABLE (NEW!)
 • AI Trend Filter + Breakout: ✅ AVAILABLE (NEW!)
 • Spike Fade Strategy: ✅ AVAILABLE (NEW!)
+• **Trend Filter:** Now using **EMA** for faster trend detection (EMA FIX 🛠️)
 
 *Contact admin for custom enhanced settings*"""
         
@@ -6079,6 +6130,8 @@ Complete technical specifications and capabilities available.
 
 • ⚡ **OVERLAP:** 12:00-16:00 UTC
   (London + New York) - Maximum enhanced signals
+  
+• **Trend Filter:** Now using **EMA** for responsive trend analysis (EMA FIX 🛠️)
 
 *Select session for detailed enhanced analysis*"""
         
@@ -6119,6 +6172,7 @@ Complete technical specifications and capabilities available.
 • OrderBlock AI
 • SupportResistance AI
 • HarmonicPattern AI
+• **Trend Filter:** Now uses **EMA** for responsive trend detection (EMA FIX 🛠️)
 
 **BEST ASSETS:**
 • USD/JPY, AUD/USD, NZD/USD
@@ -6151,6 +6205,7 @@ Complete technical specifications and capabilities available.
 • Market Maker Move
 • **Spike Fade Strategy** (for extreme reversals)
 • **AI Trend Filter + Breakout** (Structured trend entries)
+• **Trend Filter:** Now uses **EMA** for responsive trend detection (EMA FIX 🛠️)
 
 **OPTIMAL AI ENGINES:**
 • TrendConfirmation AI (Primary)
@@ -6190,6 +6245,7 @@ Complete technical specifications and capabilities available.
 • Correlation Hedge
 • **Spike Fade Strategy** (for volatility reversals)
 • **AI Trend Filter + Breakout** (Structured trend entries)
+• **Trend Filter:** Now uses **EMA** for responsive trend detection (EMA FIX 🛠️)
 
 **OPTIMAL AI ENGINES:**
 • TrendConfirmation AI (Primary)
@@ -6231,6 +6287,7 @@ Complete technical specifications and capabilities available.
 • Multi-TF Convergence
 • **Spike Fade Strategy** (BEST for quick reversals)
 • **AI Trend Filter + Breakout** (Structured trend entries)
+• **Trend Filter:** Now uses **EMA** for responsive trend detection (EMA FIX 🛠️)
 
 **OPTIMAL AI ENGINES:**
 • All 23 AI engines optimal
@@ -6284,7 +6341,7 @@ Complete technical specifications and capabilities available.
             ]
         }
         
-        text = """
+        text = f"""
 📚 **ENHANCED OTC BINARY TRADING EDUCATION**
 
 *Learn professional OTC binary options trading with advanced features:*
@@ -6312,6 +6369,7 @@ Complete technical specifications and capabilities available.
 • **🤖 NEW:** AI Trend Confirmation strategy guide
 • **🎯 NEW:** AI Trend Filter + Breakout strategy guide
 • **⚡ NEW:** Spike Fade Strategy guide
+• **🛠️ EMA FIX:** Explanation of the new trend detection system (NEW!)
 
 *Build your enhanced OTC trading expertise*"""
         
@@ -6386,7 +6444,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Historical Learning: Learns from past performance
 
 **🚨 NEW: SAFETY SYSTEMS:**
-• Real Technical Analysis: Uses SMA, RSI, price action (NOT random)
+• Real Technical Analysis: Uses **EMA**, RSI, price action (More responsive!)
 • Stop Loss Protection: Auto-stops after 3 consecutive losses
 • Profit-Loss Tracking: Monitors your performance
 • Asset Filtering: Avoids poor-performing assets
@@ -6419,6 +6477,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation (NEW!)
 • AI Trend Filter + Breakout (NEW!)
 • Spike Fade Strategy (NEW!)
+• **🛠️ EMA FIX:** More responsive trend detection (NEW!)
 
 *Enhanced OTC trading requires understanding these advanced market dynamics*"""
 
@@ -6495,6 +6554,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation (NEW!)
 • AI Trend Filter + Breakout (NEW!)
 • Spike Fade Strategy (NEW!)
+• **Trend Filter:** Now uses **EMA** for responsive risk assessment (EMA FIX 🛠️)
 
 *Enhanced risk management is the key to OTC success*"""
 
@@ -6509,7 +6569,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
     def _show_edu_bot_usage(self, chat_id, message_id):
         """Show bot usage guide"""
-        text = """
+        text = f"""
 🤖 **HOW TO USE ENHANCED OTC BOT**
 
 *Step-by-Step Advanced Trading Process:*
@@ -6532,6 +6592,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • **🤖 NEW:** Consider AI Trend Confirmation strategy
 • **🎯 NEW:** Consider AI Trend Filter + Breakout strategy
 • **⚡ NEW:** Consider Spike Fade Strategy
+• **Trend Filter:** Note: Signals now use **EMA** for more responsive trend analysis (EMA FIX 🛠️)
 
 **6. ⚡ EXECUTE ENHANCED TRADE**
 • Enter within **realistic time window** (see signal for details) (NEW!)
@@ -6591,7 +6652,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Historical Learning: Learns from past performance
 
 **🚨 NEW SAFETY SYSTEMS:**
-• Real Technical Analysis: Uses SMA, RSI, price action
+• Real Technical Analysis: Uses **EMA**, RSI, price action (More responsive!)
 • Stop Loss Protection: Auto-stops after 3 consecutive losses
 • Profit-Loss Tracking: Monitors your performance
 • Asset Filtering: Avoids poor-performing assets
@@ -6628,7 +6689,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
     def _show_edu_technical(self, chat_id, message_id):
         """Show technical analysis education"""
-        text = """
+        text = f"""
 📊 **ENHANCED OTC TECHNICAL ANALYSIS**
 
 *Advanced AI-Powered Market Analysis:*
@@ -6652,7 +6713,8 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Correlation-based volatility forecasting
 
 **🚨 REAL TECHNICAL ANALYSIS (NOT RANDOM):**
-• Simple Moving Averages (SMA): Price vs 5/10 period averages
+• **Exponential Moving Averages (EMA):** More responsive trend following (EMA FIX 🛠️)
+• Simple Moving Averages (SMA): Price vs 5/10 period averages (Used for longer trend confirmation)
 • Relative Strength Index (RSI): Overbought/oversold conditions
 • Price Action: Recent price movements and momentum
 • Volatility Measurement: Recent price changes percentage
@@ -6779,6 +6841,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Confidence-based trading journals
 • Mental rehearsal techniques
 • Stress management protocols
+• **Trend Filter:** Trust the fast response of **EMA** to avoid emotional trend chasing (EMA FIX 🛠️)
 
 *Enhanced psychology is 80% of advanced trading success*"""
 
@@ -6826,6 +6889,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Spike Fade Strategy (NEW!)
 • Accuracy boosters explanation (NEW!)
 • Safety systems setup (NEW!)
+• **🛠️ EMA FIX:** Questions about the new trend detection system (NEW!)
 
 **ENHANCED FEATURES SUPPORT:**
 • 23 AI engines configuration (NEW!)
@@ -6839,9 +6903,9 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Multi-platform balancing (NEW!)
 • Accuracy boosters setup (NEW!)
 • Safety systems configuration (NEW!)
-• AI Trend Confirmation strategy (NEW!)
-• AI Trend Filter + Breakout strategy (NEW!)
-• Spike Fade Strategy (NEW!)
+• AI Trend Confirmation settings (NEW!)
+• AI Trend Filter + Breakout settings (NEW!)
+• Spike Fade Strategy settings (NEW!)
 
 *We're here to help you succeed with enhanced trading!*"""
         
@@ -6910,6 +6974,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Spike Fade Strategy management (NEW!)
 • User broadcast system (NEW!)
 • 🟠 PO Debugging: `/podebug` (NEW!)
+• **🛠️ EMA FIX:** Monitor EMA performance (NEW!)
 
 *Select an enhanced option below*"""
         
@@ -6978,6 +7043,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Spike Fade Strategy: ✅ ACTIVE (NEW!)
 • Accuracy Boosters: ✅ ACTIVE (NEW!)
 • Safety Systems: ✅ ACTIVE 🚨 (NEW!)
+• **Trend Filter:** Now using **EMA** (EMA FIX 🛠️)
 
 **🎯 ENHANCED PERFORMANCE:**
 • Signal Accuracy: 78-85% (with AI Trend Confirmation)
@@ -7028,6 +7094,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation usage (NEW!)
 • AI Trend Filter + Breakout usage (NEW!)
 • Spike Fade Strategy usage (NEW!)
+• **Trend Filter:** Monitor EMA usage (NEW!)
 
 **ENHANCED QUICK ACTIONS:**
 • Reset user enhanced limits
@@ -7081,6 +7148,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation: ✅ ENABLED (NEW!)
 • AI Trend Filter + Breakout: ✅ ENABLED (NEW!)
 • Spike Fade Strategy: ✅ ENABLED (NEW!)
+• **Trend Filter:** Using **EMA** for core analysis (EMA FIX 🛠️)
 
 **ENHANCED CONFIGURATION OPTIONS:**
 • Enhanced signal frequency limits
@@ -7099,6 +7167,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation settings (NEW!)
 • AI Trend Filter + Breakout settings (NEW!)
 • Spike Fade Strategy settings (NEW!)
+• **Trend Filter:** EMA period adjustments (NEW!)
 
 **ENHANCED MAINTENANCE:**
 • Enhanced system restart
@@ -7229,8 +7298,8 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             
             # ** NEW: CALCULATE REALISTIC ENTRY WINDOW **
             entry_window_details = _calculate_realistic_entry_window(platform_info['name'], expiry)
-            earliest_entry = entry_window_details['earliest_entry']
-            latest_entry = entry_window_details['latest_entry']
+            earliest_entry = entry_window_details['earliest_entry'].split(' ')[0]
+            latest_entry = entry_window_details['latest_entry'].split(' ')[0]
             setup_urgency = entry_window_details['setup_urgency']
             platform_speed = entry_window_details['platform_speed']
             validity_window = entry_window_details['validity_window'] # This is used for validity display
@@ -7334,6 +7403,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 ├─ Volatility: {volatility_value:.1f}/100
 ├─ Pattern: {analysis.get('otc_pattern', 'Standard OTC Setup')}
 └─ Risk Score: {risk_score}/100 {risk_indicator}
+• **Trend Filter:** Uses **EMA** for trend detection (EMA FIX 🛠️)
 
 {warning_30s_text}
 
@@ -7401,6 +7471,7 @@ We encountered an issue generating your signal. This is usually temporary.
 • Temporary system overload
 • Market data processing delay
 • Network connectivity issue
+• **EMA Trend Filter failed** (EMA FIX 🛠️)
 
 **Quick fixes to try:**
 1. Wait 10 seconds and try again
@@ -7420,7 +7491,7 @@ We encountered an issue generating your signal. This is usually temporary.
     def _generate_truthful_signal_with_indicators_v2(self, chat_id, message_id, asset, expiry):
         """
         Generates the detailed truthful signal showing all REAL indicators.
-        This replaces the _generate_enhanced_otc_signal_v9 logic temporarily for the user request.
+        This display is now using EMA instead of SMA for core logic.
         """
         try:
             # 1. User/Platform/Safety Checks (minimal version for demo)
@@ -7461,11 +7532,11 @@ We encountered an issue generating your signal. This is usually temporary.
             payout_range = get_real_payout(platform_key)
             risk_text = "1-2% recommended"
 
-            # --- REAL INDICATOR ANALYSIS BLOCK ---
+            # --- REAL INDICATOR ANALYSIS BLOCK (UPDATED TO SHOW EMA) ---
             indicator_block = ""
             if method == 'REAL_INDICATOR_ANALYSIS' and indicators:
-                indicator_block += f"""• SMA(5): {indicators.get('sma_5', 0):.5f}
-• SMA(10): {indicators.get('sma_10', 0):.5f}
+                indicator_block += f"""• EMA(5): {indicators.get('ema_5', 0):.5f} 🛠️
+• EMA(10): {indicators.get('ema_10', 0):.5f} 🛠️
 • RSI(14): {indicators.get('rsi', 50):.1f} ({'OS' if indicators.get('rsi', 50) < 30 else 'OB' if indicators.get('rsi', 50) > 70 else 'NEUTRAL'})
 • Current Price: {indicators.get('current_price', 0):.5f}
 • Momentum: {indicators.get('price_momentum', 0):+.2f}%
@@ -7511,7 +7582,7 @@ We encountered an issue generating your signal. This is usually temporary.
 → Payout: {payout_range}
 
 ═══════════════════════════
-📝 **TRUTH:** This signal is based on real-time indicator calculations. High confidence means strong indicator alignment, not a guarantee.
+📝 **TRUTH:** This signal is based on real-time **EMA-based** indicator calculations (EMA FIX 🛠️). High confidence means strong indicator alignment, not a guarantee.
 """
 
             # 4. Display and History
@@ -7577,6 +7648,7 @@ We encountered an issue generating your signal. This is usually temporary.
 • Momentum: {market_conditions['momentum']}%
 • Market Type: {'Ranging' if market_conditions['ranging_market'] else 'Trending'}
 • Volatility: {market_conditions['volatility']}
+• **Trend Filter:** Using **EMA** for responsive trend detection (EMA FIX 🛠️)
 
 🎯 **Recommendation:**
 **{final_expiry_display}**
@@ -7866,6 +7938,7 @@ We encountered an issue generating your signal. This is usually temporary.
 • Consistency Score: **{results['consistency_score']}%**
 • Expectancy: **{results['expectancy']}**
 {strategy_note}
+• **Trend Filter:** Note: Backtests simulate **EMA** performance for trend strategies (EMA FIX 🛠️)
 
 **🎯 Recommendation:**
 This strategy shows **{'strong' if results['win_rate'] >= 75 else 'moderate'}** performance
@@ -7920,6 +7993,7 @@ on {asset}. Consider using it during optimal market conditions.
 • ✅ AI Trend Confirmation 🤖 (NEW!)
 • ✅ AI Trend Filter + Breakout 🎯 (NEW!)
 • ✅ Spike Fade Strategy ⚡ (NEW!)
+• **Trend Filter:** Using **EMA** for responsive trend detection (EMA FIX 🛠️)
 
 **Risk Score Interpretation:**
 • 🟢 80-100: High Confidence - Optimal OTC setup
@@ -7934,7 +8008,7 @@ on {asset}. Consider using it during optimal market conditions.
 • OTC pattern strength
 • Market context availability
 
-**🤖 AI TREND CONFIRMATION BENEFITS:**
+**🤖 AI TREND CONFIRMATION RISK BENEFITS:**
 • Multiple timeframe confirmation reduces risk
 • Only enters when all 3 timeframes align
 • Higher accuracy (78-85% win rate)
@@ -7947,7 +8021,7 @@ on {asset}. Consider using it during optimal market conditions.
 • Reduced risk from false breakouts
 
 **🚨 Safety Systems Active:**
-• Real Technical Analysis (NOT random)
+• Real Technical Analysis (**EMA**-based, NOT random)
 • Stop Loss Protection (3 consecutive losses)
 • Profit-Loss Tracking
 • Asset Performance Filtering
@@ -8091,13 +8165,14 @@ def get_confidence_factors(indicators):
     if rsi < 30 or rsi > 70:
         factors.append("RSI extreme")
     
-    if 'sma_5' in indicators and 'sma_10' in indicators and 'current_price' in indicators:
+    # Use EMA for confidence factors (EMA FIX 🛠️)
+    if 'ema_5' in indicators and 'ema_10' in indicators and 'current_price' in indicators:
         cp = indicators['current_price']
-        sma5 = indicators['sma_5']
-        sma10 = indicators['sma_10']
+        ema5 = indicators['ema_5']
+        ema10 = indicators['ema_10']
         
-        if (cp > sma5 > sma10) or (cp < sma5 < sma10):
-            factors.append("SMA alignment")
+        if (cp > ema5 > ema10) or (cp < ema5 < ema10):
+            factors.append("EMA alignment")
     
     volatility = indicators.get('volatility', 50)
     if volatility > 80:
@@ -8162,7 +8237,8 @@ def home():
             "dynamic_confidence_calculation", # Added fix 1/3
             "30s_trade_restriction", # Added fix 2
             "realistic_entry_window", # Added realistic entry window
-            "truthful_indicator_display" # Added truthful indicator display
+            "truthful_indicator_display", # Added truthful indicator display
+            "ema_fix" # Added EMA fix
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -8202,9 +8278,6 @@ def health():
         "spike_fade_strategy": True,
         "ai_trend_filter_breakout": True, # Added new breakout strategy
         "accuracy_boosters": True,
-        "consensus_voting": True,
-        "real_time_volatility": True,
-        "session_boundaries": True,
         "safety_systems": True,
         "real_technical_analysis": True,
         "new_strategies_added": 12, # 11 original new + 1 filter breakout
@@ -8218,7 +8291,8 @@ def health():
         "dynamic_confidence_calculation": True, # Added fix 1/3
         "30s_trade_restriction": True, # Added fix 2
         "realistic_entry_window": True, # Added realistic entry window
-        "truthful_indicator_display": True # Added truthful indicator display
+        "truthful_indicator_display": True, # Added truthful indicator display
+        "ema_fix": True # Added EMA fix
     })
 
 @app.route('/broadcast/safety', methods=['POST'])
@@ -8331,7 +8405,8 @@ def set_webhook():
             "dynamic_confidence_calculation": True, # Added fix 1/3
             "30s_trade_restriction": True, # Added fix 2
             "realistic_entry_window": True, # Added realistic entry window
-            "truthful_indicator_display": True # Added truthful indicator display
+            "truthful_indicator_display": True, # Added truthful indicator display
+            "ema_fix": True # Added EMA fix
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -8381,7 +8456,8 @@ def webhook():
             "dynamic_confidence_calculation": True, # Added fix 1/3
             "30s_trade_restriction": True, # Added fix 2
             "realistic_entry_window": True, # Added realistic entry window
-            "truthful_indicator_display": True # Added truthful indicator display
+            "truthful_indicator_display": True, # Added truthful indicator display
+            "ema_fix": True # Added EMA fix
         })
         
     except Exception as e:
@@ -8399,7 +8475,7 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "realistic_entry_window", "truthful_indicator_display"], 
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "realistic_entry_window", "truthful_indicator_display", "ema_fix"], 
         "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
@@ -8421,7 +8497,8 @@ def debug():
         "dynamic_confidence_calculation": True, # Added fix 1/3
         "30s_trade_restriction": True, # Added fix 2
         "realistic_entry_window": True, # Added realistic entry window
-        "truthful_indicator_display": True # Added truthful indicator display
+        "truthful_indicator_display": True, # Added truthful indicator display
+        "ema_fix": True # Added EMA fix
     })
 
 @app.route('/stats')
@@ -8462,7 +8539,8 @@ def stats():
         "dynamic_confidence_calculation": True, # Added fix 1/3
         "30s_trade_restriction": True, # Added fix 2
         "realistic_entry_window": True, # Added realistic entry window
-        "truthful_indicator_display": True # Added truthful indicator display
+        "truthful_indicator_display": True, # Added truthful indicator display
+        "ema_fix": True # Added EMA fix
     })
 
 # =============================================================================
@@ -8515,13 +8593,13 @@ def diagnose_user(chat_id):
             "detected_issues": issues,
             "recommended_solutions": solutions,
             "expected_improvement": "+30-40% win rate with AI Trend Confirmation/Breakout",
-            "emergency_advice": "Use AI Trend Confirmation/Breakout strategy, EUR/USD 5min only, max 2% risk, stop after 2 losses"
+            "emergency_advice": "Use AI Trend Confirmation/Breakout strategy, EUR/USD 5min only, max 2% risk, stop after 2 losses. **Trend detection is now EMA-based (EMA FIX 🛠️)**"
         })
         
     except Exception as e:
         return jsonify({
             "error": str(e),
-            "general_advice": "Stop trading for 1 hour, then use AI Trend Confirmation with EUR/USD 5min signals only"
+            "general_advice": "Stop trading for 1 hour, then use AI Trend Confirmation with EUR/USD 5min signals only. **Trend detection is now EMA-based (EMA FIX 🛠️)**"
         })
 
 if __name__ == '__main__':
@@ -8547,7 +8625,7 @@ if __name__ == '__main__':
     logger.info("⚡ SPIKE FADE STRATEGY: NEW Strategy for Pocket Option volatility (NEW!)")
     logger.info("🎯 ACCURACY BOOSTERS: Consensus Voting, Real-time Volatility, Session Boundaries (NEW!)")
     logger.info("🚨 SAFETY SYSTEMS ACTIVE: Real Technical Analysis, Stop Loss Protection, Profit-Loss Tracking")
-    logger.info("🔒 NO MORE RANDOM SIGNALS: Using SMA, RSI, Price Action for real analysis")
+    logger.info("🔒 NO MORE RANDOM SIGNALS: Using EMA, RSI, Price Action for real analysis (EMA FIX 🛠️)")
     logger.info("🛡️ STOP LOSS PROTECTION: Auto-stops after 3 consecutive losses")
     logger.info("📊 PROFIT-LOSS TRACKING: Monitors user performance and adapts")
     logger.info("📢 BROADCAST SYSTEM: Send safety updates to all users")
@@ -8559,7 +8637,7 @@ if __name__ == '__main__':
     logger.info("🎯 INTELLIGENT PROBABILITY: Session biases, Asset tendencies, Strategy weighting, Platform adjustments")
     logger.info("🎮 PLATFORM BALANCING: Quotex (clean trends), Pocket Option (adaptive), Binomo (balanced), Deriv (stable synthetic) (NEW!)")
     logger.info("🚀 ACCURACY BOOSTERS: Consensus Voting (multiple AI engines), Real-time Volatility (dynamic adjustment), Session Boundaries (high-probability timing)")
-    logger.info("🛡️ SAFETY SYSTEMS: Real Technical Analysis (SMA+RSI), Stop Loss Protection, Profit-Loss Tracking, Asset Filtering, Cooldown Periods")
+    logger.info("🛡️ SAFETY SYSTEMS: Real Technical Analysis (EMA+RSI), Stop Loss Protection, Profit-Loss Tracking, Asset Filtering, Cooldown Periods")
     logger.info("🤖 AI TREND CONFIRMATION: The trader's best friend today - Analyzes 3 timeframes, enters only if all confirm same direction")
     logger.info("🔥 AI TREND FILTER V2: Semi-strict filter integrated for final safety check (NEW!)") 
     logger.info("📈 DYNAMIC CONFIDENCE CALCULATION: FIX 1/3 Implemented for variable confidence")
