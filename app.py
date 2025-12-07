@@ -1,4 +1,4 @@
-From flask import Flask, request, jsonify
+from flask import Flask, request, jsonify
 import os
 import logging
 import requests
@@ -8977,7 +8977,7 @@ def debug():
         "realistic_entry_window": True, # Added realistic entry window
         "truthful_indicator_display": True, # Added truthful indicator display
         "ema_fix": True, # Added EMA fix
-        ""stable_indicator_engine": True, # New Engine
+        "stable_indicator_engine": True, # New Engine
         "master_signal_layer": True, # New Master Layer
         "market_regime_filtering": True, # New Filter 1
         "soft_volatility_filtering": True, # New Filter 2
