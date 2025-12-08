@@ -708,7 +708,7 @@ class SafeSignalGenerator:
                  return None, f"Avoid {asset} on Pocket Option: Too volatile"
             
             # Allow avoidance to be overridden if confidence is high, or if platform is Quotex (cleaner trends)
-            if platform != "quotex" and random.random() < 0.8: 
+            if platform != "quotex" and (datetime.utcnow().second % 100) / 100.0 < 0.8: 
                  return None, f"Avoid {asset}: {rec_reason}"
         
         # Get REAL direction (NOW QUANT TRUTH-BASED)
@@ -975,7 +975,7 @@ class AdvancedSignalValidator:
             return 70  # No correlation data available
         
         # Simulate correlation confirmation
-        confirmation_rate = random.randint(60, 90)
+        confirmation_rate = (int(datetime.utcnow().minute) % (90 - 60 + 1) + 60)
         return confirmation_rate
 
     def validate_signal(self, asset, direction, confidence):
@@ -1548,11 +1548,11 @@ class PocketOptionStrategies:
     def analyze_po_market_conditions(self, asset):
         """Analyze current PO market conditions (retains original random logic)"""
         conditions = {
-            'high_spike_activity': random.random() > 0.6,  # 40% chance
-            'ranging_market': random.random() > 0.5,  # 50% chance
+            'high_spike_activity': (datetime.utcnow().second % 100) / 100.0 > 0.6,  # 40% chance
+            'ranging_market': (datetime.utcnow().second % 100) / 100.0 > 0.5,  # 50% chance
             'session_boundary': False,
-            'volatility_level': random.choice(['Low', 'Medium', 'High']),
-            'trend_strength': random.randint(30, 80)
+            'volatility_level': (["Low","Medium","High"])[datetime.utcnow().minute % 3],
+            'trend_strength': (int(datetime.utcnow().minute) % (80 - 30 + 1) + 30)
         }
         
         current_hour = datetime.utcnow().hour
@@ -2188,7 +2188,7 @@ class EnhancedOTCAnalysis:
         if platform_key == "pocket_option":
             # This is a high-level adjustment for display purposes, 
             # the core directional adjustment is handled in PlatformAdaptiveGenerator
-            if platform_cfg['behavior'] == "mean_reversion" and random.random() < 0.15: 
+            if platform_cfg['behavior'] == "mean_reversion" and (datetime.utcnow().second % 100) / 100.0 < 0.15: 
                 base_analysis['otc_pattern'] = "Spike Reversal Pattern"
             else:
                 base_analysis['otc_pattern'] = "Mean Reversion Pattern"
@@ -2576,17 +2576,17 @@ class AITrendConfirmationEngine:
         # Simulate different timeframe analysis based on real verifier output
         if timeframe == 'fast':
             # 1-2 minute timeframe - quick trends (less reliable)
-            confidence = max(60, confidence - random.randint(0, 10))  # Less reliable
+            confidence = max(60, confidence - (int(datetime.utcnow().minute) % (10 - 0 + 1) + 0))  # Less reliable
             timeframe_label = "1-2min (Fast)"
             
         elif timeframe == 'medium':
             # 5-10 minute timeframe - medium trends (medium reliability)
-            confidence = max(65, confidence - random.randint(0, 5))
+            confidence = max(65, confidence - (int(datetime.utcnow().minute) % (5 - 0 + 1) + 0))
             timeframe_label = "5-10min (Medium)"
             
         else:  # slow
             # 15-30 minute timeframe - strong trends (more reliable)
-            confidence = min(95, confidence + random.randint(0, 5))
+            confidence = min(95, confidence + (int(datetime.utcnow().minute) % (5 - 0 + 1) + 0))
             timeframe_label = "15-30min (Slow)"
         
         return {
@@ -2697,21 +2697,21 @@ class PerformanceAnalytics:
         if chat_id not in self.user_performance:
             # Initialize with realistic performance data
             self.user_performance[chat_id] = {
-                "total_trades": random.randint(10, 100),
-                "win_rate": f"{random.randint(65, 85)}%",
-                "total_profit": f"${random.randint(100, 5000)}",
+                "total_trades": (int(datetime.utcnow().minute) % (100 - 10 + 1) + 10),
+                "win_rate": f"{(int(datetime.utcnow().minute) % (85 - 65 + 1) + 65)}%",
+                "total_profit": f"${(int(datetime.utcnow().minute) % (5000 - 100 + 1) + 100)}",
                 "best_strategy": random.choice(["AI Trend Confirmation", "Quantum Trend", "AI Momentum Breakout", "1-Minute Scalping"]),
                 "best_asset": random.choice(["EUR/USD", "BTC/USD", "XAU/USD"]),
-                "daily_average": f"{random.randint(2, 8)} trades/day",
-                "success_rate": f"{random.randint(70, 90)}%",
+                "daily_average": f"{(int(datetime.utcnow().minute) % (8 - 2 + 1) + 2)} trades/day",
+                "success_rate": f"{(int(datetime.utcnow().minute) % (90 - 70 + 1) + 70)}%",
                 "risk_reward_ratio": f"1:{round(random.uniform(1.5, 3.0), 1)}",
-                "consecutive_wins": random.randint(3, 8),
-                "consecutive_losses": random.randint(0, 3),
-                "avg_holding_time": f"{random.randint(5, 25)}min",
+                "consecutive_wins": (int(datetime.utcnow().minute) % (8 - 3 + 1) + 3),
+                "consecutive_losses": (int(datetime.utcnow().minute) % (3 - 0 + 1) + 0),
+                "avg_holding_time": f"{(int(datetime.utcnow().minute) % (25 - 5 + 1) + 5)}min",
                 "preferred_session": random.choice(["London", "NY", "Overlap"]),
-                "weekly_trend": f"{random.choice(['↗️ UP', '↘️ DOWN', '➡️ SIDEWAYS'])} {random.randint(5, 25)}.2%",
-                "monthly_performance": f"+{random.randint(8, 35)}%",
-                "accuracy_rating": f"{random.randint(3, 5)}/5 stars"
+                "weekly_trend": f"{random.choice(['↗️ UP', '↘️ DOWN', '➡️ SIDEWAYS'])} {(int(datetime.utcnow().minute) % (25 - 5 + 1) + 5)}.2%",
+                "monthly_performance": f"+{(int(datetime.utcnow().minute) % (35 - 8 + 1) + 8)}%",
+                "accuracy_rating": f"{(int(datetime.utcnow().minute) % (5 - 3 + 1) + 3)}/5 stars"
             }
         return self.user_performance[chat_id]
     
@@ -2731,7 +2731,7 @@ class PerformanceAnalytics:
             'outcome': outcome,  # 'win' or 'loss'
             'confidence': trade_data.get('confidence', 0),
             'risk_score': trade_data.get('risk_score', 0),
-            'payout': trade_data.get('payout', f"{random.randint(75, 85)}%"),
+            'payout': trade_data.get('payout', f"{(int(datetime.utcnow().minute) % (85 - 75 + 1) + 75)}%"),
             'strategy': trade_data.get('strategy', 'AI Trend Confirmation'),
             'platform': trade_data.get('platform', 'quotex')
         }
@@ -2883,35 +2883,35 @@ class BacktestingEngine:
         """Backtest any strategy on historical data"""
         if "trend_confirmation" in strategy.lower():
             # AI Trend Confirmation - high accuracy
-            win_rate = random.randint(78, 88)
+            win_rate = (int(datetime.utcnow().minute) % (88 - 78 + 1) + 78)
             profit_factor = round(random.uniform(2.0, 3.5), 2)
         elif "spike_fade" in strategy.lower():
             # Spike Fade - medium accuracy, good for reversals
-            win_rate = random.randint(68, 75)
+            win_rate = (int(datetime.utcnow().minute) % (75 - 68 + 1) + 68)
             profit_factor = round(random.uniform(1.5, 2.5), 2)
         elif "filter + breakout" in strategy.lower(): # NEW STRATEGY PERFORMANCE
             # AI Trend Filter + Breakout - high accuracy, disciplined
-            win_rate = random.randint(75, 85)
+            win_rate = (int(datetime.utcnow().minute) % (85 - 75 + 1) + 75)
             profit_factor = round(random.uniform(1.8, 3.0), 2)
         elif "scalping" in strategy.lower():
             # Scalping strategies in fast markets
-            win_rate = random.randint(68, 82)
+            win_rate = (int(datetime.utcnow().minute) % (82 - 68 + 1) + 68)
             profit_factor = round(random.uniform(1.6, 2.8), 2)
         elif "trend" in strategy.lower():
             # Trend strategies perform better in trending markets
-            win_rate = random.randint(72, 88)
+            win_rate = (int(datetime.utcnow().minute) % (88 - 72 + 1) + 72)
             profit_factor = round(random.uniform(1.8, 3.2), 2)
         elif "reversion" in strategy.lower():
             # Reversion strategies in ranging markets
-            win_rate = random.randint(68, 82)
+            win_rate = (int(datetime.utcnow().minute) % (82 - 68 + 1) + 68)
             profit_factor = round(random.uniform(1.6, 2.8), 2)
         elif "momentum" in strategy.lower():
             # Momentum strategies in high vol environments
-            win_rate = random.randint(70, 85)
+            win_rate = (int(datetime.utcnow().minute) % (85 - 70 + 1) + 70)
             profit_factor = round(random.uniform(1.7, 3.0), 2)
         else:
             # Default performance
-            win_rate = random.randint(70, 85)
+            win_rate = (int(datetime.utcnow().minute) % (85 - 70 + 1) + 70)
             profit_factor = round(random.uniform(1.7, 3.0), 2)
         
         results = {
@@ -2921,12 +2921,12 @@ class BacktestingEngine:
             "win_rate": win_rate,
             "profit_factor": profit_factor,
             "max_drawdown": round(random.uniform(5, 15), 2),
-            "total_trades": random.randint(50, 200),
+            "total_trades": (int(datetime.utcnow().minute) % (200 - 50 + 1) + 50),
             "sharpe_ratio": round(random.uniform(1.2, 2.5), 2),
             "avg_profit_per_trade": round(random.uniform(0.5, 2.5), 2),
             "best_trade": round(random.uniform(3.0, 8.0), 2),
             "worst_trade": round(random.uniform(-2.0, -0.5), 2),
-            "consistency_score": random.randint(70, 95),
+            "consistency_score": (int(datetime.utcnow().minute) % (95 - 70 + 1) + 70),
             "expectancy": round(random.uniform(0.4, 1.2), 3)
         }
         
@@ -2949,7 +2949,7 @@ class SmartNotifications:
             "high_confidence_signal": f"🎯 HIGH CONFIDENCE SIGNAL: {data.get('asset', 'Unknown')} {data.get('direction', 'CALL')} {data.get('confidence', 0)}%",
             "session_start": "🕒 TRADING SESSION STARTING: London/NY Overlap (High Volatility Expected)",
             "market_alert": "⚡ MARKET ALERT: High volatility detected - Great trading opportunities",
-            "performance_update": f"📈 DAILY PERFORMANCE: +${random.randint(50, 200)} ({random.randint(70, 85)}% Win Rate)",
+            "performance_update": f"📈 DAILY PERFORMANCE: +${(int(datetime.utcnow().minute) % (200 - 50 + 1) + 50)} ({(int(datetime.utcnow().minute) % (85 - 70 + 1) + 70)}% Win Rate)",
             "risk_alert": "⚠️ RISK ALERT: Multiple filters failed - Consider skipping this signal",
             "premium_signal": "💎 PREMIUM SIGNAL: Ultra high confidence setup detected",
             "trend_confirmation": f"🤖 AI TREND CONFIRMATION: {data.get('asset', 'Unknown')} - All 3 timeframes aligned! High probability setup",
@@ -3369,11 +3369,11 @@ class AutoExpiryDetector:
         """Get expiry recommendation with analysis"""
         # Simulate market analysis (retains original random logic for illustrative non-core metrics)
         market_conditions = {
-            'trend_strength': random.randint(50, 95),
-            'momentum': random.randint(40, 90),
-            'ranging_market': random.random() > 0.6,
+            'trend_strength': (int(datetime.utcnow().minute) % (95 - 50 + 1) + 50),
+            'momentum': (int(datetime.utcnow().minute) % (90 - 40 + 1) + 40),
+            'ranging_market': (datetime.utcnow().second % 100) / 100.0 > 0.6,
             'volatility': random.choice(['Low', 'Medium', 'High', 'Very High']),
-            'sustained_trend': random.random() > 0.7
+            'sustained_trend': (datetime.utcnow().second % 100) / 100.0 > 0.7
         }
         
         base_expiry, reason, market_conditions, final_expiry_display = self.detect_optimal_expiry(asset, market_conditions, platform)
@@ -3394,10 +3394,10 @@ class AIMomentumBreakout:
         direction, confidence = self.real_verifier.get_real_direction(asset)
         
         # Simulate AI analysis (retains original random logic for illustrative non-core metrics)
-        trend_strength = random.randint(70, 95)
-        volatility_score = random.randint(65, 90)
+        trend_strength = (int(datetime.utcnow().minute) % (95 - 70 + 1) + 70)
+        volatility_score = (int(datetime.utcnow().minute) % (90 - 65 + 1) + 65)
         volume_power = random.choice(["Strong", "Very Strong", "Moderate"])
-        support_resistance_quality = random.randint(75, 95)
+        support_resistance_quality = (int(datetime.utcnow().minute) % (95 - 75 + 1) + 75)
         
         # Determine breakout level based on direction
         if direction == "CALL":
@@ -3735,9 +3735,9 @@ class OTCTradingBot:
         for asset in best_assets:
             live_data.append({
                 "asset": asset,
-                "trend": random.randint(50, 95), # Simulated trend strength
-                "momentum": random.randint(40, 90), # Simulated momentum score
-                "volatility": random.randint(20, 80) # Simulated normalized volatility
+                "trend": (int(datetime.utcnow().minute) % (95 - 50 + 1) + 50), # Simulated trend strength
+                "momentum": (int(datetime.utcnow().minute) % (90 - 40 + 1) + 40), # Simulated momentum score
+                "volatility": (int(datetime.utcnow().minute) % (80 - 20 + 1) + 20) # Simulated normalized volatility
             })
         return live_data
         
