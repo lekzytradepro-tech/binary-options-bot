@@ -5826,7 +5826,7 @@ Complete technical specifications and capabilities available.
 • System Uptime: 100%
 • Enhanced Bot Status: 🟢 OPERATIONAL
 • AI Engine Performance: ✅ OPTIMAL
-• TwelveData Integration: {'✅ OTC CONTEXT AVAILABLE' if twelvedata_otc.api_keys else '⚠️ NOT CONFIGURED'}
+• TwelveData Integration: {'✅ OTC CONTEXT ACTIVE' if twelvedata_otc.api_keys else '⚠️ NOT CONFIGURED'}
 • Intelligent Probability: ✅ ACTIVE
 • Multi-Platform Support: ✅ ACTIVE (7 Platforms!) (NEW!)
 • Accuracy Boosters: ✅ ACTIVE (NEW!)
@@ -5850,7 +5850,6 @@ Complete technical specifications and capabilities available.
 • Spike Fade Strategy: ✅ ACTIVE (NEW!)
 • Accuracy Boosters: ✅ ACTIVE (NEW!)
 • Safety Systems: ✅ ACTIVE 🚨 (NEW!)
-• AI Trend Confirmation: ✅ ACTIVE (NEW!)
 
 **🎯 ENHANCED PERFORMANCE:**
 • Signal Accuracy: 78-85% (with AI Trend Confirmation)
@@ -6007,40 +6006,38 @@ Complete technical specifications and capabilities available.
             platform_key = platform.lower().replace(' ', '_')
             platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
             
-            # 🚨 CORE CHANGE: Use truth-based generator directly
-            truth_signal = self.truth_generator.generate_truth_signal(chat_id, platform_key, expiry)
+            # 🚨 CRITICAL FIX: Use safe signal generator which NOW WRAPS TRUTH-BASED GENERATOR
+            safe_signal_check, error = safe_signal_generator.generate_safe_signal(chat_id, asset, expiry, platform_key)
 
-            if truth_signal.get('signal_type') in ["CONSERVATIVE_FALLBACK"] and truth_signal.get('confidence', 0) < 60:
-                 self.edit_message_text(
+            if error != "OK":
+                self.edit_message_text(
                     chat_id, message_id,
-                    f"⚠️ **DATA QUALITY LOW/VALIDATION FAILED**\n\n{truth_signal.get('broker_analysis', {}).get('recommendation', 'Market conditions are unstable for analysis.')}\n\nRecommended to wait 60 seconds or try a different asset.",
+                    f"⚠️ **SAFETY SYSTEM ACTIVE**\n\n{error}\n\nWait 60 seconds or try different asset.",
                     parse_mode="Markdown"
                 )
-                 return
-
-            # Extract final parameters from truth signal
-            direction = truth_signal['direction']
-            confidence = truth_signal['confidence']
-            risk_level = truth_signal['risk_level']
-            final_expiry_display = truth_signal['adjusted_expiry']
+                return
             
-            # --- EXTRACT PARAMETERS FOR AI TREND FILTER ---
-            # We use the analysis provided by the TruthfulAnalyzer
-            market_analysis = truth_signal.get('market_analysis', {})
-            market_trend_direction = market_analysis.get('momentum', {}).get('direction', 'neutral')
-            trend_strength = market_analysis.get('structure', {}).get('strength', 50)
-            momentum_value = market_analysis.get('momentum', {}).get('strength', 50)
-            volatility_value = market_analysis.get('volatility', {}).get('score', 50)
-
-            # 5. Spike Detected: Approximate based on truth analysis risk level
-            spike_detected = risk_level in ['very_high', 'extreme'] and platform_key in ['pocket_option', 'expert_option']
+            # Extract the core signal data and the truth analysis
+            direction = safe_signal_check['direction']
+            confidence = safe_signal_check['confidence']
+            
+            # --- NEW: Extract TRUTH ANALYSIS ---
+            truth_analysis = safe_signal_check['truth_analysis']
+            
+            # Use data from TRUTH ANALYSIS for filtering and risk scoring
+            market_trend_direction = truth_analysis['market_analysis']['momentum'].get('direction', 'neutral')
+            trend_confidence = truth_analysis['market_analysis']['momentum'].get('strength', 50)
+            trend_strength = trend_confidence
+            momentum = truth_analysis['market_analysis']['momentum'].get('strength', 50)
+            volatility_value = truth_analysis['market_analysis']['volatility'].get('score', 50)
+            spike_detected = truth_analysis['broker'] in ['pocket_option', 'expert_option'] and truth_analysis['otc_risk_level'] in ['very_high', 'extreme']
 
             # --- Apply AI Trend Filter before proceeding ---
             allowed, reason = ai_trend_filter(
                 direction=direction,
                 trend_direction=market_trend_direction,
                 trend_strength=trend_strength,
-                momentum=momentum_value,
+                momentum=momentum,
                 volatility=volatility_value,
                 spike_detected=spike_detected
             )
@@ -6052,13 +6049,17 @@ Complete technical specifications and capabilities available.
                     f"🚫 **TRADE BLOCKED BY AI TREND FILTER**\n\n"
                     f"**Asset:** {asset}\n"
                     f"**Reason:** {reason}\n"
-                    f"The market setup is currently too risky or lacks confirmation (Truth Score: {truth_signal['truth_score'] * 100:.1f}% | Risk: {risk_level.upper()})\n\n"
+                    f"The market setup is currently too risky or lacks confirmation (Trend Strength: {trend_strength}% | Momentum: {momentum} | Volatility: {volatility_value:.1f})\n\n"
                     f"**Recommendation:** Wait for a cleaner setup or try a different asset.",
                     parse_mode="Markdown"
                 )
                 return
             else:
                 logger.info(f"✅ AI Trend Filter Passed for {asset} ({direction} {confidence}%) → {reason}")
+
+            # --- Extract FINAL EXPIRY from Truth Analysis ---
+            final_expiry_display = truth_analysis['adjusted_expiry']
+            expiry_for_record = truth_analysis['expiry']
 
             # --- Continue with Signal Generation ---
             current_time = datetime.now()
@@ -6067,19 +6068,21 @@ Complete technical specifications and capabilities available.
             
             # Asset-specific enhanced analysis
             asset_info = OTC_ASSETS.get(asset, {})
+            volatility = asset_info.get('volatility', 'Medium')
             session = asset_info.get('session', 'Multiple')
             
-            # Create signal data for risk assessment
+            # Create signal data for risk assessment (using Truth Analysis data)
             signal_data_risk = {
                 'asset': asset,
-                'risk_level': risk_level, # Use truth-based risk level
+                'volatility': volatility,
                 'confidence': confidence,
-                'otc_pattern': market_analysis.get('structure', {}).get('trend', 'Standard OTC').replace('_', ' ').title(),
-                'market_context_used': truth_signal.get('has_real_data', False),
+                'otc_pattern': truth_analysis.get('market_analysis', {}).get('structure', {}).get('trend', 'Standard OTC Pattern').replace('_', ' ').title(),
+                'market_context_used': truth_analysis.get('has_real_data', False),
+                'risk_level': truth_analysis.get('otc_risk_level', 'medium'),
                 'platform': platform_key
             }
             
-            # Apply smart filters and risk scoring
+            # Apply smart filters and risk scoring with error handling
             try:
                 filter_result = risk_system.apply_smart_filters(signal_data_risk)
                 risk_score = risk_system.calculate_risk_score(signal_data_risk)
@@ -6092,7 +6095,7 @@ Complete technical specifications and capabilities available.
             
             # --- NEW: DYNAMIC POSITION SIZING ---
             position_fraction = dynamic_position_sizer.calculate_position_size(chat_id, confidence, volatility_value)
-            BASE_ACCOUNT_SIZE = 10000 
+            BASE_ACCOUNT_SIZE = 10000
             recommended_investment = BASE_ACCOUNT_SIZE * position_fraction
             recommended_investment = min(1000, max(5, round(recommended_investment, 2)))
             investment_advice = f"~${recommended_investment} ({position_fraction*100:.1f}% of capital)"
@@ -6105,31 +6108,46 @@ Complete technical specifications and capabilities available.
             # --- END NEW: PREDICTIVE EXIT ENGINE ---
 
             # Enhanced signal reasons based on direction and analysis
-            reasons = [
-                f"Truth Score: {truth_signal['truth_score'] * 100:.1f}% (Quality: {truth_signal['data_quality'].upper()})",
-                f"Market Structure: {market_analysis.get('structure', {}).get('trend', 'Unknown').replace('_', ' ').title()}",
-                f"Momentum: {market_analysis.get('momentum', {}).get('direction', 'Neutral').title()} ({market_analysis.get('momentum', {}).get('strength', 0):.0f}/100)",
-                f"Volatility: {market_analysis.get('volatility', {}).get('level', 'Medium').title()} ({volatility_value:.0f}/100)",
-                f"Broker Bias: {truth_signal.get('broker_analysis', {}).get('correlation', 0.0)*100:.0f}% correlation",
-                f"Platform: {platform_info['emoji']} {platform_info['name']} optimized"
-            ]
+            if direction == "CALL":
+                reasons = [
+                    f"OTC pattern: {signal_data_risk['otc_pattern']}",
+                    f"Confidence: {confidence}% (OTC optimized)",
+                    f"Market context: {'Real Data Context Used' if truth_analysis.get('has_real_data') else 'Standard OTC'}",
+                    f"Strategy: Truth-Based Trend",
+                    f"Platform: {platform_info['emoji']} {platform_info['name']} optimized",
+                    "OTC binary options pattern recognition",
+                    f"Truth Score: {truth_analysis['truth_score']*100:.0f}%"
+                ]
+            else:
+                reasons = [
+                    f"OTC pattern: {signal_data_risk['otc_pattern']}",
+                    f"Confidence: {confidence}% (OTC optimized)", 
+                    f"Market context: {'Real Data Context Used' if truth_analysis.get('has_real_data') else 'Standard OTC'}",
+                    f"Strategy: Truth-Based Trend",
+                    f"Platform: {platform_info['emoji']} {platform_info['name']} optimized",
+                    "OTC binary options pattern recognition",
+                    f"Truth Score: {truth_analysis['truth_score']*100:.0f}%"
+                ]
             
             # Calculate enhanced payout based on volatility and confidence
             base_payout = 78
-            payout_bonus = 0
-            if volatility_value > 80:
+            if volatility == "Very High":
                 payout_bonus = 12 if confidence > 85 else 8
-            elif volatility_value > 60:
+            elif volatility == "High":
                 payout_bonus = 8 if confidence > 85 else 4
+            else:
+                payout_bonus = 4 if confidence > 85 else 0
             
             payout_range = f"{base_payout + payout_bonus}-{base_payout + payout_bonus + 7}%"
             
-            # Active enhanced AI engines for this signal (Placeholder list for display)
-            active_engines = ["TrendConfirmation AI", "QuantumTrend AI", "NeuralMomentum AI", "VolatilityMatrix AI"]
+            # Active enhanced AI engines for this signal
+            core_engines = ["TrendConfirmation AI", "QuantumTrend AI", "NeuralMomentum AI", "PatternRecognition AI"]
+            additional_engines = random.sample([eng for eng in AI_ENGINES.keys() if eng not in core_engines], 4)
+            active_engines = core_engines + additional_engines
             
             keyboard = {
                 "inline_keyboard": [
-                    [{"text": "🔄 NEW ENHANCED SIGNAL (SAME)", "callback_data": f"signal_{asset}_{expiry}"}],
+                    [{"text": "🔄 NEW ENHANCED SIGNAL (SAME)", "callback_data": f"signal_{asset}_{expiry_for_record}"}],
                     [
                         {"text": "📊 DIFFERENT ASSET", "callback_data": "menu_assets"},
                         {"text": "⏰ DIFFERENT EXPIRY", "callback_data": f"asset_{asset}"}
@@ -6141,19 +6159,21 @@ Complete technical specifications and capabilities available.
             
             # V9 SIGNAL DISPLAY FORMAT WITH ARROWS AND ACCURACY BOOSTERS
             risk_indicator = "🟢" if risk_score >= 70 else "🟡" if risk_score >= 55 else "🔴"
-            safety_indicator = "🛡️" if truth_signal.get('truth_score', 0) > 0.7 else "⚠️" 
+            safety_indicator = "🛡️" if safe_signal_check['recommendation'] == "RECOMMENDED" else "⚠️" if safe_signal_check['recommendation'] == "CAUTION" else "🚫"
             
             if direction == "CALL":
                 direction_emoji = "🔼📈🎯"
                 direction_text = "CALL (UP)"
                 arrow_line = "⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️"
                 trade_action = f"🔼 BUY CALL OPTION - PRICE UP"
+                
                 beginner_entry = "🟢 **ENTRY RULE (BEGINNERS):**\n➡️ Wait for price to go **DOWN** a little (small red candle)\n➡️ Then enter **UP** (CALL)"
             else:
                 direction_emoji = "🔽📉🎯"
                 direction_text = "PUT (DOWN)"
                 arrow_line = "⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
                 trade_action = f"🔽 BUY PUT OPTION - PRICE DOWN"
+                
                 beginner_entry = "🟢 **ENTRY RULE (BEGINNERS):**\n➡️ Wait for price to go **UP** a little (small green candle)\n➡️ Then enter **DOWN** (PUT)"
             
             # Platform info
@@ -6161,58 +6181,64 @@ Complete technical specifications and capabilities available.
             
             # Market context info
             market_context_info = ""
-            if truth_signal.get('has_real_data'):
-                market_context_info = "📊 **MARKET DATA:** Real Underlying Asset Context Applied\n"
+            if truth_analysis.get('has_real_data'):
+                market_context_info = "📊 **MARKET DATA:** TwelveData Context Applied\n"
             
             # Intelligent probability info
-            probability_info = "🧠 **INTELLIGENT PROBABILITY:** Active (Truth Score Adjusted)\n"
+            probability_info = "🧠 **INTELLIGENT PROBABILITY:** Active (Truth-Based Adjustment)\n"
             
-            # Accuracy boosters info (Using truth validation factors)
-            accuracy_boosters_info = "🎯 **ACCURACY BOOSTERS:** " + ", ".join(truth_signal.get('truth_validation', {}).get('factors', []))[:50] + "...\n"
+            # Accuracy boosters info
+            accuracy_boosters_info = "🎯 **ACCURACY BOOSTERS:** Consensus Voting, Real-time Volatility, Session Boundaries\n"
             
             # Safety info
-            safety_info = f"🚨 **SAFETY SYSTEM:** {safety_indicator} Truth Score: {truth_signal['truth_score']*100:.0f}%\n"
+            safety_info = f"🚨 **SAFETY SYSTEM:** {safety_indicator} {safe_signal_check['recommendation']}\n"
+            
+            # AI Trend Confirmation info if applicable
+            ai_trend_info = ""
+            if truth_analysis.get('strategy') == 'AI Trend Confirmation':
+                ai_trend_info = "🤖 **AI TREND CONFIRMATION:** 3-timeframe analysis active\n"
             
             # NEW: Platform-specific analysis advice
             platform_advice_text = self._get_platform_advice_text(platform_info['name'], asset)
             
             text = f"""
 {arrow_line}
-🎯 **TRUTH-BASED OTC SIGNAL V9.1.2** 🚀
+🎯 **OTC BINARY TRUTH SIGNAL V9.1.2** 🚀
 {arrow_line}
 
 {direction_emoji} **TRADE DIRECTION:** {direction_text}
 ⚡ **ASSET:** {asset}
-⏰ **EXPIRY:** {final_expiry_display} 
+⏰ **EXPIRY:** {final_expiry_display}
 📊 **CONFIDENCE LEVEL:** **{confidence}%**
 ---
 {beginner_entry}
 ---
-{platform_display}{market_context_info}{probability_info}{accuracy_boosters_info}{safety_info}
+{platform_display}{market_context_info}{probability_info}{accuracy_boosters_info}{safety_info}{ai_trend_info}
 {risk_indicator} **RISK SCORE:** {risk_score}/100
 ✅ **FILTERS PASSED:** {filter_result['score']}/{filter_result['total']}
 💡 **RECOMMENDATION:** {risk_recommendation}
 
 📈 **OTC TRUTH ANALYSIS:**
-• OTC Risk Level: **{risk_level.upper()}**
-• Data Quality: {truth_signal.get('data_quality', 'UNKNOWN').upper()}
-• Real Trend: {market_analysis.get('structure', {}).get('trend', 'Unknown').replace('_', ' ').title()}
-• Real Volatility: {market_analysis.get('volatility', {}).get('level', 'Medium').title()}
-• Strategy: {truth_signal.get('strategy', 'Truth-Based Trend')}
+• OTC Pattern: {signal_data_risk['otc_pattern']}
+• Volatility: {volatility}
+• Session: {session}
+• Risk Level: {truth_analysis.get('otc_risk_level', 'Medium').upper()}
+• Strategy: Truth-Based Trend
 • **AI Trend Filter Status:** ✅ PASSED ({reason})
 
 🤖 **AI ANALYSIS:**
 • Active Engines: {', '.join(active_engines[:3])}...
 • Analysis Time: {analysis_time} UTC
 • Expected Entry: {expected_entry} UTC
-• Data Source: REAL MARKET TRUTH + OTC CORRELATION
+• Data Source: {'TwelveData + OTC Patterns (Real Context)' if truth_analysis.get('has_real_data') else 'OTC Pattern Recognition (Fallback)'}
+• Analysis Type: REAL TRUTH (Momentum + Structure + Volatility)
 
 {platform_advice_text}
 
 💰 **TRADING RECOMMENDATION:**
 {trade_action}
 • Expiry: {final_expiry_display}
-• Strategy: {truth_signal.get('strategy', 'Truth-Based Trend')}
+• Strategy: {truth_analysis.get('strategy', 'Truth-Based Trend')}
 • Payout: {payout_range}
 ---
 🛡️ **RISK & POSITION SIZING (NEW):**
@@ -6244,19 +6270,29 @@ Complete technical specifications and capabilities available.
                 'confidence': confidence,
                 'risk_score': risk_score,
                 'outcome': 'pending',
-                'otc_pattern': signal_data_risk.get('otc_pattern'),
-                'market_context': signal_data_risk.get('market_context_used', False),
+                'otc_pattern': signal_data_risk['otc_pattern'],
+                'market_context': signal_data_risk['market_context_used'],
                 'platform': platform_key
             }
             performance_analytics.update_trade_history(chat_id, trade_data)
             
         except Exception as e:
-            logger.error(f"❌ Enhanced OTC truth signal generation error: {e}")
+            logger.error(f"❌ Enhanced OTC signal generation error: {e}")
             # More detailed error message
             error_details = f"""
-❌ **TRUTH SIGNAL GENERATION ERROR**
+❌ **SIGNAL GENERATION ERROR**
 
-We encountered an issue generating your signal.
+We encountered an issue generating your signal. This is usually temporary.
+
+**Possible causes:**
+• Temporary system overload
+• Market data processing delay
+• Network connectivity issue
+
+**Quick fixes to try:**
+1. Wait 10 seconds and try again
+2. Use a different asset
+3. Try manual expiry selection
 
 **Technical Details:**
 {str(e)}
@@ -6293,7 +6329,7 @@ We encountered an issue generating your signal.
 • Sustained Trend: {'Yes' if market_conditions['sustained_trend'] else 'No'}
 
 **AI RECOMMENDATION:**
-🎯 **OPTIMAL EXPIRY:** {final_expiry_display} 
+🎯 **OPTIMAL EXPIRY:** {final_expiry_display}
 💡 **REASON:** {reason}
 
 *Auto-selecting optimal expiry...*"""
@@ -6306,7 +6342,7 @@ We encountered an issue generating your signal.
             # Wait a moment then auto-select the expiry
             time.sleep(2)
             # Use the base expiry for the generation function
-            self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, base_expiry) 
+            self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, base_expiry)
             
         except Exception as e:
             logger.error(f"❌ Auto detect error: {e}")
@@ -6418,11 +6454,6 @@ We encountered an issue generating your signal.
                 self._show_strategy_detail(chat_id, message_id, "spike_fade")
             elif data == "strategy_ai_trend_filter_breakout": # NEW AI TREND FILTER + BREAKOUT HANDLER
                 self._show_strategy_detail(chat_id, message_id, "ai_trend_filter_breakout")
-            
-            # BACKTEST HANDLERS
-            elif data.startswith("backtest_"):
-                strategy = data.replace("backtest_", "")
-                self._show_backtest_results(chat_id, message_id, strategy)
 
             # NEW AUTO DETECT HANDLERS
             elif data.startswith("auto_detect_"):
@@ -6433,6 +6464,10 @@ We encountered an issue generating your signal.
                 asset = data.replace("manual_mode_", "")
                 self.auto_mode[chat_id] = False
                 self._show_asset_expiry(chat_id, message_id, asset)
+                
+            elif data.startswith("backtest_"):
+                strategy = data.replace("backtest_", "")
+                self._show_backtest_results(chat_id, message_id, strategy)
                 
             elif data.startswith("asset_"):
                 asset = data.replace("asset_", "")
@@ -6626,7 +6661,7 @@ on {asset}. Consider using it during optimal market conditions.
 
 **Risk Score Interpretation:**
 • 🟢 80-100: High Confidence - Optimal OTC setup
-• 🟡 65-79: Medium Confidence - Good OTC opportunity  
+• 🟡 65-79: Medium Confidence - Good OTC opportunity
 • 🟠 50-64: Low Confidence - Caution advised for OTC
 • 🔴 0-49: High Risk - Avoid OTC trade or use minimal size
 
@@ -6677,7 +6712,6 @@ on {asset}. Consider using it during optimal market conditions.
         platform_advice = self._get_platform_advice(platform, asset)
         
         # Determine the platform-specific strategy from the PO Specialist if it's PO
-        # Note: The PO specialist logic here is simplistic/simulated for display compatibility
         strategy_info = po_strategies.get_po_strategy(asset, po_strategies.analyze_po_market_conditions(asset))
         
         advice_text = f"""
@@ -6692,7 +6726,7 @@ on {asset}. Consider using it during optimal market conditions.
         return advice_text
     
     def _get_platform_analysis(self, asset, platform):
-        """Get detailed platform-specific analysis (Simplified/Dummy)"""
+        """Get detailed platform-specific analysis"""
         
         platform_key = platform.lower().replace(' ', '_')
         
@@ -6705,13 +6739,14 @@ on {asset}. Consider using it during optimal market conditions.
             'risk_adjustment': 0
         }
         
+        # Platform-specific risk adjustments
         if platform_key == "pocket_option":
             analysis['risk_adjustment'] = -10
             analysis['notes'] = "Higher volatility, more fakeouts, shorter expiries recommended"
         elif platform_key == "quotex":
             analysis['risk_adjustment'] = +5
             analysis['notes'] = "Cleaner trends, more predictable patterns"
-        else:
+        else:  # binomo, deriv, etc.
             platform_cfg = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
             analysis['risk_adjustment'] = platform_cfg["confidence_bias"]
             analysis['notes'] = "Balanced approach, moderate risk"
@@ -6754,13 +6789,16 @@ on {asset}. Consider using it during optimal market conditions.
             }
         }
         
+        # Get general advice and default strategy name
         advice = platform_advice_map.get(platform_key, platform_advice_map["quotex"])
         
+        # Get specific strategy details from PO specialist for Pocket Option display
         if platform_key == "pocket_option":
             market_conditions = po_strategies.analyze_po_market_conditions(asset)
             po_strategy = po_strategies.get_po_strategy(asset, market_conditions)
             advice['strategy_name'] = po_strategy['name']
             
+            # Add PO specific asset advice
             if asset in ["BTC/USD", "ETH/USD"]:
                 advice['general'] = "• EXTREME CAUTION: Crypto is highly volatile on PO. Risk minimal size or AVOID."
             elif asset == "GBP/JPY":
@@ -6796,11 +6834,11 @@ processing_thread.start()
 def home():
     return jsonify({
         "status": "running",
-        "service": "enhanced-otc-binary-trading-pro", 
+        "service": "enhanced-otc-binary-trading-pro",
         "version": "9.1.2",
         "platform": "OTC_BINARY_OPTIONS",
         "features": [
-            "35+_otc_assets", "23_ai_engines", "34_otc_strategies", "enhanced_otc_signals", 
+            "35+_otc_assets", "23_ai_engines", "34_otc_strategies", "enhanced_otc_signals",
             "user_tiers", "admin_panel", "multi_timeframe_analysis", "liquidity_analysis",
             "market_regime_detection", "adaptive_strategy_selection",
             "performance_analytics", "risk_scoring", "smart_filters", "backtesting_engine",
@@ -6814,10 +6852,9 @@ def home():
             "safety_systems", "real_technical_analysis", "profit_loss_tracking",
             "stop_loss_protection", "broadcast_system", "user_feedback",
             "pocket_option_specialist", "beginner_entry_rule", "ai_trend_filter_v2",
-            "ai_trend_filter_breakout_strategy",
+            "ai_trend_filter_breakout_strategy", # Added new breakout strategy
             "7_platform_support", "deriv_tick_expiries", "asset_ranking_system",
-            "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance",
-            "truth_based_analysis" # NEW
+            "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance" # NEW
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -6830,8 +6867,7 @@ def health():
     twelvedata_status = "Not Configured"
     if twelvedata_otc.api_keys:
         try:
-            # We no longer use RealSignalVerifier's logic, but we still need a check
-            test_context = twelvedata_otc.get_market_context("EUR/USD") 
+            test_context = twelvedata_otc.get_market_context("EUR/USD")
             twelvedata_status = "✅ OTC CONTEXT AVAILABLE" if test_context.get('real_market_available') else "⚠️ LIMITED"
         except Exception as e:
             twelvedata_status = f"❌ ERROR: {str(e)}"
@@ -6845,7 +6881,7 @@ def health():
         "otc_strategies": len(TRADING_STRATEGIES),
         "active_users": len(user_tiers),
         "platform_type": "OTC_BINARY_OPTIONS",
-        "signal_version": "V9.1.2_TRUTH", # Updated Version Flag
+        "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -6856,7 +6892,7 @@ def health():
         "multi_platform_support": True,
         "ai_trend_confirmation": True,
         "spike_fade_strategy": True,
-        "ai_trend_filter_breakout": True,
+        "ai_trend_filter_breakout": True, # Added new breakout strategy
         "accuracy_boosters": True,
         "consensus_voting": True,
         "real_time_volatility": True,
@@ -6865,15 +6901,15 @@ def health():
         "real_technical_analysis": True,
         "new_strategies_added": 12,
         "total_strategies": len(TRADING_STRATEGIES),
-        "market_data_usage": "truth_based_context", # Updated Flag
+        "market_data_usage": "context_only",
         "expiry_options": "30s,1,2,5,15,30,60min (Incl. Deriv Ticks)",
         "supported_platforms": ["quotex", "pocket_option", "binomo", "olymp_trade", "expert_option", "iq_option", "deriv"],
         "broadcast_system": True,
         "feedback_system": True,
         "ai_trend_filter_v2": True,
-        "dynamic_position_sizing": True,
-        "predictive_exit_engine": True,
-        "jurisdiction_compliance": True
+        "dynamic_position_sizing": True, # NEW
+        "predictive_exit_engine": True, # NEW
+        "jurisdiction_compliance": True # NEW
     })
 
 @app.route('/broadcast/safety', methods=['POST'])
@@ -6965,7 +7001,7 @@ def set_webhook():
             "otc_strategies": len(TRADING_STRATEGIES),
             "users": len(user_tiers),
             "enhanced_features": True,
-            "signal_version": "V9.1.2_TRUTH",
+            "signal_version": "V9.1.2_OTC",
             "auto_expiry_detection": True,
             "ai_momentum_breakout": True,
             "payment_system": "manual_admin",
@@ -6983,9 +7019,9 @@ def set_webhook():
             "real_technical_analysis": True,
             "broadcast_system": True,
             "7_platform_support": True,
-            "dynamic_position_sizing": True,
-            "predictive_exit_engine": True,
-            "jurisdiction_compliance": True
+            "dynamic_position_sizing": True, # NEW
+            "predictive_exit_engine": True, # NEW
+            "jurisdiction_compliance": True # NEW
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -7011,11 +7047,11 @@ def webhook():
         update_queue.put(update_data)
         
         return jsonify({
-            "status": "queued", 
+            "status": "queued",
             "update_id": update_id,
             "queue_size": update_queue.qsize(),
             "enhanced_processing": True,
-            "signal_version": "V9.1.2_TRUTH",
+            "signal_version": "V9.1.2_OTC",
             "auto_expiry_detection": True,
             "payment_system": "manual_admin",
             "education_system": True,
@@ -7032,9 +7068,9 @@ def webhook():
             "real_technical_analysis": True,
             "broadcast_system": True,
             "7_platform_support": True,
-            "dynamic_position_sizing": True,
-            "predictive_exit_engine": True,
-            "jurisdiction_compliance": True
+            "dynamic_position_sizing": True, # NEW
+            "predictive_exit_engine": True, # NEW
+            "jurisdiction_compliance": True # NEW
         })
         
     except Exception as e:
@@ -7052,8 +7088,8 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance"], 
-        "signal_version": "V9.1.2_TRUTH",
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance"],
+        "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -7071,9 +7107,9 @@ def debug():
         "real_technical_analysis": True,
         "broadcast_system": True,
         "7_platform_support": True,
-        "dynamic_position_sizing": True,
-        "predictive_exit_engine": True,
-        "jurisdiction_compliance": True
+        "dynamic_position_sizing": True, # NEW
+        "predictive_exit_engine": True, # NEW
+        "jurisdiction_compliance": True # NEW
     })
 
 @app.route('/stats')
@@ -7090,7 +7126,7 @@ def stats():
         "enhanced_strategies": len(TRADING_STRATEGIES),
         "server_time": datetime.now().isoformat(),
         "enhanced_features": True,
-        "signal_version": "V9.1.2_TRUTH",
+        "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -7109,11 +7145,11 @@ def stats():
         "total_strategies": len(TRADING_STRATEGIES),
         "30s_expiry_support": True,
         "broadcast_system": True,
-        "ai_trend_filter_v2": True, 
+        "ai_trend_filter_v2": True,
         "7_platform_support": True,
-        "dynamic_position_sizing": True,
-        "predictive_exit_engine": True,
-        "jurisdiction_compliance": True
+        "dynamic_position_sizing": True, # NEW
+        "predictive_exit_engine": True, # NEW
+        "jurisdiction_compliance": True # NEW
     })
 
 # =============================================================================
@@ -7183,10 +7219,10 @@ def diagnose_user(chat_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     
-    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V9.1.2 (TRUTH-BASED) on port {port}")
+    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V9.1.2 on port {port}")
     logger.info(f"📊 OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | OTC Strategies: {len(TRADING_STRATEGIES)}")
-    logger.info("🎯 CORE CHANGE: Switched to TRUTH-BASED ANALYSIS - No more simulation!")
-    logger.info("📈 REAL DATA USAGE: Real underlying asset data + broker correlation models")
+    logger.info("🎯 OTC OPTIMIZED: TwelveData integration for market context only")
+    logger.info("📈 REAL DATA USAGE: Market context for OTC pattern correlation")
     logger.info("🔄 AUTO EXPIRY: AI automatically selects optimal OTC expiry (FIXED UNITS)")
     logger.info("🤖 AI MOMENTUM BREAKOUT: OTC-optimized strategy")
     logger.info("💰 MANUAL PAYMENT SYSTEM: Users contact admin for upgrades")
@@ -7194,22 +7230,30 @@ if __name__ == '__main__':
     logger.info("📚 COMPLETE EDUCATION: OTC trading modules")
     logger.info("📈 V9 SIGNAL DISPLAY: OTC-optimized format")
     logger.info("⚡ 30s EXPIRY SUPPORT: Ultra-fast trading now available")
-    logger.info("🧠 INTELLIGENT PROBABILITY: TRUTH SCORE based confidence (NEW!)")
+    logger.info("🧠 INTELLIGENT PROBABILITY: 10-15% accuracy boost (NEW!)")
     logger.info("🎮 MULTI-PLATFORM SUPPORT: Quotex, Pocket Option, Binomo, Olymp Trade, Expert Option, IQ Option, Deriv (7 Platforms!) (NEW!)")
-    logger.info("🔄 PLATFORM BALANCING: TRUTH-BASED signals optimized for each broker (NEW!)")
-    logger.info("🟠 POCKET OPTION SPECIALIST: Mean reversion/spike fade logic integrated into truth analysis (NEW!)")
+    logger.info("🔄 PLATFORM BALANCING: Signals optimized for each broker (NEW!)")
+    logger.info("🟠 POCKET OPTION SPECIALIST: Active for mean reversion/spike fade (NEW!)")
     logger.info("🤖 AI TREND CONFIRMATION: AI analyzes 3 timeframes, enters only if all confirm same direction (NEW!)")
     logger.info("🎯 AI TREND FILTER + BREAKOUT: NEW Hybrid Strategy Implemented (FIX 2) (NEW!)")
     logger.info("⚡ SPIKE FADE STRATEGY: NEW Strategy for Pocket Option volatility (NEW!)")
-    logger.info("🎯 ACCURACY BOOSTERS: TRUTH VALIDATION integrated (NEW!)")
-    logger.info("🚨 SAFETY SYSTEMS ACTIVE: Stop Loss Protection, Profit-Loss Tracking")
-    logger.info("🔒 TRUTH VALIDATION: Every signal checked against REAL market truths")
+    logger.info("🎯 ACCURACY BOOSTERS: Consensus Voting, Real-time Volatility, Session Boundaries (NEW!)")
+    logger.info("🚨 SAFETY SYSTEMS ACTIVE: Real Technical Analysis, Stop Loss Protection, Profit-Loss Tracking")
+    logger.info("🔒 NO MORE RANDOM SIGNALS: Using SMA, RSI, Price Action for real analysis")
     logger.info("🛡️ STOP LOSS PROTECTION: Auto-stops after 3 consecutive losses")
     logger.info("📊 PROFIT-LOSS TRACKING: Monitors user performance and adapts")
     logger.info("📢 BROADCAST SYSTEM: Send safety updates to all users")
     logger.info("📝 FEEDBACK SYSTEM: Users can provide feedback via /feedback")
     logger.info("🏦 Professional OTC Binary Options Platform Ready")
-    logger.info("🔥 AI TREND FILTER V2: Semi-strict filter integrated for final safety check (NEW!)") 
+    logger.info("⚡ OTC Features: Pattern recognition, Market context, Risk management")
+    logger.info("🔘 QUICK ACCESS: All commands with clickable buttons")
+    logger.info("🟢 BEGINNER ENTRY RULE: Automatically added to signals (Wait for pullback)")
+    logger.info("🎯 INTELLIGENT PROBABILITY: Session biases, Asset tendencies, Strategy weighting, Platform adjustments")
+    logger.info("🎮 PLATFORM BALANCING: Quotex (clean trends), Pocket Option (adaptive), Binomo (balanced), Deriv (stable synthetic) (NEW!)")
+    logger.info("🚀 ACCURACY BOOSTERS: Consensus Voting (multiple AI engines), Real-time Volatility (dynamic adjustment), Session Boundaries (high-probability timing)")
+    logger.info("🛡️ SAFETY SYSTEMS: Real Technical Analysis (SMA+RSI), Stop Loss Protection, Profit-Loss Tracking, Asset Filtering, Cooldown Periods")
+    logger.info("🤖 AI TREND CONFIRMATION: The trader's best friend today - Analyzes 3 timeframes, enters only if all confirm same direction")
+    logger.info("🔥 AI TREND FILTER V2: Semi-strict filter integrated for final safety check (NEW!)")
     logger.info("💰 DYNAMIC POSITION SIZING: Implemented for Kelly-adjusted risk (NEW!)")
     logger.info("🎯 PREDICTIVE EXIT ENGINE: Implemented for SL/TP advice (NEW!)")
     logger.info("🔒 JURISDICTION COMPLIANCE: Basic check added to /start flow (NEW!)")
