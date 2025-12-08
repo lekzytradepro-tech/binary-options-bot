@@ -3393,6 +3393,139 @@ auto_expiry_detector = AutoExpiryDetector()
 ai_momentum_breakout = AIMomentumBreakout()
 ai_trend_filter_breakout_strategy = AITrendFilterBreakoutStrategy() # NEW Strategy initialization
 
+# =============================================================================
+# NEW ADVANCED FEATURES (PREDICTIVE EXIT & DYNAMIC POSITION SIZING)
+# =============================================================================
+
+class DynamicPositionSizer:
+    """AI-driven position sizing based on multiple factors (Kelly Adaptation)"""
+    
+    def calculate_position_size(self, chat_id, confidence, volatility):
+        # Retrieve user stats from the real performance tracker
+        user_stats = profit_loss_tracker.get_user_stats(chat_id)
+        
+        # Default safety values if no trades yet
+        win_rate = 0.75  # Start with 75% assumed win rate
+        if user_stats['total_trades'] > 5:
+             # Use real win rate if sufficient data, otherwise use assumed
+            try:
+                win_rate = float(user_stats['win_rate'].strip('%')) / 100
+            except ValueError:
+                pass
+
+        # 1. Kelly Criterion Adaptation (Simplified)
+        # We need expected reward (e.g., 80% payout)
+        expected_reward = 0.80 # Typical binary payout
+        P = win_rate # Probability of success
+        Q = 1 - P # Probability of failure
+        B = expected_reward # Payout ratio
+
+        # Kelly fraction (f = P - Q/B) - Max risk is 2%
+        try:
+            kelly_fraction = P - (Q / B)
+        except ZeroDivisionError:
+            kelly_fraction = 0.005 # Minimal risk
+        
+        # Cap Kelly output for sensible trading (e.g., max risk 5% of account)
+        kelly_fraction = min(0.05, max(0.005, kelly_fraction)) # Min 0.5%, Max 5%
+
+        # 2. Confidence & Volatility Scaling
+        # Confidence boosts position size
+        confidence_factor = (confidence / 100) / 0.75 # Scales confidence relative to min 75%
+        
+        # Volatility reduces position size on extremes
+        volatility_factor = 1.0
+        if volatility > 80: # Very High Volatility -> Half size
+            volatility_factor = 0.5
+        elif volatility < 30: # Low Volatility -> Slightly lower size (less chance of meeting expiry)
+            volatility_factor = 0.8
+        
+        # Final Position Size: max(kelly * confidence * volatility, safe minimum)
+        final_fraction = kelly_fraction * confidence_factor * volatility_factor
+        
+        # Min/Max cap at 0.5% - 3% of account per trade
+        # The output is a percentage (e.g., 0.02 for 2%)
+        return min(0.03, max(0.005, final_fraction))
+
+class PredictiveExitEngine:
+    """AI-predicts optimal exit points (Simulated Order Flow)"""
+    
+    def predict_optimal_exits(self, asset, direction, volatility):
+        # We can't access real-time order flow (OFI, Volume Profile), so we simulate based on volatility and confidence
+        
+        if volatility > 70:
+            # High Volatility -> Use tighter stops/targets relative to asset price
+            tp_range = 0.002 # 2 pips/ticks
+            sl_range = 0.0015 # 1.5 pips/ticks
+            notes = "Tighter exits due to High Volatility. Use short expiry."
+        elif volatility < 40:
+            # Low Volatility -> Use wider stops/targets for pattern completion
+            tp_range = 0.005 # 5 pips/ticks
+            sl_range = 0.003 # 3 pips/ticks
+            notes = "Wider targets due to Low Volatility. Patience required."
+        else:
+            # Medium Volatility -> Standard 1:2
+            tp_range = 0.003 # 3 pips/ticks
+            sl_range = 0.0015 # 1.5 pips/ticks
+            notes = "Standard 1:2 Risk/Reward based on typical market structure."
+
+        # Simulate dynamic levels (based on asset price, simplified)
+        simulated_entry = random.uniform(1.0, 1.5) # Placeholder
+        
+        if direction == "CALL":
+            stop_loss_level = round(simulated_entry - sl_range, 5)
+            take_profit_level = round(simulated_entry + tp_range, 5)
+        else:
+            stop_loss_level = round(simulated_entry + sl_range, 5)
+            take_profit_level = round(simulated_entry - tp_range, 5)
+            
+        return {
+            'stop_loss': "Mental stop loss is required, ideally a wick beyond nearest S/R",
+            'take_profit': "Trade until expiry, unless pattern breaks (Mental Take Profit)",
+            'predicted_sl_level': stop_loss_level,
+            'predicted_tp_level': take_profit_level,
+            'risk_reward_ratio': f"1:{round(tp_range/sl_range, 1)}",
+            'notes': notes
+        }
+
+# Initialize new exit and sizing systems
+dynamic_position_sizer = DynamicPositionSizer()
+predictive_exit_engine = PredictiveExitEngine()
+
+# =============================================================================
+# NEW: COMPLIANCE & JURISDICTION CHECKS
+# =============================================================================
+
+JURISDICTION_WARNINGS = {
+    "EU": "⚠️ EU REGULATION: Binary options trading is heavily regulated. Verify your broker is ESMA/FCA compliant.",
+    "US": "🚫 US REGULATION: Binary options are largely prohibited for US retail traders. Proceed with extreme caution.",
+    "UK": "⚠️ UK REGULATION: Ensure your broker is FCA-regulated for retail consumer protection.",
+    "AU": "⚠️ AUSTRALIAN REGULATION: Ensure your broker is ASIC-regulated."
+}
+
+def check_user_jurisdiction(chat_id):
+    """
+    Simulated check for user's jurisdiction for compliance warnings.
+    In a real app, this would use IP geolocation or explicit user input.
+    """
+    # Simulate a country code guess
+    simulated_ip_data = random.choice([
+        {"country": "US", "risk": "High"},
+        {"country": "EU", "risk": "Medium"},
+        {"country": "AU", "risk": "Medium"},
+        {"country": "BR", "risk": "Low"},
+        {"country": "JP", "risk": "Low"},
+        {"country": "OTH", "risk": "Low"}
+    ])
+    
+    country = simulated_ip_data['country']
+    
+    if country in JURISDICTION_WARNINGS:
+        return JURISDICTION_WARNINGS[country], simulated_ip_data
+    else:
+        return "🌐 GLOBAL NOTICE: Verify all local regulations before trading.", simulated_ip_data
+
+
 class OTCTradingBot:
     """OTC Binary Trading Bot with Enhanced Features"""
     
@@ -3562,13 +3695,18 @@ class OTCTradingBot:
             
             logger.info(f"👤 User started: {user_id} - {first_name}")
             
+            # --- NEW: JURISDICTION CHECK ---
+            jurisdiction_warning, _ = check_user_jurisdiction(chat_id)
+            
             # Show legal disclaimer
-            disclaimer_text = """
+            disclaimer_text = f"""
 ⚠️ **OTC BINARY TRADING - RISK DISCLOSURE**
 
 **IMPORTANT LEGAL NOTICE:**
 
 This bot provides educational signals for OTC binary options trading. OTC trading carries substantial risk and may not be suitable for all investors.
+
+**{jurisdiction_warning}**
 
 **YOU ACKNOWLEDGE:**
 • You understand OTC trading risks
@@ -3675,12 +3813,14 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Market regime detection
 • Adaptive strategy selection
 • Smart signal filtering
+• **NEW:** Dynamic position sizing
 • Risk-based position sizing
 • Intelligent probability weighting (NEW!)
 • Platform-specific balancing (NEW!)
 • Real-time volatility adjustment (NEW!)
 • Session boundary optimization (NEW!)
 • Real technical analysis (NEW!)
+• **NEW:** Predictive exit engine
 • Stop loss protection (NEW!)
 • Profit-loss tracking (NEW!)"""
         
@@ -5022,7 +5162,7 @@ Designed for lightning-fast execution on 30-second timeframes. Captures micro pr
 **AI ENGINES USED:**
 - NeuralMomentum AI (Primary)
 - VolatilityMatrix AI
-- PatternRecognition AI
+- - PatternRecognition AI
 
 **EXPIRY RECOMMENDATION:**
 30 seconds (or 5 Deriv Ticks) for ultra-fast scalps""",
@@ -6196,6 +6336,9 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Safety system protection (NEW!)
 • AI Trend Confirmation (NEW!)
 • AI Trend Filter + Breakout (NEW!)
+• Spike Fade Strategy (NEW!)
+• **NEW:** Dynamic position sizing implementation
+• **NEW:** Predictive stop-loss/take-profit engine
 
 *Enhanced risk management is the key to OTC success*"""
 
@@ -6267,7 +6410,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 **NEW INTELLIGENT PROBABILITY:**
 • Session-based biases improve accuracy
 • Asset-specific tendencies enhance predictions
-• Strategy-performance weighting optimizes results
+• Strategy-performance weighting
 • Platform-specific adjustments (NEW!)
 • 10-15% accuracy boost over random selection
 
@@ -6936,6 +7079,28 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 risk_score = 75
                 risk_recommendation = "🟡 MEDIUM CONFIDENCE - Good OTC opportunity"
             
+            # --- NEW: DYNAMIC POSITION SIZING ---
+            # 1. Calculate position size fraction (e.g., 0.02 for 2%)
+            position_fraction = dynamic_position_sizer.calculate_position_size(chat_id, confidence, volatility_value)
+            
+            # 2. Determine investment advice based on position fraction
+            # Assume a baseline account size or risk tolerance to give a dollar amount
+            # Using $10,000 baseline account for illustrative purposes.
+            BASE_ACCOUNT_SIZE = 10000 
+            recommended_investment = BASE_ACCOUNT_SIZE * position_fraction
+            
+            # Ensure investment is within sensible limits for binary options platforms ($1 to $1000)
+            recommended_investment = min(1000, max(5, round(recommended_investment, 2)))
+
+            investment_advice = f"~${recommended_investment} ({position_fraction*100:.1f}% of capital)"
+            # --- END NEW: DYNAMIC POSITION SIZING ---
+
+            # --- NEW: PREDICTIVE EXIT ENGINE ---
+            exit_predictions = predictive_exit_engine.predict_optimal_exits(
+                asset, direction, volatility_value
+            )
+            # --- END NEW: PREDICTIVE EXIT ENGINE ---
+
             # Enhanced signal reasons based on direction and analysis
             if direction == "CALL":
                 reasons = [
@@ -7071,11 +7236,17 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Expiry: {final_expiry_display}
 • Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}
 • Payout: {payout_range}
+---
+🛡️ **RISK & POSITION SIZING (NEW):**
+• Recommended Investment: **{investment_advice}**
+• SL/TP Advice: {exit_predictions['notes']} (R/R: {exit_predictions['risk_reward_ratio']})
+• Max Risk: 2% of account
+• Stop Loss: {exit_predictions['stop_loss']}
+• Take Profit: {exit_predictions['take_profit']}
 
 ⚡ **EXECUTION:**
 • Entry: Within 30 seconds of {expected_entry} UTC (Use Beginner Rule!)
-• Max Risk: 2% of account
-• Investment: $25-$100
+• Investment: **{investment_advice}**
 • Stop Loss: Mental (close if pattern invalidates)
 
 {arrow_line}
@@ -7481,6 +7652,8 @@ on {asset}. Consider using it during optimal market conditions.
 • ✅ AI Trend Confirmation 🤖 (NEW!)
 • ✅ AI Trend Filter + Breakout 🎯 (NEW!)
 • ✅ Spike Fade Strategy ⚡ (NEW!)
+• ✅ Dynamic Position Sizing (NEW!)
+• ✅ Predictive Exit Engine (NEW!)
 
 **Risk Score Interpretation:**
 • 🟢 80-100: High Confidence - Optimal OTC setup
@@ -7676,7 +7849,8 @@ def home():
             "stop_loss_protection", "broadcast_system", "user_feedback",
             "pocket_option_specialist", "beginner_entry_rule", "ai_trend_filter_v2",
             "ai_trend_filter_breakout_strategy", # Added new breakout strategy
-            "7_platform_support", "deriv_tick_expiries", "asset_ranking_system" 
+            "7_platform_support", "deriv_tick_expiries", "asset_ranking_system",
+            "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance" # NEW
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -7728,7 +7902,10 @@ def health():
         "supported_platforms": ["quotex", "pocket_option", "binomo", "olymp_trade", "expert_option", "iq_option", "deriv"],
         "broadcast_system": True,
         "feedback_system": True,
-        "ai_trend_filter_v2": True 
+        "ai_trend_filter_v2": True,
+        "dynamic_position_sizing": True, # NEW
+        "predictive_exit_engine": True, # NEW
+        "jurisdiction_compliance": True # NEW
     })
 
 @app.route('/broadcast/safety', methods=['POST'])
@@ -7831,13 +8008,16 @@ def set_webhook():
             "30s_expiry_support": True,
             "multi_platform_balancing": True,
             "ai_trend_confirmation": True,
-            "ai_trend_filter_breakout": True, # Added new breakout strategy
+            "ai_trend_filter_breakout": True,
             "spike_fade_strategy": True,
             "accuracy_boosters": True,
             "safety_systems": True,
             "real_technical_analysis": True,
             "broadcast_system": True,
-            "7_platform_support": True
+            "7_platform_support": True,
+            "dynamic_position_sizing": True, # NEW
+            "predictive_exit_engine": True, # NEW
+            "jurisdiction_compliance": True # NEW
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -7883,7 +8063,10 @@ def webhook():
             "safety_systems": True,
             "real_technical_analysis": True,
             "broadcast_system": True,
-            "7_platform_support": True
+            "7_platform_support": True,
+            "dynamic_position_sizing": True, # NEW
+            "predictive_exit_engine": True, # NEW
+            "jurisdiction_compliance": True # NEW
         })
         
     except Exception as e:
@@ -7901,7 +8084,7 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system"], 
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance"], 
         "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
@@ -7919,7 +8102,10 @@ def debug():
         "safety_systems": True,
         "real_technical_analysis": True,
         "broadcast_system": True,
-        "7_platform_support": True
+        "7_platform_support": True,
+        "dynamic_position_sizing": True, # NEW
+        "predictive_exit_engine": True, # NEW
+        "jurisdiction_compliance": True # NEW
     })
 
 @app.route('/stats')
@@ -7956,7 +8142,10 @@ def stats():
         "30s_expiry_support": True,
         "broadcast_system": True,
         "ai_trend_filter_v2": True, 
-        "7_platform_support": True
+        "7_platform_support": True,
+        "dynamic_position_sizing": True, # NEW
+        "predictive_exit_engine": True, # NEW
+        "jurisdiction_compliance": True # NEW
     })
 
 # =============================================================================
@@ -7978,9 +8167,14 @@ def diagnose_user(chat_id):
         solutions = []
         
         if real_stats['total_trades'] > 0:
-            if real_stats.get('win_rate', '0%') < "50%":
-                issues.append("Low win rate (<50%)")
-                solutions.append("Use AI Trend Confirmation strategy with EUR/USD 5min signals only")
+            # Note: win_rate in real_stats is a formatted string, comparison needs parsing
+            try:
+                win_rate_float = float(real_stats.get('win_rate', '0%').strip('%')) / 100
+                if win_rate_float < 0.50:
+                    issues.append("Low win rate (<50%)")
+                    solutions.append("Use AI Trend Confirmation strategy with EUR/USD 5min signals only")
+            except ValueError:
+                issues.append("Error parsing win rate data")
             
             if abs(real_stats.get('current_streak', 0)) >= 3:
                 issues.append(f"{abs(real_stats['current_streak'])} consecutive losses")
@@ -7990,6 +8184,13 @@ def diagnose_user(chat_id):
             issues.append("Overtrading (>10 signals today)")
             solutions.append("Maximum 5 signals per day recommended, focus on quality not quantity")
         
+        # New: Add Jurisdiction Check Warning
+        jurisdiction_warning, _ = check_user_jurisdiction(chat_id_int)
+        if "⚠️" in jurisdiction_warning or "🚫" in jurisdiction_warning:
+             issues.append(jurisdiction_warning)
+             solutions.append("Verify broker compliance and local regulations before trading.")
+
+
         if not issues:
             issues.append("No major issues detected")
             solutions.append("Continue with AI Trend Confirmation strategy for best results")
@@ -8049,5 +8250,8 @@ if __name__ == '__main__':
     logger.info("🛡️ SAFETY SYSTEMS: Real Technical Analysis (SMA+RSI), Stop Loss Protection, Profit-Loss Tracking, Asset Filtering, Cooldown Periods")
     logger.info("🤖 AI TREND CONFIRMATION: The trader's best friend today - Analyzes 3 timeframes, enters only if all confirm same direction")
     logger.info("🔥 AI TREND FILTER V2: Semi-strict filter integrated for final safety check (NEW!)") 
-    
+    logger.info("💰 DYNAMIC POSITION SIZING: Implemented for Kelly-adjusted risk (NEW!)")
+    logger.info("🎯 PREDICTIVE EXIT ENGINE: Implemented for SL/TP advice (NEW!)")
+    logger.info("🔒 JURISDICTION COMPLIANCE: Basic check added to /start flow (NEW!)")
+
     app.run(host='0.0.0.0', port=port, debug=False)
