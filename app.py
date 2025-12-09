@@ -4909,17 +4909,17 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
     
-    def _show_signals_menu(self, chat_id, message_id=None):
+        def _show_signals_menu(self, chat_id, message_id=None):
         """Show signals menu with all assets"""
         # Get user's platform preference
         platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
         platform_key = platform.lower().replace(' ', '_')
         platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-        
+
         # Get final expiry display for the quick button
         default_expiry_base = platform_info['default_expiry']
         default_expiry_display = adjust_for_deriv(platform_info['name'], default_expiry_base)
-        
+
         keyboard = {
             "inline_keyboard": [
                 [{"text": f"⚡ QUICK SIGNAL (EUR/USD {default_expiry_display})", "callback_data": f"signal_EUR/USD_{default_expiry_base}"}],
@@ -4940,34 +4940,35 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         text = f"""
-🎯 QUANTUM SIGNAL ENGINE • V3.9 (Optimized)
+🎯 **ENHANCED OTC SIGNAL MENU** • V3.9
 
-📌 **Asset:** {asset}
-📈 **Direction:** {direction_text}
-⏳ **Expiry:** {final_expiry_display}
-🔍 **Confidence:** {confidence}%
+*Current Platform: {platform_info['emoji']} {platform_info['name']}*
+*Optimized for: {platform_info['behavior'].replace('_', ' ').title()}*
 
-── **MARKET OVERVIEW** ──
-• Trend Strength: {trend_strength}%
-• Momentum: {momentum}
-• Volatility: {volatility_value:.1f}
-• AI Trend Filter: {'PASSED' if allowed else 'BLOCKED'}
+**QUICK SIGNALS:**
+• EUR/USD with optimal {default_expiry_display} expiry
+• Any asset with 5-minute enhanced analysis
+• Platform-optimized signals
 
-── **ANALYSIS SUMMARY** ──
-• Structure: {analysis.get('otc_pattern', 'Standard OTC')}
-• Flow: {analysis.get('strategy','AI Trend')}
-• Session: {session}
-• Market Type: OTC
+**POPULAR ASSETS:**
+• EUR/USD - Most liquid, clean trends
+• GBP/USD - High volatility, good for PO
+• USD/JPY - Asian session favorite
+• BTC/USD - Crypto volatility
+• XAU/USD - Strong trending asset
+• US30 - Index momentum
 
-── **EXECUTION** ──
-Entry Window: {expected_entry}
-Platform: {platform_info['name']}
+**FEATURES:**
+✅ Platform-specific optimization
+✅ Real technical analysis (EMA, ATR, Momentum)
+✅ Multi-timeframe confirmation  
+✅ Risk management built-in
+✅ Auto expiry detection available
 
-🎯 **FINAL SIGNAL:** {direction_text}
-"""
-        
+*Select an asset or use quick signal to start trading*"""
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -4978,8 +4979,8 @@ Platform: {platform_info['name']}
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
-    def _show_assets_menu(self, chat_id, message_id=None):
+
+def _show_assets_menu(self, chat_id, message_id=None):
         """Show all 35+ trading assets in organized categories (Includes Synthetics)"""
         keyboard = {
             "inline_keyboard": [
@@ -7440,7 +7441,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             
             keyboard = {
                 "inline_keyboard": [
-                    [{"text": "🔄 NEW ENHANCED SIGNAL", "callback_data": "menu_assets"}],
+                    [{"text": "🔄 NEW ENHANCED SIGNAL (SAME)", "callback_data": f"signal_{asset}_{expiry}"}],
                     [
                         {"text": "📊 DIFFERENT ASSET", "callback_data": "menu_assets"},
                         {"text": "⏰ DIFFERENT EXPIRY", "callback_data": f"asset_{asset}"}
