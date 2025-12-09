@@ -13,7 +13,7 @@ from flask import Flask, request, jsonify
 
 
 # ====== DETERMINISTIC HELPERS (REPLACES _removed_random_dot_* USAGE) ======
-
+import math
 
 # ======= OPTIMIZATION HELPERS (DETERMINISTIC, NO RANDOM) =======
 import hashlib, math
