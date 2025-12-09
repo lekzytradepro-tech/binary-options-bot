@@ -7440,7 +7440,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             
             keyboard = {
                 "inline_keyboard": [
-                    [{"text": "🔄 NEW ENHANCED SIGNAL (SAME)", "callback_data": f"signal_{asset}_{expiry}"}],
+                    [{"text":"🔄 NEW ENHANCED SIGNAL","callback_data":"menu_assets"}],
                     [
                         {"text": "📊 DIFFERENT ASSET", "callback_data": "menu_assets"},
                         {"text": "⏰ DIFFERENT EXPIRY", "callback_data": f"asset_{asset}"}
