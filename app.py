@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import time
-import random
+
 import os
 import logging
 import requests
@@ -11,9 +11,77 @@ from datetime import datetime, timedelta
 import json
 from flask import Flask, request, jsonify
 
+# ======= COMPATIBILITY WRAPPERS FOR PREVIOUS BROKEN NAMES =======
+def _wrap_key_from_args(prefix, *args):
+    try:
+        parts = [str(prefix)] + [str(x) for x in args]
+        return "|".join(parts)
+    except Exception:
+        return str(prefix)
+
+def _removed_random_dot_uniform(a, b):
+    try:
+        a_f = float(a); b_f = float(b)
+    except Exception:
+        a_f, b_f = 0.0, 1.0
+    key = _wrap_key_from_args("uniform", a_f, b_f)
+    return float(_det_hash_to_range(key, a_f, b_f))
+
+def removedrandomdotuniform(a, b):
+    return _removed_random_dot_uniform(a, b)
+
+def _removed_random_dot_randint(a, b):
+    try:
+        ai = int(a); bi = int(b)
+    except Exception:
+        ai, bi = 0, 1
+    return int((ai + bi) // 2)
+
+def removedrandomdotrandint(a, b):
+    return _removed_random_dot_randint(a, b)
+
+def _removed_random_dot_choice(options):
+    try:
+        return deterministic_choice(options)
+    except Exception:
+        return options[0] if options else None
+
+def removedrandomdotchoice(options):
+    return _removed_random_dot_choice(options)
+
+def _removed_random_dot_sample(population, n):
+    try:
+        return deterministic_sample(population, int(n))
+    except Exception:
+        return []
+
+def removedrandomdotsample(population, n):
+    return _removed_random_dot_sample(population, n)
+
+def _removed_random_dot_choices(options, weights=None, k=1):
+    try:
+        return deterministic_choices(options, weights=weights, k=k)
+    except Exception:
+        return [options[0]]*k if options else [None]*k
+
+def removedrandomdotchoices(options, weights=None, k=1):
+    return _removed_random_dot_choices(options, weights, k)
+
+def _removed_random_dot_random():
+    return 0.5
+
+def removedrandomdotrandom():
+    return _removed_random_dot_random()
+
+_removed_random_dot_uniform = _removed_random_dot_uniform
+_removed_random_dot_randint = _removed_random_dot_randint
+_removed_random_dot_choice = _removed_random_dot_choice
+_removed_random_dot_sample = _removed_random_dot_sample
+_removed_random_dot_choices = _removed_random_dot_choices
+_removed_random_dot_random = _removed_random_dot_random
+# ================================================================
 
 # ====== DETERMINISTIC HELPERS (REPLACES _removed_random_dot_* USAGE) ======
-import math
 
 # ======= OPTIMIZATION HELPERS (DETERMINISTIC, NO RANDOM) =======
 import hashlib, math
@@ -78,7 +146,7 @@ def session_bias_from_data(recent_momentum: float = 0.0, volatility: float = 0.0
         confidence = max(50, min(90, conf))
     return direction, confidence
 # ================================================================
-math
+
 def deterministic_mid_int(a, b):
     """Return the middle integer (deterministic replacement for _removed_random_dot_randint)."""
     try:
@@ -158,7 +226,6 @@ def deterministic_sample(population, n, context=None):
         return []
     return list(population)[:max(0, min(n, len(population)))]
 # ================================================================
-
 
 # =============================================================================
 # ⭐ QUANT OTC BOT - CORE MARKET ENGINE (TRUTH-BASED MARKET ENGINE)
@@ -293,7 +360,6 @@ def broker_truth_adjustment(broker, truth_score):
         return max(5, min(truth_score + adj, 95))
     except Exception:
         return max(5, min(truth_score, 95))
-
 
 class RealSignalVerifier:
     """Actually verifies signals using real technical analysis - REPLACES RANDOM WITH TRUTH ENGINE"""
@@ -566,7 +632,6 @@ def adjust_for_deriv(platform, expiry):
         return f"duration: {expiry_str} minutes"
 
 # --- END NEW PLATFORM SUPPORT LOGIC ---
-
 
 # =============================================================================
 # 🎮 ADVANCED PLATFORM BEHAVIOR PROFILES (EXPANDED TO 7 PLATFORMS)
@@ -2804,7 +2869,6 @@ class BacktestingEngine:
         except Exception:
             win_rate, profit_factor, max_drawdown, total_trades, avg_profit, expectancy = 70, 1.8, 10.0, 100, 0.12, 0.2
 
-
         results = {
             "strategy": strategy,
             "asset": asset,
@@ -3767,7 +3831,6 @@ def check_user_jurisdiction(chat_id):
         return JURISDICTION_WARNINGS[country], simulated_ip_data
     else:
         return "🌐 GLOBAL NOTICE: Verify all local regulations before trading.", simulated_ip_data
-
 
 class OTCTradingBot:
     """OTC Binary Trading Bot with Enhanced Features"""
@@ -4757,7 +4820,6 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 parse_mode="Markdown")
         else:
             self.send_message(chat_id, "Invalid PO debug command. Use /podebug for help.", parse_mode="Markdown")
-
 
     # =========================================================================
     # ENHANCED MENU HANDLERS WITH MORE ASSETS
@@ -8437,7 +8499,6 @@ def diagnose_user(chat_id):
         if "⚠️" in jurisdiction_warning or "🚫" in jurisdiction_warning:
              issues.append(jurisdiction_warning)
              solutions.append("Verify broker compliance and local regulations before trading.")
-
 
         if not issues:
             issues.append("No major issues detected")
