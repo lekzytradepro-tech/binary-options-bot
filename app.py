@@ -3159,7 +3159,7 @@ def ai_trend_filter(direction, trend_direction, trend_strength, momentum, volati
     """
     
     # 1️⃣ Extremely weak trend → block
-    if trend_strength < 30:
+    if trend_strength < 18:
         return False, "Weak Trend (<30%)"
     
     # 2️⃣ Opposite direction trades allowed ONLY if spike detected (reversal logic)
@@ -3181,7 +3181,7 @@ def ai_trend_filter(direction, trend_direction, trend_strength, momentum, volati
         return True, "High Volatility - Increase Expiry"
     
     # 4️⃣ Momentum very low → block
-    if momentum < 20:
+    if momentum < 15:
         return False, "Low Momentum (<20)"
         
     # If everything is good:
@@ -8140,7 +8140,7 @@ def home():
     return jsonify({
         "status": "running",
         "service": "enhanced-otc-binary-trading-pro", 
-        "version": "9.1.2",
+        "version": "3.9",
         "platform": "OTC_BINARY_OPTIONS",
         "features": [
             "35+_otc_assets", "23_ai_engines", "34_otc_strategies", "enhanced_otc_signals", 
@@ -8186,7 +8186,7 @@ def health():
         "otc_strategies": len(TRADING_STRATEGIES),
         "active_users": len(user_tiers),
         "platform_type": "OTC_BINARY_OPTIONS",
-        "signal_version": "V9.1.2_OTC",
+        "signal_version": "V3.9_OPTIMIZED",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8306,7 +8306,7 @@ def set_webhook():
             "otc_strategies": len(TRADING_STRATEGIES),
             "users": len(user_tiers),
             "enhanced_features": True,
-            "signal_version": "V9.1.2_OTC",
+            "signal_version": "V3.9_OPTIMIZED",
             "auto_expiry_detection": True,
             "ai_momentum_breakout": True,
             "payment_system": "manual_admin",
@@ -8356,7 +8356,7 @@ def webhook():
             "update_id": update_id,
             "queue_size": update_queue.qsize(),
             "enhanced_processing": True,
-            "signal_version": "V9.1.2_OTC",
+            "signal_version": "V3.9_OPTIMIZED",
             "auto_expiry_detection": True,
             "payment_system": "manual_admin",
             "education_system": True,
@@ -8394,7 +8394,7 @@ def debug():
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
         "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance"], 
-        "signal_version": "V9.1.2_OTC",
+        "signal_version": "V3.9_OPTIMIZED",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8431,7 +8431,7 @@ def stats():
         "enhanced_strategies": len(TRADING_STRATEGIES),
         "server_time": datetime.now().isoformat(),
         "enhanced_features": True,
-        "signal_version": "V9.1.2_OTC",
+        "signal_version": "V3.9_OPTIMIZED",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
