@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import time
+
 import os
 import logging
 import requests
@@ -7440,7 +7441,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             
             keyboard = {
                 "inline_keyboard": [
-                    [{"text":"🔄 NEW ENHANCED SIGNAL","callback_data":"menu_assets"}],
+                    [{"text": "🔄 NEW ENHANCED SIGNAL", "callback_data": "menu_assets"}],
                     [
                         {"text": "📊 DIFFERENT ASSET", "callback_data": "menu_assets"},
                         {"text": "⏰ DIFFERENT EXPIRY", "callback_data": f"asset_{asset}"}
