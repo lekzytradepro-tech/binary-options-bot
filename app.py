@@ -3159,7 +3159,7 @@ def ai_trend_filter(direction, trend_direction, trend_strength, momentum, volati
     """
     
     # 1️⃣ Extremely weak trend → block
-    if trend_strength < 18:
+    if trend_strength < 30:
         return False, "Weak Trend (<30%)"
     
     # 2️⃣ Opposite direction trades allowed ONLY if spike detected (reversal logic)
@@ -3181,7 +3181,7 @@ def ai_trend_filter(direction, trend_direction, trend_strength, momentum, volati
         return True, "High Volatility - Increase Expiry"
     
     # 4️⃣ Momentum very low → block
-    if momentum < 15:
+    if momentum < 20:
         return False, "Low Momentum (<20)"
         
     # If everything is good:
@@ -4942,41 +4942,31 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         }
         
         text = f"""
-🎯 **ENHANCED OTC BINARY SIGNALS - ALL ASSETS**
+🎯 QUANTUM SIGNAL ENGINE • V3.9 (Optimized)
 
-*Platform: {platform_info['emoji']} {platform_info['name']}*
+📌 **Asset:** {asset}
+📈 **Direction:** {direction_text}
+⏳ **Expiry:** {final_expiry_display}
+🔍 **Confidence:** {confidence}%
 
-*Generate AI-powered signals with market context analysis:*
+── **MARKET OVERVIEW** ──
+• Trend Strength: {trend_strength}%
+• Momentum: {momentum}
+• Volatility: {volatility_value:.1f}
+• AI Trend Filter: {'PASSED' if allowed else 'BLOCKED'}
 
-**QUICK SIGNALS:**
-• EUR/USD {default_expiry_display} - Platform-optimized execution
-• Any asset 5min - Detailed multi-timeframe analysis
+── **ANALYSIS SUMMARY** ──
+• Structure: {analysis.get('otc_pattern', 'Standard OTC')}
+• Flow: {analysis.get('strategy','AI Trend')}
+• Session: {session}
+• Market Type: OTC
 
-**POPULAR OTC ASSETS:**
-• Forex Majors (EUR/USD, GBP/USD, USD/JPY)
-• Cryptocurrencies (BTC/USD, ETH/USD)  
-• Commodities (XAU/USD, XAG/USD)
-• Indices (US30, SPX500, NAS100)
-• Deriv Synthetics (Volatility 10, Crash 500) (NEW!)
+── **EXECUTION** ──
+Entry Window: {expected_entry}
+Platform: {platform_info['name']}
 
-**ENHANCED FEATURES:**
-• Multi-timeframe convergence
-• Liquidity flow analysis
-• Market regime detection
-• Adaptive strategy selection
-• Risk scoring
-• Smart filtering
-• **NEW:** Auto expiry detection
-• **NEW:** AI Momentum Breakout strategy
-• **NEW:** TwelveData market context
-• **NEW:** Intelligent probability system
-• **NEW:** Platform-specific optimization
-• **🎯 NEW:** Accuracy boosters active
-• **🚨 NEW:** Safety systems active
-• **🤖 NEW:** AI Trend Confirmation strategy
-• **🎯 NEW:** AI Trend Filter + Breakout strategy
-
-*Select asset or quick signal*"""
+🎯 **FINAL SIGNAL:** {direction_text}
+"""
         
         if message_id:
             self.edit_message_text(
@@ -7508,7 +7498,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             
             text = f"""
 {arrow_line}
-🎯 **OTC BINARY SIGNAL V9.1.2** 🚀
+🎯 **QUANTUM SIGNAL ENGINE • V3.9 (Optimized)** 🚀
 {arrow_line}
 
 {direction_emoji} **TRADE DIRECTION:** {direction_text}
@@ -8140,7 +8130,7 @@ def home():
     return jsonify({
         "status": "running",
         "service": "enhanced-otc-binary-trading-pro", 
-        "version": "3.9",
+        "version": "9.1.2",
         "platform": "OTC_BINARY_OPTIONS",
         "features": [
             "35+_otc_assets", "23_ai_engines", "34_otc_strategies", "enhanced_otc_signals", 
@@ -8186,7 +8176,7 @@ def health():
         "otc_strategies": len(TRADING_STRATEGIES),
         "active_users": len(user_tiers),
         "platform_type": "OTC_BINARY_OPTIONS",
-        "signal_version": "V3.9_OPTIMIZED",
+        "signal_version": "V3.9_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8306,7 +8296,7 @@ def set_webhook():
             "otc_strategies": len(TRADING_STRATEGIES),
             "users": len(user_tiers),
             "enhanced_features": True,
-            "signal_version": "V3.9_OPTIMIZED",
+            "signal_version": "V3.9_OTC",
             "auto_expiry_detection": True,
             "ai_momentum_breakout": True,
             "payment_system": "manual_admin",
@@ -8356,7 +8346,7 @@ def webhook():
             "update_id": update_id,
             "queue_size": update_queue.qsize(),
             "enhanced_processing": True,
-            "signal_version": "V3.9_OPTIMIZED",
+            "signal_version": "V3.9_OTC",
             "auto_expiry_detection": True,
             "payment_system": "manual_admin",
             "education_system": True,
@@ -8394,7 +8384,7 @@ def debug():
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
         "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance"], 
-        "signal_version": "V3.9_OPTIMIZED",
+        "signal_version": "V3.9_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8431,7 +8421,7 @@ def stats():
         "enhanced_strategies": len(TRADING_STRATEGIES),
         "server_time": datetime.now().isoformat(),
         "enhanced_features": True,
-        "signal_version": "V3.9_OPTIMIZED",
+        "signal_version": "V3.9_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8523,7 +8513,7 @@ def diagnose_user(chat_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     
-    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V9.1.2 on port {port}")
+    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V3.9 on port {port}")
     logger.info(f"📊 OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | OTC Strategies: {len(TRADING_STRATEGIES)}")
     logger.info("🎯 OTC OPTIMIZED: TwelveData integration for market context only")
     logger.info("📈 REAL DATA USAGE: Market context for OTC pattern correlation")
