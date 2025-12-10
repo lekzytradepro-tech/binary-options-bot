@@ -8940,13 +8940,13 @@ on {asset}. Consider using it during optimal market conditions.
 
 *Use /signals to get risk-assessed trading signals*"""
             
-            keyboard = {
-                "inline_keyboard": [
-                    {"text": "🎯 GET RISK-ASSESSED SIGNALS", "callback_data": "menu_signals"}],
-                    [{"text": "📊 PERFORMANCE ANALYTICS", "callback_data": "performance_stats"}],
-                    [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            }
-            
+           keyboard = {
+    "inline_keyboard": [
+        [{"text": "🎯 GET RISK-ASSESSED SIGNALS", "callback_data": "menu_signals"}],  # Added outer [ ] and removed extra ]
+        [{"text": "📊 PERFORMANCE ANALYTICS", "callback_data": "performance_stats"}],
+        [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+    ]
+        } 
             self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
             
         except Exception as e:
