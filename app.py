@@ -3892,8 +3892,9 @@ def format_full_signal(signal_data):
     expiry_display = signal_data.get('expiry_display', signal_data.get('expiry', '5min'))
     platform_key = signal_data.get('platform', 'quotex').lower().replace(' ', '_')
     platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
+    # Get risk system from global scope via the bot instance
     risk_score = signal_data.get('risk_score', 75)
-    risk_recommendation = signal_system.risk_system.get_risk_recommendation(risk_score)
+    risk_recommendation = risk_system.get_risk_recommendation(risk_score)
     filter_result = signal_data.get('filter_result', {'score': 5, 'total': 5})
     
     # Enhanced details (from otc_analysis fields)
@@ -4096,6 +4097,7 @@ class OTCTradingBot:
                 data["parse_mode"] = parse_mode
                 
             if reply_markup:
+                # Telegram requires reply_markup to be a JSON string/object
                 data["reply_markup"] = reply_markup
                 
             response = requests.post(url, json=data, timeout=10)
@@ -4119,6 +4121,7 @@ class OTCTradingBot:
                 data["parse_mode"] = parse_mode
                 
             if reply_markup:
+                # Telegram requires reply_markup to be a JSON string/object
                 data["reply_markup"] = reply_markup
                 
             response = requests.post(url, json=data, timeout=10)
@@ -4466,43 +4469,61 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     
     def _handle_status(self, chat_id):
         """Handle /status command"""
-        status_text = """
+        # --- FIX: SHOWING ONLY ACTIVE ENGINES ---
+        active_engines = [
+            "RealSignalVerifier",           # Primary signal engine
+            "QuantMarketEngine",            # Truth engine
+            "PlatformAdaptiveGenerator",    # Platform optimization
+            "IntelligentSignalGenerator",   # Core intelligence
+            "RealTimeVolatilityAnalyzer",   # Volatility adjustment
+            "SessionBoundaryAnalyzer",      # Session optimization
+            "AccuracyTracker",              # Historical learning
+            "SafeSignalGenerator",          # Cooldown/Loss protection
+            "ProfitLossTracker",            # Safety tracking
+            "RiskManagementSystem",         # Risk management
+        ]
+
+        status_text = f"""
 ✅ **ENHANCED OTC TRADING BOT - STATUS: OPERATIONAL**
 
-🤖 **AI ENGINES ACTIVE:** 23/23 (NEW!)
-📊 **TRADING ASSETS:** 35+ (Incl. Synthetics) (NEW!)
-🎯 **STRATEGIES AVAILABLE:** 34 (NEW!)
+🤖 **ACTIVE AI ENGINES:** {len(active_engines)}/{len(AI_ENGINES)}
+📊 **TRADING ASSETS:** 35+ (Incl. Synthetics)
+🎯 **STRATEGIES AVAILABLE:** 34
 ⚡ **SIGNAL GENERATION:** LIVE REAL ANALYSIS 🚨
 💾 **MARKET DATA:** REAL-TIME CONTEXT
 📈 **PERFORMANCE TRACKING:** ACTIVE
 ⚡ **RISK MANAGEMENT:** ENABLED
 🔄 **AUTO EXPIRY DETECTION:** ACTIVE
 📊 **TWELVEDATA INTEGRATION:** ACTIVE
-🧠 **INTELLIGENT PROBABILITY:** ACTIVE (NEW!)
-🎮 **MULTI-PLATFORM SUPPORT:** ACTIVE (7 Platforms!) (NEW!)
-🎯 **ACCURACY BOOSTERS:** ACTIVE (NEW!)
-🚨 **SAFETY SYSTEMS:** REAL ANALYSIS, STOP LOSS, PROFIT TRACKING (NEW!)
-🤖 **AI TREND CONFIRMATION:** ACTIVE (NEW!)
+🧠 **INTELLIGENT PROBABILITY:** ACTIVE
+🎮 **MULTI-PLATFORM SUPPORT:** ACTIVE (7 Platforms!)
+🎯 **ACCURACY BOOSTERS:** ACTIVE
+🚨 **SAFETY SYSTEMS:** ACTIVE
 
+**CORE ACTIVE ENGINES:**
+"""
+        
+        for engine in active_engines:
+            status_text += f"• {engine}: ✅ Active\n"
+        
+        status_text += """
 **ENHANCED OTC FEATURES:**
-• QuantumTrend AI: ✅ Active
-• NeuralMomentum AI: ✅ Active  
-• LiquidityFlow AI: ✅ Active
-• Multi-Timeframe Analysis: ✅ Active
+• Real Market Analysis: ✅ Active (NOT random)
+• Multi-Timeframe Analysis: ✅ Active  
+• Liquidity-based Entries: ✅ Active
 • Performance Analytics: ✅ Active
 • Risk Scoring: ✅ Active
 • Auto Expiry Detection: ✅ Active
 • AI Momentum Breakout: ✅ Active
 • TwelveData Context: ✅ Active
-• Intelligent Probability: ✅ Active (NEW!)
-• Platform Balancing: ✅ Active (NEW!)
-• AI Trend Confirmation: ✅ ACTIVE (NEW!)
-• AI Trend Filter + Breakout: ✅ ACTIVE (NEW!)
-• Consensus Voting: ✅ Active (NEW!)
-• Real-time Volatility: ✅ Active (NEW!)
-• Session Boundaries: ✅ Active (NEW!)
-• Real Technical Analysis: ✅ Active (NEW!)
-• Profit-Loss Tracking: ✅ Active (NEW!)
+• Intelligent Probability: ✅ Active
+• Platform Balancing: ✅ Active
+• AI Trend Confirmation: ✅ ACTIVE
+• AI Trend Filter + Breakout: ✅ ACTIVE
+• Consensus Voting: ✅ Active
+• Real-time Volatility: ✅ Active
+• Session Boundaries: ✅ Active
+• Profit-Loss Tracking: ✅ Active
 • All Systems: ✅ Optimal
 
 *Ready for advanced OTC binary trading*"""
@@ -5529,9 +5550,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             )
     
     def _show_strategy_detail(self, chat_id, message_id, strategy):
-        """Show detailed strategy information - UPDATED WITH NEW STRATEGIES"""
-        strategy_details = {
-            "ai_trend_confirmation": """
+    """Show detailed strategy information - UPDATED WITH NEW STRATEGIES"""
+    strategy_details = {
+        "ai_trend_confirmation": """
 🤖 **AI TREND CONFIRMATION STRATEGY**
 
 *AI analyzes 3 timeframes, generates probability-based trend, enters only if all confirm same direction*
@@ -5592,7 +5613,7 @@ Low (Only enters with strong confirmation)
 
 *Perfect for calm and confident trading! 📈*""",
 
-            "ai_trend_filter_breakout": """
+        "ai_trend_filter_breakout": """
 🎯 **AI TREND FILTER + BREAKOUT STRATEGY**
 
 *AI gives direction, you choose the entry - The structured approach*
@@ -5632,7 +5653,7 @@ Low (Only enters with strong confirmation)
 
 *This strategy teaches you to trade like a professional*""", # END NEW STRATEGY DETAIL
 
-            "spike_fade": """
+        "spike_fade": """
 ⚡ **SPIKE FADE STRATEGY (POCKET OPTION SPECIALIST)**
 
 *Fade sharp spikes (reversal trading) in Pocket Option for quick profit.*
@@ -5670,7 +5691,7 @@ High (High risk, high reward - tight mental stop-loss is critical)
 
 *Use this strategy on Pocket Option for its mean-reversion nature! 🟠*""",
 
-            "30s_scalping": """
+        "30s_scalping": """
 ⚡ **30-SECOND SCALPING STRATEGY**
 
 *Ultra-fast scalping for instant OTC profits*
@@ -5706,7 +5727,7 @@ Designed for lightning-fast execution on 30-second timeframes. Captures micro pr
 **EXPIRY RECOMMENDATION:**
 30 seconds (or 5 Deriv Ticks) for ultra-fast scalps""",
 
-            "2min_trend": """
+        "2min_trend": """
 📈 **2-MINUTE TREND STRATEGY**
 
 *Trend following on optimized 2-minute timeframe*
@@ -5742,39 +5763,39 @@ Captures emerging trends on the 2-minute chart with confirmation from higher tim
 **EXPIRY RECOMMENDATION:**
 2-5 minutes for trend development""",
 
-            # Placeholder for other strategies (you would replace these with your actual strategy details)
-            "quantum_trend": "Detailed analysis of Quantum Trend Strategy...",
-            "momentum_breakout": "Detailed analysis of Momentum Breakout Strategy...",
-            "ai_momentum_breakout": "Detailed analysis of AI Momentum Breakout Strategy...",
-            "mean_reversion": "Detailed analysis of Mean Reversion Strategy...",
-            "support_resistance": "Detailed analysis of Support & Resistance Strategy...",
-            "price_action": "Detailed analysis of Price Action Master Strategy...",
-            "ma_crossovers": "Detailed analysis of MA Crossovers Strategy...",
-            "ai_momentum": "Detailed analysis of AI Momentum Scan Strategy...",
-            "quantum_ai": "Detailed analysis of Quantum AI Mode Strategy...",
-            "ai_consensus": "Detailed analysis of AI Consensus Strategy...",
-            "volatility_squeeze": "Detailed analysis of Volatility Squeeze Strategy...",
-            "session_breakout": "Detailed analysis of Session Breakout Strategy...",
-            "liquidity_grab": "Detailed analysis of Liquidity Grab Strategy...",
-            "order_block": "Detailed analysis of Order Block Strategy...",
-            "market_maker": "Detailed analysis of Market Maker Move Strategy...",
-            "harmonic_pattern": "Detailed analysis of Harmonic Pattern Strategy...",
-            "fibonacci": "Detailed analysis of Fibonacci Retracement Strategy...",
-            "multi_tf": "Detailed analysis of Multi-TF Convergence Strategy...",
-            "timeframe_synthesis": "Detailed analysis of Timeframe Synthesis Strategy...",
-            "session_overlap": "Detailed analysis of Session Overlap Strategy...",
-            "news_impact": "Detailed analysis of News Impact Strategy...",
-            "correlation_hedge": "Detailed analysis of Correlation Hedge Strategy...",
-            "smart_money": "Detailed analysis of Smart Money Concepts Strategy...",
-            "structure_break": "Detailed analysis of Market Structure Break Strategy...",
-            "impulse_momentum": "Detailed analysis of Impulse Momentum Strategy...",
-            "fair_value": "Detailed analysis of Fair Value Gap Strategy...",
-            "liquidity_void": "Detailed analysis of Liquidity Void Strategy...",
-            "delta_divergence": "Detailed analysis of Delta Divergence Strategy...",
-            
-        }
+        # Placeholder for other strategies (you would replace these with your actual strategy details)
+        "quantum_trend": "Detailed analysis of Quantum Trend Strategy...",
+        "momentum_breakout": "Detailed analysis of Momentum Breakout Strategy...",
+        "ai_momentum_breakout": "Detailed analysis of AI Momentum Breakout Strategy...",
+        "mean_reversion": "Detailed analysis of Mean Reversion Strategy...",
+        "support_resistance": "Detailed analysis of Support & Resistance Strategy...",
+        "price_action": "Detailed analysis of Price Action Master Strategy...",
+        "ma_crossovers": "Detailed analysis of MA Crossovers Strategy...",
+        "ai_momentum": "Detailed analysis of AI Momentum Scan Strategy...",
+        "quantum_ai": "Detailed analysis of Quantum AI Mode Strategy...",
+        "ai_consensus": "Detailed analysis of AI Consensus Strategy...",
+        "volatility_squeeze": "Detailed analysis of Volatility Squeeze Strategy...",
+        "session_breakout": "Detailed analysis of Session Breakout Strategy...",
+        "liquidity_grab": "Detailed analysis of Liquidity Grab Strategy...",
+        "order_block": "Detailed analysis of Order Block Strategy...",
+        "market_maker": "Detailed analysis of Market Maker Move Strategy...",
+        "harmonic_pattern": "Detailed analysis of Harmonic Pattern Strategy...",
+        "fibonacci": "Detailed analysis of Fibonacci Retracement Strategy...",
+        "multi_tf": "Detailed analysis of Multi-TF Convergence Strategy...",
+        "timeframe_synthesis": "Detailed analysis of Timeframe Synthesis Strategy...",
+        "session_overlap": "Detailed analysis of Session Overlap Strategy...",
+        "news_impact": "Detailed analysis of News Impact Strategy...",
+        "correlation_hedge": "Detailed analysis of Correlation Hedge Strategy...",
+        "smart_money": "Detailed analysis of Smart Money Concepts Strategy...",
+        "structure_break": "Detailed analysis of Market Structure Break Strategy...",
+        "impulse_momentum": "Detailed analysis of Impulse Momentum Strategy...",
+        "fair_value": "Detailed analysis of Fair Value Gap Strategy...",
+        "liquidity_void": "Detailed analysis of Liquidity Void Strategy...",
+        "delta_divergence": "Detailed analysis of Delta Divergence Strategy...",
         
-        detail = strategy_details.get(strategy, f"""
+    }
+    
+    detail = strategy_details.get(strategy, f"""
 **{strategy.replace('_', ' ').title()} STRATEGY**
 
 *Advanced OTC binary trading approach*
@@ -5789,76 +5810,76 @@ Complete strategy guide with enhanced AI analysis coming soon.
 
 *Use this strategy for professional OTC trading*""")
 
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🎯 USE THIS STRATEGY", "callback_data": "menu_signals"}],
-                [{"text": "📊 ALL STRATEGIES", "callback_data": "menu_strategies"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            detail, parse_mode="Markdown", reply_markup=keyboard
-        )
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "🎯 USE THIS STRATEGY", "callback_data": "menu_signals"}],
+            [{"text": "📊 ALL STRATEGIES", "callback_data": "menu_strategies"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
     
-    def _show_ai_engines_menu(self, chat_id, message_id=None):
-        """Show all 23 AI engines - UPDATED"""
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {"text": "🤖 TREND CONFIRM", "callback_data": "aiengine_trendconfirmation"},
-                    {"text": "🤖 QUANTUMTREND", "callback_data": "aiengine_quantumtrend"}
-                ],
-                [
-                    {"text": "🧠 NEURALMOMENTUM", "callback_data": "aiengine_neuralmomentum"},
-                    {"text": "📊 VOLATILITYMATRIX", "callback_data": "aiengine_volatilitymatrix"}
-                ],
-                [
-                    {"text": "🔍 PATTERNRECOGNITION", "callback_data": "aiengine_patternrecognition"},
-                    {"text": "🎯 S/R AI", "callback_data": "aiengine_supportresistance"}
-                ],
-                [
-                    {"text": "📈 MARKETPROFILE", "callback_data": "aiengine_marketprofile"},
-                    {"text": "💧 LIQUIDITYFLOW", "callback_data": "aiengine_liquidityflow"}
-                ],
-                [
-                    {"text": "📦 ORDERBLOCK", "callback_data": "aiengine_orderblock"},
-                    {"text": "📐 FIBONACCI", "callback_data": "aiengine_fibonacci"}
-                ],
-                [
-                    {"text": "📐 HARMONICPATTERN", "callback_data": "aiengine_harmonicpattern"},
-                    {"text": "🔗 CORRELATIONMATRIX", "callback_data": "aiengine_correlationmatrix"}
-                ],
-                [
-                    {"text": "😊 SENTIMENT", "callback_data": "aiengine_sentimentanalyzer"},
-                    {"text": "📰 NEWSSENTIMENT", "callback_data": "aiengine_newssentiment"}
-                ],
-                [
-                    {"text": "🔄 REGIMEDETECTION", "callback_data": "aiengine_regimedetection"},
-                    {"text": "📅 SEASONALITY", "callback_data": "aiengine_seasonality"}
-                ],
-                [
-                    {"text": "🧠 ADAPTIVELEARNING", "callback_data": "aiengine_adaptivelearning"},
-                    {"text": "🔬 MARKET MICRO", "callback_data": "aiengine_marketmicrostructure"}
-                ],
-                [
-                    {"text": "📈 VOL FORECAST", "callback_data": "aiengine_volatilityforecast"},
-                    {"text": "🔄 CYCLE ANALYSIS", "callback_data": "aiengine_cycleanalysis"}
-                ],
-                [
-                    {"text": "⚡ SENTIMENT MOMENTUM", "callback_data": "aiengine_sentimentmomentum"},
-                    {"text": "🎯 PATTERN PROB", "callback_data": "aiengine_patternprobability"}
-                ],
-                [
-                    {"text": "💼 INSTITUTIONAL", "callback_data": "aiengine_institutionalflow"},
-                    {"text": "👥 CONSENSUS VOTING", "callback_data": "aiengine_consensusvoting"}
-                ],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = """
+    self.edit_message_text(
+        chat_id, message_id,
+        detail, parse_mode="Markdown", reply_markup=keyboard
+    )
+
+def _show_ai_engines_menu(self, chat_id, message_id=None):
+    """Show all 23 AI engines - UPDATED"""
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {"text": "🤖 TREND CONFIRM", "callback_data": "aiengine_trendconfirmation"},
+                {"text": "🤖 QUANTUMTREND", "callback_data": "aiengine_quantumtrend"}
+            ],
+            [
+                {"text": "🧠 NEURALMOMENTUM", "callback_data": "aiengine_neuralmomentum"},
+                {"text": "📊 VOLATILITYMATRIX", "callback_data": "aiengine_volatilitymatrix"}
+            ],
+            [
+                {"text": "🔍 PATTERNRECOGNITION", "callback_data": "aiengine_patternrecognition"},
+                {"text": "🎯 S/R AI", "callback_data": "aiengine_supportresistance"}
+            ],
+            [
+                {"text": "📈 MARKETPROFILE", "callback_data": "aiengine_marketprofile"},
+                {"text": "💧 LIQUIDITYFLOW", "callback_data": "aiengine_liquidityflow"}
+            ],
+            [
+                {"text": "📦 ORDERBLOCK", "callback_data": "aiengine_orderblock"},
+                {"text": "📐 FIBONACCI", "callback_data": "aiengine_fibonacci"}
+            ],
+            [
+                {"text": "📐 HARMONICPATTERN", "callback_data": "aiengine_harmonicpattern"},
+                {"text": "🔗 CORRELATIONMATRIX", "callback_data": "aiengine_correlationmatrix"}
+            ],
+            [
+                {"text": "😊 SENTIMENT", "callback_data": "aiengine_sentimentanalyzer"},
+                {"text": "📰 NEWSSENTIMENT", "callback_data": "aiengine_newssentiment"}
+            ],
+            [
+                {"text": "🔄 REGIMEDETECTION", "callback_data": "aiengine_regimedetection"},
+                {"text": "📅 SEASONALITY", "callback_data": "aiengine_seasonality"}
+            ],
+            [
+                {"text": "🧠 ADAPTIVELEARNING", "callback_data": "aiengine_adaptivelearning"},
+                {"text": "🔬 MARKET MICRO", "callback_data": "aiengine_marketmicrostructure"}
+            ],
+            [
+                {"text": "📈 VOL FORECAST", "callback_data": "aiengine_volatilityforecast"},
+                {"text": "🔄 CYCLE ANALYSIS", "callback_data": "aiengine_cycleanalysis"}
+            ],
+            [
+                {"text": "⚡ SENTIMENT MOMENTUM", "callback_data": "aiengine_sentimentmomentum"},
+                {"text": "🎯 PATTERN PROB", "callback_data": "aiengine_patternprobability"}
+            ],
+            [
+                {"text": "💼 INSTITUTIONAL", "callback_data": "aiengine_institutionalflow"},
+                {"text": "👥 CONSENSUS VOTING", "callback_data": "aiengine_consensusvoting"}
+            ],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = """
 🤖 **ENHANCED AI TRADING ENGINES - 23 QUANTUM TECHNOLOGIES**
 
 *Advanced AI analysis for OTC binary trading:*
@@ -5904,22 +5925,22 @@ Complete strategy guide with enhanced AI analysis coming soon.
 • InstitutionalFlow AI - Smart money tracking
 
 *Each engine specializes in different market aspects for maximum accuracy*"""
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
     
-    def _show_ai_engine_detail(self, chat_id, message_id, engine):
-        """Show detailed AI engine information"""
-        engine_details = {
-            "trendconfirmation": """
+    if message_id:
+        self.edit_message_text(
+            chat_id, message_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+    else:
+        self.send_message(
+            chat_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+
+def _show_ai_engine_detail(self, chat_id, message_id, engine):
+    """Show detailed AI engine information"""
+    engine_details = {
+        "trendconfirmation": """
 🤖 **TRENDCONFIRMATION AI ENGINE**
 
 *Multi-Timeframe Trend Confirmation Analysis - The trader's best friend today💸*
@@ -5966,7 +5987,7 @@ This engine powers the most reliable strategy in the system:
 • Momentum Breakout Strategy
 • Multi-timeframe Convergence Strategy""",
 
-            "consensusvoting": """
+        "consensusvoting": """
 👥 **CONSENSUSVOTING AI ENGINE**
 
 *Multiple AI Engine Voting System for Maximum Accuracy*
@@ -5997,7 +6018,7 @@ Combines analysis from multiple AI engines and uses voting system to determine f
 **ACCURACY BOOST:**
 +10-15% over single-engine analysis""",
 
-            "quantumtrend": """
+        "quantumtrend": """
 🤖 **QUANTUMTREND AI ENGINE**
 
 *Advanced Trend Analysis with Machine Learning (Supports Spike Fade Strategy)*
@@ -6024,33 +6045,33 @@ Identifies and confirms market trends using quantum-inspired algorithms and mult
 - Spike Fade Strategy (for extreme reversal detection)
 - Medium to long expiries (2-15min)
 - Major currency pairs (EUR/USD, GBP/USD)""",
-            
-            # Placeholder for other AI engine details
-            "neuralmomentum": "Detailed analysis of NeuralMomentum AI Engine...",
-            "volatilitymatrix": "Detailed analysis of VolatilityMatrix AI Engine...",
-            "patternrecognition": "Detailed analysis of PatternRecognition AI Engine...",
-            "supportresistance": "Detailed analysis of SupportResistance AI Engine...",
-            "marketprofile": "Detailed analysis of MarketProfile AI Engine...",
-            "liquidityflow": "Detailed analysis of LiquidityFlow AI Engine...",
-            "orderblock": "Detailed analysis of OrderBlock AI Engine...",
-            "fibonacci": "Detailed analysis of Fibonacci AI Engine...",
-            "harmonicpattern": "Detailed analysis of HarmonicPattern AI Engine...",
-            "correlationmatrix": "Detailed analysis of CorrelationMatrix AI Engine...",
-            "sentimentanalyzer": "Detailed analysis of SentimentAnalyzer AI Engine...",
-            "newssentiment": "Detailed analysis of NewsSentiment AI Engine...",
-            "regimedetection": "Detailed analysis of RegimeDetection AI Engine...",
-            "seasonality": "Detailed analysis of Seasonality AI Engine...",
-            "adaptivelearning": "Detailed analysis of AdaptiveLearning AI Engine...",
-            "marketmicrostructure": "Detailed analysis of MarketMicrostructure AI Engine...",
-            "volatilityforecast": "Detailed analysis of VolatilityForecast AI Engine...",
-            "cycleanalysis": "Detailed analysis of CycleAnalysis AI Engine...",
-            "sentimentmomentum": "Detailed analysis of SentimentMomentum AI Engine...",
-            "patternprobability": "Detailed analysis of PatternProbability AI Engine...",
-            "institutionalflow": "Detailed analysis of InstitutionalFlow AI Engine...",
-
-        }
         
-        detail = engine_details.get(engine, f"""
+        # Placeholder for other AI engine details
+        "neuralmomentum": "Detailed analysis of NeuralMomentum AI Engine...",
+        "volatilitymatrix": "Detailed analysis of VolatilityMatrix AI Engine...",
+        "patternrecognition": "Detailed analysis of PatternRecognition AI Engine...",
+        "supportresistance": "Detailed analysis of SupportResistance AI Engine...",
+        "marketprofile": "Detailed analysis of MarketProfile AI Engine...",
+        "liquidityflow": "Detailed analysis of LiquidityFlow AI Engine...",
+        "orderblock": "Detailed analysis of OrderBlock AI Engine...",
+        "fibonacci": "Detailed analysis of Fibonacci AI Engine...",
+        "harmonicpattern": "Detailed analysis of HarmonicPattern AI Engine...",
+        "correlationmatrix": "Detailed analysis of CorrelationMatrix AI Engine...",
+        "sentimentanalyzer": "Detailed analysis of SentimentAnalyzer AI Engine...",
+        "newssentiment": "Detailed analysis of NewsSentiment AI Engine...",
+        "regimedetection": "Detailed analysis of RegimeDetection AI Engine...",
+        "seasonality": "Detailed analysis of Seasonality AI Engine...",
+        "adaptivelearning": "Detailed analysis of AdaptiveLearning AI Engine...",
+        "marketmicrostructure": "Detailed analysis of MarketMicrostructure AI Engine...",
+        "volatilityforecast": "Detailed analysis of VolatilityForecast AI Engine...",
+        "cycleanalysis": "Detailed analysis of CycleAnalysis AI Engine...",
+        "sentimentmomentum": "Detailed analysis of SentimentMomentum AI Engine...",
+        "patternprobability": "Detailed analysis of PatternProbability AI Engine...",
+        "institutionalflow": "Detailed analysis of InstitutionalFlow AI Engine...",
+
+    }
+    
+    detail = engine_details.get(engine, f"""
 **{engine.replace('_', ' ').title()} AI ENGINE**
 
 *Advanced AI Analysis Technology*
@@ -6065,51 +6086,51 @@ Complete technical specifications and capabilities available.
 
 *This AI engine contributes to enhanced signal accuracy*""")
 
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🚀 USE THIS ENGINE", "callback_data": "menu_signals"}],
-                [{"text": "🤖 ALL ENGINES", "callback_data": "menu_aiengines"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            detail, parse_mode="Markdown", reply_markup=keyboard
-        )
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "🚀 USE THIS ENGINE", "callback_data": "menu_signals"}],
+            [{"text": "🤖 ALL ENGINES", "callback_data": "menu_aiengines"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
     
-    def _show_account_dashboard(self, chat_id, message_id=None):
-        """Show account dashboard"""
-        stats = get_user_stats(chat_id)
-        
-        # Format signals text - FIXED FOR ADMIN
-        if stats['daily_limit'] == 9999:
-            signals_text = f"UNLIMITED"
-            status_emoji = "💎"
-        else:
-            signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
-            status_emoji = "🟢" if stats['signals_today'] < stats['daily_limit'] else "🔴"
-        
-        # Get user safety status
-        can_trade, trade_reason = profit_loss_tracker.should_user_trade(chat_id)
-        safety_status = "🟢 SAFE TO TRADE" if can_trade else f"🔴 {trade_reason}"
-        
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {"text": "📊 ACCOUNT LIMITS", "callback_data": "account_limits"},
-                    {"text": "💎 UPGRADE PLAN", "callback_data": "account_upgrade"}
-                ],
-                [
-                    {"text": "📈 TRADING STATS", "callback_data": "account_stats"},
-                    {"text": "🆓 PLAN FEATURES", "callback_data": "account_features"}
-                ],
-                [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
+    self.edit_message_text(
+        chat_id, message_id,
+        detail, parse_mode="Markdown", reply_markup=keyboard
+    )
+
+def _show_account_dashboard(self, chat_id, message_id=None):
+    """Show account dashboard"""
+    stats = get_user_stats(chat_id)
+    
+    # Format signals text - FIXED FOR ADMIN
+    if stats['daily_limit'] == 9999:
+        signals_text = f"UNLIMITED"
+        status_emoji = "💎"
+    else:
+        signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
+        status_emoji = "🟢" if stats['signals_today'] < stats['daily_limit'] else "🔴"
+    
+    # Get user safety status
+    can_trade, trade_reason = profit_loss_tracker.should_user_trade(chat_id)
+    safety_status = "🟢 SAFE TO TRADE" if can_trade else f"🔴 {trade_reason}"
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {"text": "📊 ACCOUNT LIMITS", "callback_data": "account_limits"},
+                {"text": "💎 UPGRADE PLAN", "callback_data": "account_upgrade"}
+            ],
+            [
+                {"text": "📈 TRADING STATS", "callback_data": "account_stats"},
+                {"text": "🆓 PLAN FEATURES", "callback_data": "account_features"}
+            ],
+            [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = f"""
 💼 **ENHANCED ACCOUNT DASHBOARD**
 
 📊 **Account Plan:** {stats['tier_name']}
@@ -6119,45 +6140,45 @@ Complete technical specifications and capabilities available.
 
 **ENHANCED FEATURES INCLUDED:**
 """
-        
-        for feature in stats['features']:
-            text += f"✓ {feature}\n"
-        
-        text += "\n*Manage your enhanced account below*"
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
     
-    def _show_limits_dashboard(self, chat_id, message_id=None):
-        """Show trading limits dashboard"""
-        stats = get_user_stats(chat_id)
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "💎 UPGRADE TO PREMIUM", "callback_data": "account_upgrade"}],
-                [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
-                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
-                [{"text": "🎯 GET ENHANCED SIGNALS", "callback_data": "menu_signals"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        if stats['daily_limit'] == 9999:
-            signals_text = "∞ UNLIMITED"
-            remaining_text = "∞"
-        else:
-            signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
-            remaining_text = f"{stats['daily_limit'] - stats['signals_today']}"
-        
-        text = f"""
+    for feature in stats['features']:
+        text += f"✓ {feature}\n"
+    
+    text += "\n*Manage your enhanced account below*"
+    
+    if message_id:
+        self.edit_message_text(
+            chat_id, message_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+    else:
+        self.send_message(
+            chat_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+
+def _show_limits_dashboard(self, chat_id, message_id=None):
+    """Show trading limits dashboard"""
+    stats = get_user_stats(chat_id)
+    
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "💎 UPGRADE TO PREMIUM", "callback_data": "account_upgrade"}],
+            [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
+            [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+            [{"text": "🎯 GET ENHANCED SIGNALS", "callback_data": "menu_signals"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    if stats['daily_limit'] == 9999:
+        signals_text = "∞ UNLIMITED"
+        remaining_text = "∞"
+    else:
+        signals_text = f"{stats['signals_today']}/{stats['daily_limit']}"
+        remaining_text = f"{stats['daily_limit'] - stats['signals_today']}"
+    
+    text = f"""
 ⚡ **ENHANCED TRADING LIMITS DASHBOARD**
 
 📊 **Current Usage:** {stats['signals_today']} signals today
@@ -6166,36 +6187,36 @@ Complete technical specifications and capabilities available.
 
 **YOUR ENHANCED PLAN: {stats['tier_name']}**
 """
-        
-        for feature in stats['features']:
-            text += f"• {feature}\n"
-        
-        text += "\n*Contact admin for enhanced plan upgrades*"
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
     
-    def _show_upgrade_options(self, chat_id, message_id):
-        """Show account upgrade options"""
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "💎 BASIC PLAN - $19/month", "callback_data": "upgrade_basic"}],
-                [{"text": "🚀 PRO PLAN - $49/month", "callback_data": "upgrade_pro"}],
-                [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
-                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = """
+    for feature in stats['features']:
+        text += f"• {feature}\n"
+    
+    text += "\n*Contact admin for enhanced plan upgrades*"
+    
+    if message_id:
+        self.edit_message_text(
+            chat_id, message_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+    else:
+        self.send_message(
+            chat_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+
+def _show_upgrade_options(self, chat_id, message_id):
+    """Show account upgrade options"""
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "💎 BASIC PLAN - $19/month", "callback_data": "upgrade_basic"}],
+            [{"text": "🚀 PRO PLAN - $49/month", "callback_data": "upgrade_pro"}],
+            [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
+            [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = """
 💎 **ENHANCED PREMIUM ACCOUNT UPGRADE**
 
 *Unlock Unlimited OTC Trading Power*
@@ -6232,28 +6253,28 @@ Complete technical specifications and capabilities available.
 
 **CONTACT ADMIN:** @LekzyDevX
 *Message for upgrade instructions*"""
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
     
-    def _show_account_stats(self, chat_id, message_id):
-        """Show account statistics"""
-        stats = get_user_stats(chat_id)
-        
-        # Get real performance data
-        real_stats = profit_loss_tracker.get_user_stats(chat_id)
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
-                [{"text": "🎯 GET ENHANCED SIGNALS", "callback_data": "menu_signals"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
+    self.edit_message_text(
+        chat_id, message_id,
+        text, parse_mode="Markdown", reply_markup=keyboard
+    )
+
+def _show_account_stats(self, chat_id, message_id):
+    """Show account statistics"""
+    stats = get_user_stats(chat_id)
+    
+    # Get real performance data
+    real_stats = profit_loss_tracker.get_user_stats(chat_id)
+    
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+            [{"text": "🎯 GET ENHANCED SIGNALS", "callback_data": "menu_signals"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = f"""
 📈 **ENHANCED TRADING STATISTICS**
 
 *Your OTC Trading Performance*
@@ -6292,36 +6313,36 @@ Complete technical specifications and capabilities available.
 • Stop after 3 consecutive losses
 
 *Track your progress with enhanced analytics*"""
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
     
-    def _show_account_features(self, chat_id, message_id):
-        """Show account features"""
-        stats = get_user_stats(chat_id)
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "💎 UPGRADE PLAN", "callback_data": "account_upgrade"}],
-                [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
-                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
+    self.edit_message_text(
+        chat_id, message_id,
+        text, parse_mode="Markdown", reply_markup=keyboard
+    )
+
+def _show_account_features(self, chat_id, message_id):
+    """Show account features"""
+    stats = get_user_stats(chat_id)
+    
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "💎 UPGRADE PLAN", "callback_data": "account_upgrade"}],
+            [{"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}],
+            [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = f"""
 🆓 **ENHANCED ACCOUNT FEATURES - {stats['tier_name']} PLAN**
 
 *Your current enhanced plan includes:*
 
 """
-        
-        for feature in stats['features']:
-            text += f"✓ {feature}\n"
-        
-        text += """
+    
+    for feature in stats['features']:
+        text += f"✓ {feature}\n"
+    
+    text += """
 
 **ENHANCED UPGRADE BENEFITS:**
 • More daily enhanced signals
@@ -6343,30 +6364,30 @@ Complete technical specifications and capabilities available.
 • **7 Platform Support** (NEW!)
 
 *Contact admin for enhanced upgrade options*"""
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
     
-    def _show_account_settings(self, chat_id, message_id):
-        """Show account settings"""
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {"text": "🔔 NOTIFICATIONS", "callback_data": "settings_notifications"},
-                    {"text": "⚡ TRADING PREFS", "callback_data": "settings_trading"}
-                ],
-                [
-                    {"text": "📊 RISK MANAGEMENT", "callback_data": "settings_risk"},
-                    {"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}
-                ],
-                [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
+    self.edit_message_text(
+        chat_id, message_id,
+        text, parse_mode="Markdown", reply_markup=keyboard
+    )
+
+def _show_account_settings(self, chat_id, message_id):
+    """Show account settings"""
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {"text": "🔔 NOTIFICATIONS", "callback_data": "settings_notifications"},
+                {"text": "⚡ TRADING PREFS", "callback_data": "settings_trading"}
+            ],
+            [
+                {"text": "📊 RISK MANAGEMENT", "callback_data": "settings_risk"},
+                {"text": "📞 CONTACT ADMIN", "callback_data": "contact_admin"}
+            ],
+            [{"text": "📊 ACCOUNT DASHBOARD", "callback_data": "menu_account"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = f"""
 🔧 **ENHANCED ACCOUNT SETTINGS**
 
 *Customize Your Advanced OTC Trading Experience*
@@ -6382,7 +6403,7 @@ Complete technical specifications and capabilities available.
 • Auto Expiry Detection: ✅ AVAILABLE (NEW!)
 • TwelveData Context: ✅ AVAILABLE (NEW!)
 • Intelligent Probability: ✅ ACTIVE (NEW!)
-• Multi-Platform Support: ✅ AVAILABLE (NEW!)
+• Multi-Platform Support: ✅ AVAILABLE (7 Platforms!) (NEW!)
 • Accuracy Boosters: ✅ ACTIVE (NEW!)
 • Safety Systems: ✅ ACTIVE (NEW!)
 • AI Trend Confirmation: ✅ AVAILABLE (NEW!)
@@ -6402,46 +6423,46 @@ Complete technical specifications and capabilities available.
 • Safety system settings (NEW!)
 
 *Contact admin for custom enhanced settings*"""
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            text, parse_mode="Markdown", reply_markup=keyboard
-        )
     
-    def _show_sessions_dashboard(self, chat_id, message_id=None):
-        """Show market sessions dashboard"""
-        current_time = datetime.utcnow().strftime("%H:%M UTC")
-        current_hour = datetime.utcnow().hour
+    self.edit_message_text(
+        chat_id, message_id,
+        text, parse_mode="Markdown", reply_markup=keyboard
+    )
+
+def _show_sessions_dashboard(self, chat_id, message_id=None):
+    """Show market sessions dashboard"""
+    current_time = datetime.utcnow().strftime("%H:%M UTC")
+    current_hour = datetime.utcnow().hour
+    
+    # Determine active sessions
+    active_sessions = []
+    if 22 <= current_hour or current_hour < 6:
+        active_sessions.append("🌏 ASIAN")
+    if 7 <= current_hour < 16:
+        active_sessions.append("🇬🇧 LONDON")
+    if 12 <= current_hour < 21:
+        active_sessions.append("🇺🇸 NEW YORK")
+    if 12 <= current_hour < 16:
+        active_sessions.append("⚡ OVERLAP")
         
-        # Determine active sessions
-        active_sessions = []
-        if 22 <= current_hour or current_hour < 6:
-            active_sessions.append("🌏 ASIAN")
-        if 7 <= current_hour < 16:
-            active_sessions.append("🇬🇧 LONDON")
-        if 12 <= current_hour < 21:
-            active_sessions.append("🇺🇸 NEW YORK")
-        if 12 <= current_hour < 16:
-            active_sessions.append("⚡ OVERLAP")
-            
-        active_text = ", ".join(active_sessions) if active_sessions else "❌ NO ACTIVE SESSIONS"
-        
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {"text": "🌏 ASIAN", "callback_data": "session_asian"},
-                    {"text": "🇬🇧 LONDON", "callback_data": "session_london"}
-                ],
-                [
-                    {"text": "🇺🇸 NEW YORK", "callback_data": "session_new_york"},
-                    {"text": "⚡ OVERLAP", "callback_data": "session_overlap"}
-                ],
-                [{"text": "🎯 GET ENHANCED SIGNALS", "callback_data": "menu_signals"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
+    active_text = ", ".join(active_sessions) if active_sessions else "❌ NO ACTIVE SESSIONS"
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {"text": "🌏 ASIAN", "callback_data": "session_asian"},
+                {"text": "🇬🇧 LONDON", "callback_data": "session_london"}
+            ],
+            [
+                {"text": "🇺🇸 NEW YORK", "callback_data": "session_new_york"},
+                {"text": "⚡ OVERLAP", "callback_data": "session_overlap"}
+            ],
+            [{"text": "🎯 GET ENHANCED SIGNALS", "callback_data": "menu_signals"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = f"""
 🕒 **ENHANCED MARKET SESSIONS DASHBOARD**
 
 *Current Time: {current_time}*
@@ -6462,22 +6483,22 @@ Complete technical specifications and capabilities available.
   (London + New York) - Maximum enhanced signals
 
 *Select session for detailed enhanced analysis*"""
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
     
-    def _show_session_detail(self, chat_id, message_id, session):
-        """Show detailed session information"""
-        session_details = {
-            "asian": """
+    if message_id:
+        self.edit_message_text(
+            chat_id, message_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+    else:
+        self.send_message(
+            chat_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+
+def _show_session_detail(self, chat_id, message_id, session):
+    """Show detailed session information"""
+    session_details = {
+        "asian": """
 🌏 **ENHANCED ASIAN TRADING SESSION**
 
 *22:00-06:00 UTC (Tokyo, Hong Kong, Singapore)*
@@ -6512,8 +6533,8 @@ Complete technical specifications and capabilities available.
 • Avoid high-impact news times
 • Use multi-timeframe convergence""",
 
-        "london": """
-        🇬🇧 **ENHANCED LONDON TRADING SESSION**
+    "london": """
+    🇬🇧 **ENHANCED LONDON TRADING SESSION**
 
 *07:00-16:00 UTC (London, Frankfurt, Paris)*
 
@@ -6551,7 +6572,7 @@ Complete technical specifications and capabilities available.
 • Watch for economic news with sentiment analysis
 • Use liquidity-based entries""",
 
-            "new_york": """
+        "new_york": """
 🇺🇸 **ENHANCED NEW YORK TRADING SESSION**
 
 *12:00-21:00 UTC (New York, Toronto, Chicago)*
@@ -6591,7 +6612,7 @@ Complete technical specifications and capabilities available.
 • Watch for US news events with sentiment
 • Use multi-asset correlation""",
 
-            "overlap": """
+        "overlap": """
 ⚡ **ENHANCED LONDON-NEW YORK OVERLAP**
 
 *12:00-16:00 UTC (Highest Volatility)*
@@ -6631,41 +6652,41 @@ Complete technical specifications and capabilities available.
 • Use any expiry time with confirmation (Incl. Deriv Ticks) (NEW!)
 • High confidence enhanced signals
 • Multiple strategy opportunities"""
-        }
-        
-        detail = session_details.get(session, "**ENHANCED SESSION DETAILS**\n\nComplete enhanced session guide coming soon.")
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🎯 GET ENHANCED SESSION SIGNALS", "callback_data": "menu_signals"}],
-                [{"text": "🕒 ALL ENHANCED SESSIONS", "callback_data": "menu_sessions"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        self.edit_message_text(
-            chat_id, message_id,
-            detail, parse_mode="Markdown", reply_markup=keyboard
-        )
+    }
     
-    def _show_education_menu(self, chat_id, message_id=None):
-        """Show education menu"""
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {"text": "📚 OTC BASICS", "callback_data": "edu_basics"},
-                    {"text": "🎯 RISK MANAGEMENT", "callback_data": "edu_risk"}
-                ],
-                [
-                    {"text": "🤖 BOT USAGE", "callback_data": "edu_bot_usage"},
-                    {"text": "📊 TECHNICAL", "callback_data": "edu_technical"}
-                ],
-                [{"text": "💡 PSYCHOLOGY", "callback_data": "edu_psychology"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = """
+    detail = session_details.get(session, "**ENHANCED SESSION DETAILS**\n\nComplete enhanced session guide coming soon.")
+    
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "🎯 GET ENHANCED SESSION SIGNALS", "callback_data": "menu_signals"}],
+            [{"text": "🕒 ALL ENHANCED SESSIONS", "callback_data": "menu_sessions"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    self.edit_message_text(
+        chat_id, message_id,
+        detail, parse_mode="Markdown", reply_markup=keyboard
+    )
+
+def _show_education_menu(self, chat_id, message_id=None):
+    """Show education menu"""
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {"text": "📚 OTC BASICS", "callback_data": "edu_basics"},
+                {"text": "🎯 RISK MANAGEMENT", "callback_data": "edu_risk"}
+            ],
+            [
+                {"text": "🤖 BOT USAGE", "callback_data": "edu_bot_usage"},
+                {"text": "📊 TECHNICAL", "callback_data": "edu_technical"}
+            ],
+            [{"text": "💡 PSYCHOLOGY", "callback_data": "edu_psychology"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = """
 📚 **ENHANCED OTC BINARY TRADING EDUCATION**
 
 *Learn professional OTC binary options trading with advanced features:*
@@ -6695,21 +6716,21 @@ Complete technical specifications and capabilities available.
 • **⚡ NEW:** Spike Fade Strategy guide
 
 *Build your enhanced OTC trading expertise*"""
-        
-        if message_id:
-            self.edit_message_text(
-                chat_id, message_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
+    
+    if message_id:
+        self.edit_message_text(
+            chat_id, message_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
+    else:
+        self.send_message(
+            chat_id,
+            text, parse_mode="Markdown", reply_markup=keyboard
+        )
 
-    def _show_edu_basics(self, chat_id, message_id):
-        """Show OTC basics education"""
-        text = """
+def _show_edu_basics(self, chat_id, message_id):
+    """Show OTC basics education"""
+    text = """
 📚 **ENHANCED OTC BINARY OPTIONS BASICS**
 
 *Understanding Advanced OTC Trading:*
@@ -6803,18 +6824,18 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
 *Enhanced OTC trading requires understanding these advanced market dynamics*"""
 
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🎯 ENHANCED RISK MANAGEMENT", "callback_data": "edu_risk"}],
-                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
-            ]
-        }
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "🎯 ENHANCED RISK MANAGEMENT", "callback_data": "edu_risk"}],
+            [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+        ]
+    }
+    
+    self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-    def _show_edu_risk(self, chat_id, message_id):
-        """Show risk management education"""
-        text = """
+def _show_edu_risk(self, chat_id, message_id):
+    """Show risk management education"""
+    text = """
 🎯 **ENHANCED OTC RISK MANAGEMENT**
 
 *Advanced Risk Rules for OTC Trading:*
@@ -6881,18 +6902,18 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
 *Enhanced risk management is the key to OTC success*"""
 
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "🤖 USING ENHANCED BOT", "callback_data": "edu_bot_usage"}],
-                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
-            ]
-        }
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "🤖 USING ENHANCED BOT", "callback_data": "edu_bot_usage"}],
+            [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+        ]
+    }
+    
+    self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-    def _show_edu_bot_usage(self, chat_id, message_id):
-        """Show bot usage guide"""
-        text = """
+def _show_edu_bot_usage(self, chat_id, message_id):
+    """Show bot usage guide"""
+    text = """
 🤖 **HOW TO USE ENHANCED OTC BOT**
 
 *Step-by-Step Advanced Trading Process:*
@@ -6961,8 +6982,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Perfect for calm and confident trading
 
 **🎯 NEW: AI TREND FILTER + BREAKOUT STRATEGY:**
-• AI gives direction (UP/DOWN/SIDEWAYS)
-• Trader marks S/R levels
+• AI gives direction (UP/DOWN/SIDEWAYS), trader marks S/R
 • Entry ONLY on confirmed breakout in AI direction
 • Blends AI certainty with structured entry
 
@@ -6999,18 +7019,18 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
 *Master the enhanced bot, master advanced OTC trading*"""
 
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📊 ENHANCED TECHNICAL ANALYSIS", "callback_data": "edu_technical"}],
-                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
-            ]
-        }
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "📊 ENHANCED TECHNICAL ANALYSIS", "callback_data": "edu_technical"}],
+            [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+        ]
+    }
+    
+    self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-    def _show_edu_technical(self, chat_id, message_id):
-        """Show technical analysis education"""
-        text = """
+def _show_edu_technical(self, chat_id, message_id):
+    """Show technical analysis education"""
+    text = """
 📊 **ENHANCED OTC TECHNICAL ANALYSIS**
 
 *Advanced AI-Powered Market Analysis:*
@@ -7049,7 +7069,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 **🎯 NEW: AI TREND FILTER + BREAKOUT ANALYSIS:**
 • AI determines objective direction (UP/DOWN/SIDEWAYS)
 • Trader uses this direction for filtering manual S/R entries
-• Focuses on clean breakouts with volume confirmation
+• Focuss on clean breakouts with volume confirmation
 • Blends AI certainty with human discipline
 
 **NEW: TWELVEDATA MARKET CONTEXT:**
@@ -7091,18 +7111,18 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
 *Enhanced technical analysis is key to advanced OTC success*"""
 
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "💡 ENHANCED TRADING PSYCHOLOGY", "callback_data": "edu_psychology"}],
-                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
-            ]
-        }
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "💡 ENHANCED TRADING PSYCHOLOGY", "callback_data": "edu_psychology"}],
+            [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+        ]
+    }
+    
+    self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-    def _show_edu_psychology(self, chat_id, message_id):
-        """Show trading psychology education"""
-        text = """
+def _show_edu_psychology(self, chat_id, message_id):
+    """Show trading psychology education"""
+    text = """
 💡 **ENHANCED OTC TRADING PSYCHOLOGY**
 
 *Master Your Advanced Mindset for Success:*
@@ -7164,26 +7184,26 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
 *Enhanced psychology is 80% of advanced trading success*"""
 
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📚 ENHANCED OTC BASICS", "callback_data": "edu_basics"}],
-                [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
-            ]
-        }
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "📚 ENHANCED OTC BASICS", "callback_data": "edu_basics"}],
+            [{"text": "🔙 BACK TO EDUCATION", "callback_data": "menu_education"}]
+        ]
+    }
+    
+    self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-    def _handle_contact_admin(self, chat_id, message_id=None):
-        """Show admin contact information"""
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📞 CONTACT ADMIN", "url": f"https://t.me/{ADMIN_USERNAME.replace('@', '')}"}],
-                [{"text": "💎 VIEW ENHANCED UPGRADES", "callback_data": "account_upgrade"}],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
+def _handle_contact_admin(self, chat_id, message_id=None):
+    """Show admin contact information"""
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "📞 CONTACT ADMIN", "url": f"https://t.me/{ADMIN_USERNAME.replace('@', '')}"}],
+            [{"text": "💎 VIEW ENHANCED UPGRADES", "callback_data": "account_upgrade"}],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = f"""
 👑 **CONTACT ADMINISTRATOR**
 
 *For enhanced account upgrades, support, and inquiries:*
@@ -7226,40 +7246,40 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Spike Fade Strategy (NEW!)
 
 *We're here to help you succeed with enhanced trading!*"""
-        
-        if message_id:
-            self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-        else:
-            self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    
+    if message_id:
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    else:
+        self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-    def _handle_admin_panel(self, chat_id, message_id=None):
-        """Admin panel for user management"""
-        # Check if user is admin
-        if chat_id not in ADMIN_IDS:
-            self.send_message(chat_id, "❌ Admin access required.", parse_mode="Markdown")
-            return
-        
-        # Get system stats
-        total_users = len(user_tiers)
-        free_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'free_trial'])
-        paid_users = total_users - free_users
-        active_today = len([uid for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat()])
-        
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {"text": "📊 ENHANCED STATS", "callback_data": "admin_stats"},
-                    {"text": "👤 MANAGE USERS", "callback_data": "admin_users"}
-                ],
-                [
-                    {"text": "⚙️ ENHANCED SETTINGS", "callback_data": "admin_settings"},
-                    {"text": "📢 BROADCAST", "callback_data": "menu_account"}
-                ],
-                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-            ]
-        }
-        
-        text = f"""
+def _handle_admin_panel(self, chat_id, message_id=None):
+    """Admin panel for user management"""
+    # Check if user is admin
+    if chat_id not in ADMIN_IDS:
+        self.send_message(chat_id, "❌ Admin access required.", parse_mode="Markdown")
+        return
+    
+    # Get system stats
+    total_users = len(user_tiers)
+    free_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'free_trial'])
+    paid_users = total_users - free_users
+    active_today = len([uid for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat()])
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {"text": "📊 ENHANCED STATS", "callback_data": "admin_stats"},
+                {"text": "👤 MANAGE USERS", "callback_data": "admin_users"}
+            ],
+            [
+                {"text": "⚙️ ENHANCED SETTINGS", "callback_data": "admin_settings"},
+                {"text": "📢 BROADCAST", "callback_data": "menu_admin_broadcast"}
+            ],
+            [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+        ]
+    }
+    
+    text = f"""
 👑 **ENHANCED ADMIN PANEL**
 
 *Advanced System Administration & User Management*
@@ -7294,32 +7314,32 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • 🟠 PO Debugging: `/podebug` (NEW!)
 
 *Select an enhanced option below*"""
-        
-        if message_id:
-            self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-        else:
-            self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    
+    if message_id:
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    else:
+        self.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-    def _show_admin_stats(self, chat_id, message_id):
-        """Show admin statistics"""
-        total_users = len(user_tiers)
-        free_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'free_trial'])
-        basic_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'basic'])
-        pro_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'pro'])
-        active_today = len([uid for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat()])
-        
-        # Calculate total signals today
-        total_signals_today = sum(user_tiers[uid].get('count', 0) for uid in user_tiers 
-                                if user_tiers[uid].get('date') == datetime.now().date().isoformat())
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "👤 MANAGE ENHANCED USERS", "callback_data": "admin_users"}],
-                [{"text": "🔙 ENHANCED ADMIN PANEL", "callback_data": "admin_panel"}]
-            ]
-        }
-        
-        text = f"""
+def _show_admin_stats(self, chat_id, message_id):
+    """Show admin statistics"""
+    total_users = len(user_tiers)
+    free_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'free_trial'])
+    basic_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'basic'])
+    pro_users = len([uid for uid, data in user_tiers.items() if data.get('tier') == 'pro'])
+    active_today = len([uid for uid in user_tiers if user_tiers[uid].get('date') == datetime.now().date().isoformat()])
+    
+    # Calculate total signals today
+    total_signals_today = sum(user_tiers[uid].get('count', 0) for uid in user_tiers 
+                            if user_tiers[uid].get('date') == datetime.now().date().isoformat())
+    
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "👤 MANAGE ENHANCED USERS", "callback_data": "admin_users"}],
+            [{"text": "🔙 ENHANCED ADMIN PANEL", "callback_data": "admin_panel"}]
+        ]
+    }
+    
+    text = f"""
 📊 **ENHANCED ADMIN STATISTICS**
 
 *Complete Enhanced System Overview*
@@ -7367,21 +7387,21 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Safety Protection: ACTIVE 🛡️
 
 *Enhanced system running optimally*"""
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    
+    self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-    def _show_admin_users(self, chat_id, message_id):
-        """Show user management"""
-        total_users = len(user_tiers)
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📊 ENHANCED STATS", "callback_data": "admin_stats"}],
-                [{"text": "🔙 ENHANCED ADMIN PANEL", "callback_data": "admin_panel"}]
-            ]
-        }
-        
-        text = f"""
+def _show_admin_users(self, chat_id, message_id):
+    """Show user management"""
+    total_users = len(user_tiers)
+    
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "📊 ENHANCED STATS", "callback_data": "admin_stats"}],
+            [{"text": "🔙 ENHANCED ADMIN PANEL", "callback_data": "admin_panel"}]
+        ]
+    }
+    
+    text = f"""
 👤 **ENHANCED USER MANAGEMENT**
 
 *Advanced User Administration Tools*
@@ -7426,19 +7446,19 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Track Spike Fade Strategy usage (NEW!)
 
 *Use enhanced database commands for user management*"""
-        
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+    
+    self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-    def _show_admin_settings(self, chat_id, message_id):
-        """Show admin settings"""
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📊 ENHANCED STATS", "callback_data": "admin_stats"}],
-                [{"text": "🔙 ENHANCED ADMIN PANEL", "callback_data": "admin_panel"}]
-            ]
-        }
-        
-        text = f"""
+def _show_admin_settings(self, chat_id, message_id):
+    """Show admin settings"""
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "📊 ENHANCED STATS", "callback_data": "admin_stats"}],
+            [{"text": "🔙 ENHANCED ADMIN PANEL", "callback_data": "admin_panel"}]
+        ]
+    }
+    
+    text = f"""
 ⚙️ **ENHANCED ADMIN SETTINGS**
 
 *Advanced System Configuration*
@@ -7497,286 +7517,322 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Spike Fade Strategy optimization (NEW!)
 
 *Contact enhanced developer for system modifications*"""
+    
+    self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+
+# --- NEW HELPER FUNCTION FOR LOADING MESSAGE (To replace redundant code blocks) ---
+def _show_loading_message(self, chat_id, message_id, asset, expiry):
+    """Show the "Generating signal..." loading message"""
+    platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
+    platform_key = platform.lower().replace(' ', '_')
+    platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
+    
+    loading_text = f"""
+⏳ **GENERATING ENHANCED OTC SIGNAL...**
+
+*Platform: {platform_info['emoji']} {platform_info['name']}*
+*Asset: {asset}*
+*Expiry: {adjust_for_deriv(platform_info['name'], expiry)}*
+
+🤖 **AI Engines Active:**
+• RealSignalVerifier - Market trend analysis
+• QuantMarketEngine - Truth-based scoring
+• PlatformAdaptiveGenerator - Platform optimization
+• AdvancedSignalValidator - Multi-layer validation
+• RiskManagementSystem - Safety checks
+
+📊 **Processing:**
+• Real-time market data from TwelveData
+• Multi-timeframe trend confirmation
+• Volatility assessment
+• Risk scoring
+• Platform-specific optimization
+• Safety verification
+
+*Please wait 3-5 seconds...*"""
+    
+    self.edit_message_text(
+        chat_id, message_id,
+        loading_text, parse_mode="Markdown"
+    )
+
+def _generate_enhanced_otc_signal_v9(self, chat_id, message_id, asset, expiry):
+    """ENHANCED V9: Advanced validation for higher accuracy"""
+    try:
+        # Check user limits using tier system
+        can_signal, message = can_generate_signal(chat_id)
+        if not can_signal:
+            self.edit_message_text(chat_id, message_id, f"❌ **ACCESS DENIED**\n\n{message}", parse_mode="Markdown")
+            return
         
-        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+        # Get user's platform preference
+        platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
+        platform_key = platform.lower().replace(' ', '_')
+        platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
+        
+        # 🚨 CRITICAL FIX: Use safe signal generator with real analysis (for initial safety check)
+        # The *intelligence* comes from the intelligent_generator, but the safety filter is first.
+        safe_signal_check, error = safe_signal_generator.generate_safe_signal(chat_id, asset, expiry, platform_key)
 
-    def _generate_enhanced_otc_signal_v9(self, chat_id, message_id, asset, expiry):
-        """ENHANCED V9: Advanced validation for higher accuracy"""
-        try:
-            # Check user limits using tier system
-            can_signal, message = can_generate_signal(chat_id)
-            if not can_signal:
-                self.edit_message_text(chat_id, message_id, f"❌ {message}", parse_mode="Markdown")
-                return
-            
-            # Get user's platform preference
-            platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
-            platform_key = platform.lower().replace(' ', '_')
-            platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-            
-            # 🚨 CRITICAL FIX: Use safe signal generator with real analysis (for initial safety check)
-            # The *intelligence* comes from the intelligent_generator, but the safety filter is first.
-            safe_signal_check, error = safe_signal_generator.generate_safe_signal(chat_id, asset, expiry, platform_key)
-
-            if error != "OK":
-                self.edit_message_text(
-                    chat_id, message_id,
-                    f"⚠️ **SAFETY SYSTEM ACTIVE**\n\n{error}\n\nWait 60 seconds or try different asset.",
-                    parse_mode="Markdown"
-                )
-                return
-
-            # Get the fully optimized signal from the intelligent generator (which includes platform balancing)
-            direction, confidence = intelligent_generator.generate_intelligent_signal(
-                asset, platform=platform_key
-            )
-            
-            # Get analysis for display
-            analysis = otc_analysis.analyze_otc_signal(asset, platform=platform_key)
-            
-            # --- EXTRACT PARAMETERS FOR AI TREND FILTER ---
-            # 1. Trend Direction: Use the final determined direction if consensus is high, else use RealVerifier's trend.
-            # We approximate the market's current underlying trend direction using RealSignalVerifier.
-            market_trend_direction, trend_confidence = real_verifier.get_real_direction(asset)
-            
-            # 2. Trend Strength: Approximate using a combination of the raw confidence and a random factor
-            trend_strength = min(100, max(0, trend_confidence + deterministic_mid_int(-15, 15)))
-            
-            # 3. Momentum: Approximate momentum based on asset's volatility class and random factor
-            asset_vol_type = OTC_ASSETS.get(asset, {}).get('volatility', 'Medium')
-            vol_map = {'Low': 25, 'Medium': 50, 'High': 75, 'Very High': 90}
-            momentum_base = vol_map.get(asset_vol_type, 50)
-            momentum = min(100, max(0, momentum_base + deterministic_mid_int(-20, 20)))
-            
-            # 4. Volatility Value: Use the output from the Volatility Analyzer
-            _, volatility_value = volatility_analyzer.get_volatility_adjustment(asset, confidence) # returns normalized volatility 0-100
-            
-            # 5. Spike Detected: Simulate this based on PO platform and high volatility/reversal pattern
-            spike_detected = platform_key == 'pocket_option' and (volatility_value > 80 or analysis.get('otc_pattern') == "Spike Reversal Pattern")
-
-            # --- Apply AI Trend Filter before proceeding ---
-            allowed, reason = ai_trend_filter(
-                direction=direction,
-                trend_direction=market_trend_direction,
-                trend_strength=trend_strength,
-                momentum=momentum,
-                volatility=volatility_value,
-                spike_detected=spike_detected
-            )
-            
-            if not allowed:
-                logger.warning(f"❌ Trade Blocked by AI Trend Filter for {asset}: {reason}")
-                self.edit_message_text(
-                    chat_id, message_id,
-                    f"🚫 **TRADE BLOCKED BY AI TREND FILTER**\n\n"
-                    f"**Asset:** {asset}\n"
-                    f"**Reason:** {reason}\n"
-                    f"The market setup is currently too risky or lacks confirmation (Trend Strength: {trend_strength:.0f}% | Momentum: {momentum:.0f} | Volatility: {volatility_value:.1f})\n\n"
-                    f"**Recommendation:** Wait for a cleaner setup or try a different asset.",
-                    parse_mode="Markdown"
-                )
-                # Still decrement signal count if reached this point and passed initial checks
-                return
-            else:
-                logger.info(f"✅ AI Trend Filter Passed for {asset} ({direction} {confidence}%) → {reason}")
-
-            # --- NEW: DERIV EXPIRY ADJUSTMENT (FIX 1) ---
-            final_expiry_display = adjust_for_deriv(platform_info['name'], expiry)
-            # --- END NEW ---
-
-            # --- Continue with Signal Generation ---
-            current_time = datetime.now()
-            analysis_time = current_time.strftime("%H:%M:%S")
-            expected_entry = (current_time + timedelta(seconds=30)).strftime("%H:%M:%S")
-            
-            # Asset-specific enhanced analysis
-            asset_info = OTC_ASSETS.get(asset, {})
-            volatility = asset_info.get('volatility', 'Medium')
-            session = asset_info.get('session', 'Multiple')
-            
-            # Create signal data for risk assessment with safe defaults
-            signal_data_risk = {
-                'asset': asset,
-                'volatility': volatility,
-                'confidence': confidence,
-                'otc_pattern': analysis.get('otc_pattern', 'Standard OTC'),
-                'market_context_used': analysis.get('market_context_used', False),
-                'volume': 'Moderate', # Default value
-                'platform': platform_key # NEW: Include platform for risk scoring adjustment
-            }
-            
-            # Apply smart filters and risk scoring with error handling
-            try:
-                filter_result = risk_system.apply_smart_filters(signal_data_risk)
-                risk_score = risk_system.calculate_risk_score(signal_data_risk)
-                risk_recommendation = risk_system.get_risk_recommendation(risk_score)
-            except Exception as risk_error:
-                logger.error(f"❌ Risk analysis failed, using defaults: {risk_error}")
-                filter_result = {'passed': True, 'score': 4, 'total': 5}
-                risk_score = 75
-                risk_recommendation = "🟡 MEDIUM CONFIDENCE - Good OTC opportunity"
-            
-            # --- NEW: DYNAMIC POSITION SIZING ---
-            # 1. Calculate position size fraction (e.g., 0.02 for 2%)
-            position_fraction = dynamic_position_sizer.calculate_position_size(chat_id, confidence, volatility_value)
-            
-            # 2. Determine investment advice based on position fraction
-            # Assume a baseline account size or risk tolerance to give a dollar amount
-            # Using $10,000 baseline account for illustrative purposes.
-            BASE_ACCOUNT_SIZE = 10000 
-            recommended_investment = BASE_ACCOUNT_SIZE * position_fraction
-            
-            # Ensure investment is within sensible limits for binary options platforms ($1 to $1000)
-            recommended_investment = min(1000, max(5, round(recommended_investment, 2)))
-
-            investment_advice = f"~${recommended_investment} ({position_fraction*100:.1f}% of capital)"
-            # --- END NEW: DYNAMIC POSITION SIZING ---
-
-            # --- NEW: PREDICTIVE EXIT ENGINE ---
-            exit_predictions = predictive_exit_engine.predict_optimal_exits(
-                asset, direction, volatility_value
-            )
-            # --- END NEW: PREDICTIVE EXIT ENGINE ---
-
-            # Enhanced signal reasons based on direction and analysis
-            if direction == "CALL":
-                reasons = [
-                    f"OTC pattern: {analysis.get('otc_pattern', 'Bullish setup')}",
-                    f"Confidence: {confidence}% (OTC optimized)",
-                    f"Market context: {'Available' if analysis.get('market_context_used') else 'Standard OTC'}",
-                    f"Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}",
-                    f"Platform: {platform_info['emoji']} {platform_info['name']} optimized",
-                    "OTC binary options pattern recognition",
-                    "Real technical analysis: SMA + RSI + Price action"
-                ]
-            else:
-                reasons = [
-                    f"OTC pattern: {analysis.get('otc_pattern', 'Bearish setup')}",
-                    f"Confidence: {confidence}% (OTC optimized)", 
-                    f"Market context: {'Available' if analysis.get('market_context_used') else 'Standard OTC'}",
-                    f"Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}",
-                    f"Platform: {platform_info['emoji']} {platform_info['name']} optimized",
-                    "OTC binary options pattern recognition",
-                    "Real technical analysis: SMA + RSI + Price action"
-                ]
-            
-            # Calculate enhanced payout based on volatility and confidence
-            base_payout = 78  # Slightly higher base for OTC
-            if volatility == "Very High":
-                payout_bonus = 12 if confidence > 85 else 8
-            elif volatility == "High":
-                payout_bonus = 8 if confidence > 85 else 4
-            else:
-                payout_bonus = 4 if confidence > 85 else 0
-            
-            payout_range = f"{base_payout + payout_bonus}-{base_payout + payout_bonus + 7}%"
-            
-            # Active enhanced AI engines for this signal
-            core_engines = ["TrendConfirmation AI", "QuantumTrend AI", "NeuralMomentum AI", "PatternRecognition AI"]
-            additional_engines = deterministic_sample([eng for eng in AI_ENGINES.keys() if eng not in core_engines], 4)
-            active_engines = core_engines + additional_engines
-            
-            keyboard = {
-                "inline_keyboard": [
-                    [{"text": "🔄 NEW ENHANCED SIGNAL (SAME)", "callback_data": f"signal_{asset}_{expiry}"}],
-                    [
-                        {"text": "📊 DIFFERENT ASSET", "callback_data": "menu_assets"},
-                        {"text": "⏰ DIFFERENT EXPIRY", "callback_data": f"asset_{asset}"}
-                    ],
-                    [{"text": "📊 PERFORMANCE ANALYTICS", "callback_data": "performance_stats"}],
-                    [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-                ]
-            }
-            
-            # --- NEW: CONSOLIDATED SIGNAL DATA FOR TIER-BASED FORMATTING (CRITICAL FIX) ---
-            # Extract V9 fields directly from the analysis object (which was augmented in _generate_otc_analysis)
-            signal_data = {
-                'asset': asset,
-                'direction': direction,
-                'confidence': confidence,
-                'expiry': expiry,
-                'expiry_display': final_expiry_display,
-                'platform': platform,
-                'trend_summary': analysis.get('trend_summary', 'NEUTRAL'),
-                'volatility_label': analysis.get('volatility_label', 'MEDIUM'),
-                'momentum_level': analysis.get('momentum_level', 'MEDIUM'),
-                'otc_pattern': analysis.get('otc_pattern', 'Standard OTC Pattern'),
-                'strategy': analysis.get('strategy', 'Quantum Trend'),
-                'risk_score': risk_score,
-                'filter_result': filter_result,
-                'risk_recommendation': risk_recommendation,
-                'safe_recommendation': safe_signal_check['recommendation'],
-                'investment_advice': investment_advice,
-                'exit_predictions': exit_predictions,
-                'active_engines': active_engines,
-                'analysis_time': analysis_time,
-                'expected_entry': expected_entry,
-                'market_context_used': analysis.get('market_context_used', False),
-                'platform_info': platform_info,
-                'volatility_raw': volatility,
-                'payout_range': payout_range,
-                'ai_trend_filter_reason': reason
-            }
-            
-            # Get user tier
-            user_tier = get_user_tier(chat_id)
-            
-            # Format message based on tier
-            if user_tier in ['pro', 'admin']:
-                message_text = format_full_signal(signal_data)
-            else:
-                message_text = format_short_signal(signal_data)
-
-            # --- END NEW TIER-BASED FORMATTING ---
-
+        if error != "OK":
             self.edit_message_text(
                 chat_id, message_id,
-                message_text, parse_mode="Markdown", reply_markup=keyboard
+                f"⚠️ **SAFETY SYSTEM ACTIVE**\n\n{error}\n\nWait 60 seconds or try different asset.",
+                parse_mode="Markdown"
             )
-            
-            # --- NEW: CHANNEL BROADCAST LOGIC ---
-            # Decide if this signal should be broadcasted (e.g., only if Pro/Admin generated and confidence > 80)
-            should_broadcast = (user_tier in ['pro', 'admin'] and confidence >= 80) or (user_tier == 'admin' and confidence >= 75)
-            
-            if should_broadcast:
-                broadcast_text = format_broadcast_signal(signal_data)
-                channel_id = os.getenv("TELEGRAM_CHANNEL_ID")
-                if channel_id:
-                    # Replace placeholder username in keyboard with your actual bot username
-                    broadcast_keyboard = get_broadcast_keyboard()
-                    for row in broadcast_keyboard['inline_keyboard']:
-                        for button in row:
-                            if 'url' in button:
-                                button['url'] = button['url'].replace("your_telegram_bot_username", "LekzyDevXBot") # Assuming your bot username is LekzyDevXBot
-                    
-                    self.send_message(
-                        channel_id,
-                        broadcast_text,
-                        parse_mode="Markdown",
-                        reply_markup=broadcast_keyboard
-                    )
-                    logger.info(f"📢 Broadcasted signal for {asset} ({confidence}%) to channel.")
-            # --- END NEW CHANNEL BROADCAST LOGIC ---
-            
-            # Record this trade for performance analytics
-            trade_data = {
-                'asset': asset,
-                'direction': direction,
-                'expiry': final_expiry_display, # Use display version for recording
-                'confidence': confidence,
-                'risk_score': risk_score,
-                'outcome': 'pending',
-                'otc_pattern': analysis.get('otc_pattern'),
-                'market_context': analysis.get('market_context_used', False),
-                'platform': platform_key,
-                'strategy': signal_data['strategy']
-            }
-            performance_analytics.update_trade_history(chat_id, trade_data)
-            
-        except Exception as e:
-            logger.error(f"❌ Enhanced OTC signal generation error: {e}")
-            # More detailed error message
-            error_details = f"""
+            return
+
+        # Get the fully optimized signal from the intelligent generator (which includes platform balancing)
+        direction, confidence = intelligent_generator.generate_intelligent_signal(
+            asset, platform=platform_key
+        )
+        
+        # Get analysis for display
+        analysis = otc_analysis.analyze_otc_signal(asset, platform=platform_key)
+        
+        # --- EXTRACT PARAMETERS FOR AI TREND FILTER ---
+        # 1. Trend Direction: Use the final determined direction if consensus is high, else use RealVerifier's trend.
+        # We approximate the market's current underlying trend direction using RealSignalVerifier.
+        market_trend_direction, trend_confidence = real_verifier.get_real_direction(asset)
+        
+        # 2. Trend Strength: Approximate using a combination of the raw confidence and a random factor
+        trend_strength = min(100, max(0, trend_confidence + deterministic_mid_int(-15, 15)))
+        
+        # 3. Momentum: Approximate momentum based on asset's volatility class and random factor
+        asset_vol_type = OTC_ASSETS.get(asset, {}).get('volatility', 'Medium')
+        vol_map = {'Low': 25, 'Medium': 50, 'High': 75, 'Very High': 90}
+        momentum_base = vol_map.get(asset_vol_type, 50)
+        momentum = min(100, max(0, momentum_base + deterministic_mid_int(-20, 20)))
+        
+        # 4. Volatility Value: Use the output from the Volatility Analyzer
+        _, volatility_value = volatility_analyzer.get_volatility_adjustment(asset, confidence) # returns normalized volatility 0-100
+        
+        # 5. Spike Detected: Simulate this based on PO platform and high volatility/reversal pattern
+        spike_detected = platform_key == 'pocket_option' and (volatility_value > 80 or analysis.get('otc_pattern') == "Spike Reversal Pattern")
+
+        # --- Apply AI Trend Filter before proceeding ---
+        allowed, reason = ai_trend_filter(
+            direction=direction,
+            trend_direction=market_trend_direction,
+            trend_strength=trend_strength,
+            momentum=momentum,
+            volatility=volatility_value,
+            spike_detected=spike_detected
+        )
+        
+        if not allowed:
+            logger.warning(f"❌ Trade Blocked by AI Trend Filter for {asset}: {reason}")
+            self.edit_message_text(
+                chat_id, message_id,
+                f"🚫 **TRADE BLOCKED BY AI TREND FILTER**\n\n"
+                f"**Asset:** {asset}\n"
+                f"**Reason:** {reason}\n"
+                f"The market setup is currently too risky or lacks confirmation (Trend Strength: {trend_strength:.0f}% | Momentum: {momentum:.0f} | Volatility: {volatility_value:.1f})\n\n"
+                f"**Recommendation:** Wait for a cleaner setup or try a different asset.",
+                parse_mode="Markdown"
+            )
+            # Still decrement signal count if reached this point and passed initial checks
+            return
+        else:
+            logger.info(f"✅ AI Trend Filter Passed for {asset} ({direction} {confidence}%) → {reason}")
+
+        # --- NEW: DERIV EXPIRY ADJUSTMENT (FIX 1) ---
+        final_expiry_display = adjust_for_deriv(platform_info['name'], expiry)
+        # --- END NEW ---
+
+        # --- Continue with Signal Generation ---
+        current_time = datetime.now()
+        analysis_time = current_time.strftime("%H:%M:%S")
+        expected_entry = (current_time + timedelta(seconds=30)).strftime("%H:%M:%S")
+        
+        # Asset-specific enhanced analysis
+        asset_info = OTC_ASSETS.get(asset, {})
+        volatility = asset_info.get('volatility', 'Medium')
+        session = asset_info.get('session', 'Multiple')
+        
+        # Create signal data for risk assessment with safe defaults
+        signal_data_risk = {
+            'asset': asset,
+            'volatility': volatility,
+            'confidence': confidence,
+            'otc_pattern': analysis.get('otc_pattern', 'Standard OTC'),
+            'market_context_used': analysis.get('market_context_used', False),
+            'volume': 'Moderate', # Default value
+            'platform': platform_key # NEW: Include platform for risk scoring adjustment
+        }
+        
+        # Apply smart filters and risk scoring with error handling
+        try:
+            filter_result = risk_system.apply_smart_filters(signal_data_risk)
+            risk_score = risk_system.calculate_risk_score(signal_data_risk)
+            risk_recommendation = risk_system.get_risk_recommendation(risk_score)
+        except Exception as risk_error:
+            logger.error(f"❌ Risk analysis failed, using defaults: {risk_error}")
+            filter_result = {'passed': True, 'score': 4, 'total': 5}
+            risk_score = 75
+            risk_recommendation = "🟡 MEDIUM CONFIDENCE - Good OTC opportunity"
+        
+        # --- NEW: DYNAMIC POSITION SIZING ---
+        # 1. Calculate position size fraction (e.g., 0.02 for 2%)
+        position_fraction = dynamic_position_sizer.calculate_position_size(chat_id, confidence, volatility_value)
+        
+        # 2. Determine investment advice based on position fraction
+        # Assume a baseline account size or risk tolerance to give a dollar amount
+        # Using $10,000 baseline account for illustrative purposes.
+        BASE_ACCOUNT_SIZE = 10000 
+        recommended_investment = BASE_ACCOUNT_SIZE * position_fraction
+        
+        # Ensure investment is within sensible limits for binary options platforms ($1 to $1000)
+        recommended_investment = min(1000, max(5, round(recommended_investment, 2)))
+
+        investment_advice = f"~${recommended_investment} ({position_fraction*100:.1f}% of capital)"
+        # --- END NEW: DYNAMIC POSITION SIZING ---
+
+        # --- NEW: PREDICTIVE EXIT ENGINE ---
+        exit_predictions = predictive_exit_engine.predict_optimal_exits(
+            asset, direction, volatility_value
+        )
+        # --- END NEW: PREDICTIVE EXIT ENGINE ---
+
+        # Enhanced signal reasons based on direction and analysis
+        if direction == "CALL":
+            reasons = [
+                f"OTC pattern: {analysis.get('otc_pattern', 'Bullish setup')}",
+                f"Confidence: {confidence}% (OTC optimized)",
+                f"Market context: {'Available' if analysis.get('market_context_used') else 'Standard OTC'}",
+                f"Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}",
+                f"Platform: {platform_info['emoji']} {platform_info['name']} optimized",
+                "OTC binary options pattern recognition",
+                "Real technical analysis: SMA + RSI + Price action"
+            ]
+        else:
+            reasons = [
+                f"OTC pattern: {analysis.get('otc_pattern', 'Bearish setup')}",
+                f"Confidence: {confidence}% (OTC optimized)", 
+                f"Market context: {'Available' if analysis.get('market_context_used') else 'Standard OTC'}",
+                f"Strategy: {analysis.get('strategy', 'AI Trend Confirmation')}",
+                f"Platform: {platform_info['emoji']} {platform_info['name']} optimized",
+                "OTC binary options pattern recognition",
+                "Real technical analysis: SMA + RSI + Price action"
+            ]
+        
+        # Calculate enhanced payout based on volatility and confidence
+        base_payout = 78  # Slightly higher base for OTC
+        if volatility == "Very High":
+            payout_bonus = 12 if confidence > 85 else 8
+        elif volatility == "High":
+            payout_bonus = 8 if confidence > 85 else 4
+        else:
+            payout_bonus = 4 if confidence > 85 else 0
+        
+        payout_range = f"{base_payout + payout_bonus}-{base_payout + payout_bonus + 7}%"
+        
+        # Active enhanced AI engines for this signal
+        core_engines = ["TrendConfirmation AI", "QuantumTrend AI", "NeuralMomentum AI", "PatternRecognition AI"]
+        additional_engines = deterministic_sample([eng for eng in AI_ENGINES.keys() if eng not in core_engines], 4)
+        active_engines = core_engines + additional_engines
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "🔄 NEW ENHANCED SIGNAL (SAME)", "callback_data": f"signal_{asset}_{expiry}"}],
+                [
+                    {"text": "📊 DIFFERENT ASSET", "callback_data": "menu_assets"},
+                    {"text": "⏰ DIFFERENT EXPIRY", "callback_data": f"asset_{asset}"}
+                ],
+                [{"text": "📊 PERFORMANCE ANALYTICS", "callback_data": "performance_stats"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        # --- NEW: CONSOLIDATED SIGNAL DATA FOR TIER-BASED FORMATTING (CRITICAL FIX) ---
+        # Extract V9 fields directly from the analysis object (which was augmented in _generate_otc_analysis)
+        signal_data = {
+            'asset': asset,
+            'direction': direction,
+            'confidence': confidence,
+            'expiry': expiry,
+            'expiry_display': final_expiry_display,
+            'platform': platform,
+            'trend_summary': analysis.get('trend_summary', 'NEUTRAL'),
+            'volatility_label': analysis.get('volatility_label', 'MEDIUM'),
+            'momentum_level': analysis.get('momentum_level', 'MEDIUM'),
+            'otc_pattern': analysis.get('otc_pattern', 'Standard OTC Pattern'),
+            'strategy': analysis.get('strategy', 'Quantum Trend'),
+            'risk_score': risk_score,
+            'filter_result': filter_result,
+            'risk_recommendation': risk_recommendation,
+            'safe_recommendation': safe_signal_check['recommendation'],
+            'investment_advice': investment_advice,
+            'exit_predictions': exit_predictions,
+            'active_engines': active_engines,
+            'analysis_time': analysis_time,
+            'expected_entry': expected_entry,
+            'market_context_used': analysis.get('market_context_used', False),
+            'platform_info': platform_info,
+            'volatility_raw': volatility,
+            'payout_range': payout_range,
+            'ai_trend_filter_reason': reason
+        }
+        
+        # Get user tier
+        user_tier = get_user_tier(chat_id)
+        
+        # Format message based on tier
+        if user_tier in ['pro', 'admin']:
+            message_text = format_full_signal(signal_data)
+        else:
+            message_text = format_short_signal(signal_data)
+
+        # --- END NEW TIER-BASED FORMATTING ---
+
+        self.edit_message_text(
+            chat_id, message_id,
+            message_text, parse_mode="Markdown", reply_markup=keyboard
+        )
+        
+        # --- NEW: CHANNEL BROADCAST LOGIC ---
+        # Decide if this signal should be broadcasted (e.g., only if Pro/Admin generated and confidence > 80)
+        should_broadcast = (user_tier in ['pro', 'admin'] and confidence >= 80) or (user_tier == 'admin' and confidence >= 75)
+        
+        if should_broadcast:
+            broadcast_text = format_broadcast_signal(signal_data)
+            channel_id = os.getenv("TELEGRAM_CHANNEL_ID")
+            if channel_id:
+                # Replace placeholder username in keyboard with your actual bot username
+                broadcast_keyboard = get_broadcast_keyboard()
+                for row in broadcast_keyboard['inline_keyboard']:
+                    for button in row:
+                        if 'url' in button:
+                            button['url'] = button['url'].replace("your_telegram_bot_username", "LekzyDevXBot") # Assuming your bot username is LekzyDevXBot
+                
+                self.send_message(
+                    channel_id,
+                    broadcast_text,
+                    parse_mode="Markdown",
+                    reply_markup=broadcast_keyboard
+                )
+                logger.info(f"📢 Broadcasted signal for {asset} ({confidence}%) to channel.")
+        # --- END NEW CHANNEL BROADCAST LOGIC ---
+        
+        # Record this trade for performance analytics
+        trade_data = {
+            'asset': asset,
+            'direction': direction,
+            'expiry': final_expiry_display, # Use display version for recording
+            'confidence': confidence,
+            'risk_score': risk_score,
+            'outcome': 'pending',
+            'otc_pattern': analysis.get('otc_pattern'),
+            'market_context': analysis.get('market_context_used', False),
+            'platform': platform_key,
+            'strategy': signal_data['strategy']
+        }
+        performance_analytics.update_trade_history(chat_id, trade_data)
+        
+    except Exception as e:
+        logger.error(f"❌ Enhanced OTC signal generation error: {e}")
+        # More detailed error message
+        error_details = f"""
 ❌ **SIGNAL GENERATION ERROR**
 
 We encountered an issue generating your signal. This is usually temporary.
@@ -7795,25 +7851,25 @@ We encountered an issue generating your signal. This is usually temporary.
 {str(e)}
 
 *Please try again or contact support if the issue persists*"""
-            
-            self.edit_message_text(
-                chat_id, message_id,
-                error_details, parse_mode="Markdown"
-            )
+        
+        self.edit_message_text(
+            chat_id, message_id,
+            error_details, parse_mode="Markdown"
+        )
 
-    def _handle_auto_detect(self, chat_id, message_id, asset):
-        """NEW: Handle auto expiry detection"""
-        try:
-            platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
-            
-            # Get optimal expiry recommendation (now platform-aware)
-            base_expiry, reason, market_conditions, final_expiry_display = auto_expiry_detector.get_expiry_recommendation(asset, platform)
-            
-            # Enable auto mode for this user
-            self.auto_mode[chat_id] = True
-            
-            # Show analysis results
-            analysis_text = f"""
+def _handle_auto_detect(self, chat_id, message_id, asset):
+    """NEW: Handle auto expiry detection"""
+    try:
+        platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
+        
+        # Get optimal expiry recommendation (now platform-aware)
+        base_expiry, reason, market_conditions, final_expiry_display = auto_expiry_detector.get_expiry_recommendation(asset, platform)
+        
+        # Enable auto mode for this user
+        self.auto_mode[chat_id] = True
+        
+        # Show analysis results
+        analysis_text = f"""
 🔄 **AUTO EXPIRY DETECTION ANALYSIS**
 
 *Analyzing {asset} market conditions for {platform.upper()}...*
@@ -7830,259 +7886,246 @@ We encountered an issue generating your signal. This is usually temporary.
 💡 **REASON:** {reason}
 
 *Auto-selecting optimal expiry...*"""
+        
+        self.edit_message_text(
+            chat_id, message_id,
+            analysis_text, parse_mode="Markdown"
+        )
+        
+        # Wait a moment then auto-select the expiry
+        time.sleep(2)
+        # Use the base expiry for the generation function
+        self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, base_expiry) 
+        
+    except Exception as e:
+        logger.error(f"❌ Auto detect error: {e}")
+        self.edit_message_text(
+            chat_id, message_id,
+            "❌ **AUTO DETECTION ERROR**\n\nPlease try manual mode or contact support.",
+            parse_mode="Markdown"
+        )
+
+def _handle_button_click(self, chat_id, message_id, data, callback_query=None):
+    """Handle button clicks - UPDATED WITH PLATFORM SELECTION"""
+    try:
+        logger.info(f"🔄 Button clicked: {data}")
+        
+        if data == "disclaimer_accepted":
+            self._show_main_menu(chat_id, message_id)
             
+        elif data == "disclaimer_declined":
             self.edit_message_text(
                 chat_id, message_id,
-                analysis_text, parse_mode="Markdown"
-            )
-            
-            # Wait a moment then auto-select the expiry
-            time.sleep(2)
-            # Use the base expiry for the generation function
-            self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, base_expiry) 
-            
-        except Exception as e:
-            logger.error(f"❌ Auto detect error: {e}")
-            self.edit_message_text(
-                chat_id, message_id,
-                "❌ **AUTO DETECTION ERROR**\n\nPlease try manual mode or contact support.",
+                "❌ **DISCLAIMER DECLINED**\n\nYou must accept risks for OTC trading.\nUse /start to try again.",
                 parse_mode="Markdown"
             )
+            
+        elif data == "menu_main":
+            self._show_main_menu(chat_id, message_id)
+            
+        elif data == "menu_signals":
+            self._show_platform_selection(chat_id, message_id)
+        
+        elif data == "signal_menu_start":
+            self._show_signals_menu(chat_id, message_id)
+        
+        elif data == "menu_signals_platform_change":
+             self._show_platform_selection(chat_id, message_id)
+            
+        elif data == "menu_assets":
+            self._show_assets_menu(chat_id, message_id)
+            
+        elif data == "menu_strategies":
+            self._show_strategies_menu(chat_id, message_id)
+            
+        elif data == "menu_aiengines":
+            self._show_ai_engines_menu(chat_id, message_id)
+            
+        elif data == "menu_account":
+            self._show_account_dashboard(chat_id, message_id)
+            
+        # ADD EDUCATION MENU HANDLER
+        elif data == "menu_education":
+            self._show_education_menu(chat_id, message_id)
+            
+        elif data == "menu_sessions":
+            self._show_sessions_dashboard(chat_id, message_id)
+            
+        elif data == "menu_limits":
+            self._show_limits_dashboard(chat_id, message_id)
 
-    def _handle_button_click(self, chat_id, message_id, data, callback_query=None):
-        """Handle button clicks - UPDATED WITH PLATFORM SELECTION"""
+        # NEW FEATURE HANDLERS
+        elif data == "performance_stats":
+            self._handle_performance(chat_id, message_id)
+            
+        elif data == "menu_backtest":
+            self._handle_backtest(chat_id, message_id)
+            
+        elif data == "menu_risk":
+            self._show_risk_analysis(chat_id, message_id)
+
+        # NEW PLATFORM SELECTION HANDLERS
+        elif data.startswith("platform_"):
+            platform = data.replace("platform_", "")
+            # Store user's platform preference
+            if chat_id not in self.user_sessions:
+                self.user_sessions[chat_id] = {}
+            self.user_sessions[chat_id]["platform"] = platform
+            logger.info(f"🎮 User {chat_id} selected platform: {platform}")
+            self._show_platform_selection(chat_id, message_id) # Show selection again with checkmark
+
+        # MANUAL UPGRADE HANDLERS
+        elif data == "account_upgrade":
+            self._show_upgrade_options(chat_id, message_id)
+            
+        elif data == "upgrade_basic":
+            self._handle_upgrade_flow(chat_id, message_id, "basic")
+            
+        elif data == "upgrade_pro":
+            self._handle_upgrade_flow(chat_id, message_id, "pro")
+
+        # STRATEGY DETAIL HANDLERS
+        elif data.startswith("strategy_"):
+            strategy_key = data.replace("strategy_", "")
+            strategy_name = strategy_key.replace("_", " ")
+            self._show_strategy_detail(chat_id, message_id, strategy_name)
+
+        # BACKTEST HANDLERS
+        elif data.startswith("backtest_"):
+            strategy = data.replace("backtest_", "")
+            self._show_backtest_results(chat_id, message_id, strategy)
+
+        # ASSET SELECTION HANDLER (show expiry menu)
+        elif data.startswith("asset_"):
+            asset = data.replace("asset_", "")
+            self._show_asset_expiry(chat_id, message_id, asset)
+            
+        # EXPIRY SELECTED / MANUAL MODE (Generate signal)
+        elif data.startswith("expiry_"):
+            parts = data.replace("expiry_", "").split("_")
+            if len(parts) >= 2:
+                asset = parts[0]
+                expiry = parts[1]
+                # Show loading before generating signal
+                self._show_loading_message(chat_id, message_id, asset, expiry)
+                self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, expiry)
+                
+        # QUICK SIGNAL / REFRESH SIGNAL (Generate signal)
+        elif data.startswith("signal_"):
+            parts = data.replace("signal_", "").split("_")
+            if len(parts) >= 2:
+                asset = parts[0]
+                expiry = parts[1]
+                # Show loading before generating signal
+                self._show_loading_message(chat_id, message_id, asset, expiry)
+                self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, expiry)
+                
+        # AUTO DETECT HANDLERS
+        elif data.startswith("auto_detect_"):
+            asset = data.replace("auto_detect_", "")
+            self._handle_auto_detect(chat_id, message_id, asset)
+            
+        elif data.startswith("manual_mode_"):
+            asset = data.replace("manual_mode_", "")
+            self.auto_mode[chat_id] = False
+            self._show_asset_expiry(chat_id, message_id, asset)
+                
+        # AI ENGINE DETAIL HANDLERS
+        elif data.startswith("aiengine_"):
+            engine = data.replace("aiengine_", "")
+            self._show_ai_engine_detail(chat_id, message_id, engine)
+
+        # EDUCATION HANDLERS
+        elif data == "edu_basics":
+            self._show_edu_basics(chat_id, message_id)
+        elif data == "edu_risk":
+            self._show_edu_risk(chat_id, message_id)
+        elif data == "edu_bot_usage":
+            self._show_edu_bot_usage(chat_id, message_id)
+        elif data == "edu_technical":
+            self._show_edu_technical(chat_id, message_id)
+        elif data == "edu_psychology":
+            self._show_edu_psychology(chat_id, message_id)
+            
+        # ACCOUNT HANDLERS
+        elif data == "account_limits":
+            self._show_limits_dashboard(chat_id, message_id)
+        elif data == "account_stats":
+            self._show_account_stats(chat_id, message_id)
+        elif data == "account_features":
+            self._show_account_features(chat_id, message_id)
+        elif data == "account_settings":
+            self._show_account_settings(chat_id, message_id)
+            
+        # SESSIONS HANDLERS
+        elif data == "session_asian":
+            self._show_session_detail(chat_id, message_id, "asian")
+        elif data == "session_london":
+            self._show_session_detail(chat_id, message_id, "london")
+        elif data == "session_new_york":
+            self._show_session_detail(chat_id, message_id, "new_york")
+        elif data == "session_overlap":
+            self._show_session_detail(chat_id, message_id, "overlap")
+            
+        # ADMIN & CONTACT HANDLERS
+        elif data == "contact_admin":
+            self._handle_contact_admin(chat_id, message_id)
+        elif data == "admin_panel":
+            self._handle_admin_panel(chat_id, message_id)
+        elif data == "admin_stats":
+            self._show_admin_stats(chat_id, message_id)
+        elif data == "admin_users":
+            self._show_admin_users(chat_id, message_id)
+        elif data == "admin_settings":
+            self._show_admin_settings(chat_id, message_id)
+        elif data == "menu_admin_broadcast":
+            # Admin broadcast shortcut: use the /broadcast command logic
+            self._handle_admin_broadcast(chat_id, "/broadcast stats")
+        
+        # DEFAULT CATCH
+        else:
+            self.edit_message_text(
+                chat_id, message_id,
+                "🔄 **ENHANCED FEATURE ACTIVE**\n\nSelect an option from the menu above.",
+                parse_mode="Markdown"
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ Button handler error: {e}")
         try:
-            logger.info(f"🔄 Button clicked: {data}")
-            
-            if data == "disclaimer_accepted":
-                self._show_main_menu(chat_id, message_id)
-                
-            elif data == "disclaimer_declined":
-                self.edit_message_text(
-                    chat_id, message_id,
-                    "❌ **DISCLAIMER DECLINED**\n\nYou must accept risks for OTC trading.\nUse /start to try again.",
-                    parse_mode="Markdown"
-                )
-                
-            elif data == "menu_main":
-                self._show_main_menu(chat_id, message_id)
-                
-            elif data == "menu_signals":
-                self._show_platform_selection(chat_id, message_id)
-            
-            elif data == "signal_menu_start":
-                self._show_signals_menu(chat_id, message_id)
-            
-            elif data == "menu_signals_platform_change":
-                 self._show_platform_selection(chat_id, message_id)
-                
-            elif data == "menu_assets":
-                self._show_assets_menu(chat_id, message_id)
-                
-            elif data == "menu_strategies":
-                self._show_strategies_menu(chat_id, message_id)
-                
-            elif data == "menu_aiengines":
-                self._show_ai_engines_menu(chat_id, message_id)
-                
-            elif data == "menu_account":
-                self._show_account_dashboard(chat_id, message_id)
-                
-            # ADD EDUCATION MENU HANDLER
-            elif data == "menu_education":
-                self._show_education_menu(chat_id, message_id)
-                
-            elif data == "menu_sessions":
-                self._show_sessions_dashboard(chat_id, message_id)
-                
-            elif data == "menu_limits":
-                self._show_limits_dashboard(chat_id, message_id)
+            self.edit_message_text(
+                chat_id, message_id,
+                "❌ **SYSTEM ERROR**\n\nPlease use /start to restart.",
+                parse_mode="Markdown"
+            )
+        except:
+            pass
 
-            # NEW FEATURE HANDLERS
-            elif data == "performance_stats":
-                self._handle_performance(chat_id, message_id)
-                
-            elif data == "menu_backtest":
-                self._handle_backtest(chat_id, message_id)
-                
-            elif data == "menu_risk":
-                self._show_risk_analysis(chat_id, message_id)
-
-            # NEW PLATFORM SELECTION HANDLERS
-            elif data.startswith("platform_"):
-                platform = data.replace("platform_", "")
-                # Store user's platform preference
-                if chat_id not in self.user_sessions:
-                    self.user_sessions[chat_id] = {}
-                self.user_sessions[chat_id]["platform"] = platform
-                logger.info(f"🎮 User {chat_id} selected platform: {platform}")
-                self._show_platform_selection(chat_id, message_id) # Show selection again with checkmark
-
-            # MANUAL UPGRADE HANDLERS
-            elif data == "account_upgrade":
-                self._show_upgrade_options(chat_id, message_id)
-                
-            elif data == "upgrade_basic":
-                self._handle_upgrade_flow(chat_id, message_id, "basic")
-                
-            elif data == "upgrade_pro":
-                self._handle_upgrade_flow(chat_id, message_id, "pro")
-
-            # NEW STRATEGY HANDLERS
-            elif data == "strategy_30s_scalping":
-                self._show_strategy_detail(chat_id, message_id, "30s_scalping")
-            elif data == "strategy_2min_trend":
-                self._show_strategy_detail(chat_id, message_id, "2min_trend")
-            elif data == "strategy_support_resistance":
-                self._show_strategy_detail(chat_id, message_id, "support_resistance")
-            elif data == "strategy_price_action":
-                self._show_strategy_detail(chat_id, message_id, "price_action")
-            elif data == "strategy_ma_crossovers":
-                self._show_strategy_detail(chat_id, message_id, "ma_crossovers")
-            elif data == "strategy_ai_momentum":
-                self._show_strategy_detail(chat_id, message_id, "ai_momentum")
-            elif data == "strategy_quantum_ai":
-                self._show_strategy_detail(chat_id, message_id, "quantum_ai")
-            elif data == "strategy_ai_consensus":
-                self._show_strategy_detail(chat_id, message_id, "ai_consensus")
-            elif data == "strategy_ai_trend_confirmation":
-                self._show_strategy_detail(chat_id, message_id, "ai_trend_confirmation")
-            elif data == "strategy_spike_fade": # NEW SPIKE FADE HANDLER
-                self._show_strategy_detail(chat_id, message_id, "spike_fade")
-            elif data == "strategy_ai_trend_filter_breakout": # NEW AI TREND FILTER + BREAKOUT HANDLER
-                self._show_strategy_detail(chat_id, message_id, "ai_trend_filter_breakout")
-
-            # NEW AUTO DETECT HANDLERS
-            elif data.startswith("auto_detect_"):
-                asset = data.replace("auto_detect_", "")
-                self._handle_auto_detect(chat_id, message_id, asset)
-                
-            elif data.startswith("manual_mode_"):
-                asset = data.replace("manual_mode_", "")
-                self.auto_mode[chat_id] = False
-                self._show_asset_expiry(chat_id, message_id, asset)
-                
-            elif data.startswith("backtest_"):
-                strategy = data.replace("backtest_", "")
-                self._show_backtest_results(chat_id, message_id, strategy)
-                
-            elif data.startswith("asset_"):
-                asset = data.replace("asset_", "")
-                self._show_asset_expiry(chat_id, message_id, asset)
-                
-            elif data.startswith("expiry_"):
-                parts = data.split("_")
-                if len(parts) >= 3:
-                    asset = parts[1]
-                    expiry = parts[2]
-                    self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, expiry)
-                    
-            elif data.startswith("signal_"):
-                parts = data.split("_")
-                if len(parts) >= 3:
-                    asset = parts[1]
-                    expiry = parts[2]
-                    self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, expiry)
-                    
-            elif data.startswith("strategy_"):
-                strategy = data.replace("strategy_", "")
-                self._show_strategy_detail(chat_id, message_id, strategy)
-
-            # NEW AI MOMENTUM BREAKOUT STRATEGY
-            elif data == "strategy_ai_momentum_breakout":
-                self._show_strategy_detail(chat_id, message_id, "ai_momentum_breakout")
-                
-            elif data.startswith("aiengine_"):
-                engine = data.replace("aiengine_", "")
-                self._show_ai_engine_detail(chat_id, message_id, engine)
-
-            # EDUCATION HANDLERS
-            elif data == "edu_basics":
-                self._show_edu_basics(chat_id, message_id)
-            elif data == "edu_risk":
-                self._show_edu_risk(chat_id, message_id)
-            elif data == "edu_bot_usage":
-                self._show_edu_bot_usage(chat_id, message_id)
-            elif data == "edu_technical":
-                self._show_edu_technical(chat_id, message_id)
-            elif data == "edu_psychology":
-                self._show_edu_psychology(chat_id, message_id)
-                
-            # ACCOUNT HANDLERS
-            elif data == "account_limits":
-                self._show_limits_dashboard(chat_id, message_id)
-            elif data == "account_stats":
-                self._show_account_stats(chat_id, message_id)
-            elif data == "account_features":
-                self._show_account_features(chat_id, message_id)
-            elif data == "account_settings":
-                self._show_account_settings(chat_id, message_id)
-                
-            # SESSIONS HANDLERS
-            elif data == "session_asian":
-                self._show_session_detail(chat_id, message_id, "asian")
-            elif data == "session_london":
-                self._show_session_detail(chat_id, message_id, "london")
-            elif data == "session_new_york":
-                self._show_session_detail(chat_id, message_id, "new_york")
-            elif data == "session_overlap":
-                self._show_session_detail(chat_id, message_id, "overlap")
-                
-            # ADMIN & CONTACT HANDLERS
-            elif data == "contact_admin":
-                self._handle_contact_admin(chat_id, message_id)
-            elif data == "admin_panel":
-                self._handle_admin_panel(chat_id, message_id)
-            elif data == "admin_stats":
-                self._show_admin_stats(chat_id, message_id)
-            elif data == "admin_users":
-                self._show_admin_users(chat_id, message_id)
-            elif data == "admin_settings":
-                self._show_admin_settings(chat_id, message_id)
-                
-            else:
-                self.edit_message_text(
-                    chat_id, message_id,
-                    "🔄 **ENHANCED FEATURE ACTIVE**\n\nSelect an option from the menu above.",
-                    parse_mode="Markdown"
-                )
-                
-        except Exception as e:
-            logger.error(f"❌ Button handler error: {e}")
-            try:
-                self.edit_message_text(
-                    chat_id, message_id,
-                    "❌ **SYSTEM ERROR**\n\nPlease use /start to restart.",
-                    parse_mode="Markdown"
-                )
-            except:
-                pass
-
-    def _show_backtest_results(self, chat_id, message_id, strategy):
-        """NEW: Show backtesting results"""
-        try:
-            # Get backtest results for a random asset
-            asset = deterministic_choice(list(OTC_ASSETS.keys()))
-            results = backtesting_engine.backtest_strategy(strategy, asset)
-            
-            # Determine performance rating
-            if results['win_rate'] >= 80:
-                rating = "💎 EXCELLENT"
-            elif results['win_rate'] >= 70:
-                rating = "🎯 VERY GOOD"
-            else:
-                rating = "⚡ GOOD"
-            
-            # Special message for AI Trend Confirmation
-            strategy_note = ""
-            if "trend_confirmation" in strategy.lower():
-                strategy_note = "\n\n**🤖 AI Trend Confirmation Benefits:**\n• Multiple timeframe confirmation reduces false signals\n• Only enters when all timeframes align\n• Higher accuracy through systematic approach\n• Perfect for conservative traders seeking consistency"
-            elif "spike_fade" in strategy.lower():
-                strategy_note = "\n\n**⚡ Spike Fade Strategy Benefits:**\n• Exploits broker-specific mean reversion on spikes (Pocket Option Specialist)\n• Requires quick, decisive execution on ultra-short expiries (30s-1min)\n• High risk, high reward when conditions are met."
-            elif "filter_breakout" in strategy.lower():
-                strategy_note = "\n\n**🎯 AI Trend Filter + Breakout Benefits:**\n• AI direction removes bias; trader chooses structural entry\n• Perfect blend of technology and human skill\n• High accuracy when breakout rules are strictly followed."
-            
-            text = f"""
+def _show_backtest_results(self, chat_id, message_id, strategy):
+    """NEW: Show backtesting results"""
+    try:
+        # Get backtest results for a random asset
+        asset = deterministic_choice(list(OTC_ASSETS.keys()))
+        results = backtesting_engine.backtest_strategy(strategy, asset)
+        
+        # Determine performance rating
+        if results['win_rate'] >= 80:
+            rating = "💎 EXCELLENT"
+        elif results['win_rate'] >= 70:
+            rating = "🎯 VERY GOOD"
+        else:
+            rating = "⚡ GOOD"
+        
+        # Special message for AI Trend Confirmation
+        strategy_note = ""
+        if "trend_confirmation" in strategy.lower():
+            strategy_note = "\n\n**🤖 AI Trend Confirmation Benefits:**\n• Multiple timeframe confirmation reduces false signals\n• Only enters when all timeframes align\n• Higher accuracy through systematic approach\n• Perfect for conservative traders seeking consistency"
+        elif "spike_fade" in strategy.lower():
+            strategy_note = "\n\n**⚡ Spike Fade Strategy Benefits:**\n• Exploits broker-specific mean reversion on spikes (Pocket Option Specialist)\n• Requires quick, decisive execution on ultra-short expiries (30s-1min)\n• High risk, high reward when conditions are met."
+        elif "filter_breakout" in strategy.lower():
+            strategy_note = "\n\n**🎯 AI Trend Filter + Breakout Benefits:**\n• AI direction removes bias; trader chooses structural entry\n• Perfect blend of technology and human skill\n• High accuracy when breakout rules are strictly followed."
+        
+        text = f"""
 📊 **BACKTEST RESULTS: {strategy.replace('_', ' ').title()}**
 
 **Strategy Performance on {asset}:**
@@ -8105,31 +8148,31 @@ This strategy shows **{'strong' if results['win_rate'] >= 75 else 'moderate'}** 
 on {asset}. Consider using it during optimal market conditions.
 
 *Backtest period: {results['period']} | Asset: {results['asset']}*"""
-            
-            keyboard = {
-                "inline_keyboard": [
-                    [
-                        {"text": "🔄 TEST ANOTHER STRATEGY", "callback_data": "menu_backtest"},
-                        {"text": "🎯 USE THIS STRATEGY", "callback_data": "menu_signals"}
-                    ],
-                    [{"text": "📊 PERFORMANCE ANALYTICS", "callback_data": "performance_stats"}],
-                    [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-                ]
-            }
-            
-            self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-            
-        except Exception as e:
-            logger.error(f"❌ Backtest results error: {e}")
-            self.edit_message_text(chat_id, message_id, "❌ Error generating backtest results. Please try again.", parse_mode="Markdown")
+        
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "🔄 TEST ANOTHER STRATEGY", "callback_data": "menu_backtest"},
+                    {"text": "🎯 USE THIS STRATEGY", "callback_data": "menu_signals"}
+                ],
+                [{"text": "📊 PERFORMANCE ANALYTICS", "callback_data": "performance_stats"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+        
+    except Exception as e:
+        logger.error(f"❌ Backtest results error: {e}")
+        self.edit_message_text(chat_id, message_id, "❌ Error generating backtest results. Please try again.", parse_mode="Markdown")
 
-    def _show_risk_analysis(self, chat_id, message_id):
-        """NEW: Show risk analysis dashboard"""
-        try:
-            current_hour = datetime.utcnow().hour
-            optimal_time = risk_system.is_optimal_otc_session_time()
-            
-            text = f"""
+def _show_risk_analysis(self, chat_id, message_id):
+    """NEW: Show risk analysis dashboard"""
+    try:
+        current_hour = datetime.utcnow().hour
+        optimal_time = risk_system.is_optimal_otc_session_time()
+        
+        text = f"""
 ⚡ **ENHANCED RISK ANALYSIS DASHBOARD**
 
 **Current Market Conditions:**
@@ -8189,29 +8232,29 @@ on {asset}. Consider using it during optimal market conditions.
 • Cooldown Periods
 
 *Use /signals to get risk-assessed trading signals*"""
-            
-            keyboard = {
-                "inline_keyboard": [
-                    [{"text": "🎯 GET RISK-ASSESSED SIGNALS", "callback_data": "menu_signals"}],
-                    [{"text": "📊 PERFORMANCE ANALYTICS", "callback_data": "performance_stats"}],
-                    [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
-                ]
-            }
-            
-            self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
-            
-        except Exception as e:
-            logger.error(f"❌ Risk analysis error: {e}")
-            self.edit_message_text(chat_id, message_id, "❌ Error loading risk analysis. Please try again.", parse_mode="Markdown")
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "🎯 GET RISK-ASSESSED SIGNALS", "callback_data": "menu_signals"}],
+                [{"text": "📊 PERFORMANCE ANALYTICS", "callback_data": "performance_stats"}],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
+        
+    except Exception as e:
+        logger.error(f"❌ Risk analysis error: {e}")
+        self.edit_message_text(chat_id, message_id, "❌ Error loading risk analysis. Please try again.", parse_mode="Markdown")
+
+def _get_platform_advice_text(self, platform, asset):
+    """Helper to format platform-specific advice for the signal display"""
+    platform_advice = self._get_platform_advice(platform, asset)
     
-    def _get_platform_advice_text(self, platform, asset):
-        """Helper to format platform-specific advice for the signal display"""
-        platform_advice = self._get_platform_advice(platform, asset)
-        
-        # Determine the platform-specific strategy from the PO Specialist if it's PO
-        strategy_info = po_strategies.get_po_strategy(asset, po_strategies.analyze_po_market_conditions(asset))
-        
-        advice_text = f"""
+    # Determine the platform-specific strategy from the PO Specialist if it's PO
+    strategy_info = po_strategies.get_po_strategy(asset, po_strategies.analyze_po_market_conditions(asset))
+    
+    advice_text = f"""
 🎮 **PLATFORM ADVICE: {PLATFORM_SETTINGS[platform.lower().replace(' ', '_')]['emoji']} {platform}**
 • Recommended Strategy: **{platform_advice['strategy_name']}**
 • Optimal Expiry: {platform_generator.get_optimal_expiry(asset, platform)}
@@ -8220,88 +8263,88 @@ on {asset}. Consider using it during optimal market conditions.
 💡 **Advice for {asset}:**
 {platform_advice['general']}
 """
-        return advice_text
+    return advice_text
+
+def _get_platform_analysis(self, asset, platform):
+    """Get detailed platform-specific analysis"""
     
-    def _get_platform_analysis(self, asset, platform):
-        """Get detailed platform-specific analysis"""
-        
-        platform_key = platform.lower().replace(' ', '_')
-        
-        analysis = {
-            'platform': platform,
-            'platform_name': PLATFORM_SETTINGS.get(platform_key, {}).get('name', 'Unknown'),
-            'behavior_type': PLATFORM_SETTINGS.get(platform_key, {}).get('behavior', 'standard'),
-            'optimal_expiry': platform_generator.get_optimal_expiry(asset, platform),
-            'recommendation': platform_generator.get_platform_recommendation(asset, platform),
-            'risk_adjustment': 0
-        }
-        
-        # Platform-specific risk adjustments
-        if platform_key == "pocket_option":
-            analysis['risk_adjustment'] = -10
-            analysis['notes'] = "Higher volatility, more fakeouts, shorter expiries recommended"
-        elif platform_key == "quotex":
-            analysis['risk_adjustment'] = +5
-            analysis['notes'] = "Cleaner trends, more predictable patterns"
-        else:  # binomo, deriv, etc.
-            platform_cfg = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-            analysis['risk_adjustment'] = platform_cfg["confidence_bias"]
-            analysis['notes'] = "Balanced approach, moderate risk"
-        
-        return analysis
+    platform_key = platform.lower().replace(' ', '_')
     
-    def _get_platform_advice(self, platform, asset):
-        """Get platform-specific trading advice and strategy name"""
-        
-        platform_key = platform.lower().replace(' ', '_')
-        
-        platform_advice_map = {
-            "quotex": {
-                "strategy_name": "AI Trend Confirmation/Quantum Trend",
-                "general": "• Trust trend-following. Use 2-5 min expiries.\n• Clean technical patterns work reliably on Quotex.",
-            },
-            "pocket_option": {
-                "strategy_name": "Spike Fade Strategy/PO Mean Reversion",
-                "general": "• Mean reversion strategies prioritized. Prefer 30 seconds-1 minute expiries.\n• Be cautious of broker spikes/fakeouts; enter conservatively.",
-            },
-            "binomo": {
-                "strategy_name": "Hybrid/Support & Resistance",
-                "general": "• Balanced approach, 1-3 min expiries optimal.\n• Combine trend and reversal strategies; moderate risk is recommended.",
-            },
-            "deriv": {
-                "strategy_name": "AI Trend Confirmation/Stable Synthetic",
-                "general": "• High stability/trend trust. Use Deriv ticks/mins as advised.\n• Synthetics are best for systematic trend following.",
-            },
-            "olymp_trade": {
-                "strategy_name": "AI Trend Confirmation/Trend Stable",
-                "general": "• Trend reliability is good. Use medium 2-5 min expiries.\n• Focus on clean breakouts and sustained trends.",
-            },
-            "expert_option": {
-                "strategy_name": "Spike Fade Strategy/Reversal Extreme",
-                "general": "• EXTREME volatility/reversal bias. Use ultra-short 30 seconds-1 minute expiries.\n• High risk: prioritize mean reversion/spike fades.",
-            },
-            "iq_option": {
-                "strategy_name": "AI Trend Confirmation/Trend Stable",
-                "general": "• Balanced, relatively stable platform. Use 2-5 min expiries.\n• Works well with standard technical analysis.",
-            }
+    analysis = {
+        'platform': platform,
+        'platform_name': PLATFORM_SETTINGS.get(platform_key, {}).get('name', 'Unknown'),
+        'behavior_type': PLATFORM_SETTINGS.get(platform_key, {}).get('behavior', 'standard'),
+        'optimal_expiry': platform_generator.get_optimal_expiry(asset, platform),
+        'recommendation': platform_generator.get_platform_recommendation(asset, platform),
+        'risk_adjustment': 0
+    }
+    
+    # Platform-specific risk adjustments
+    if platform_key == "pocket_option":
+        analysis['risk_adjustment'] = -10
+        analysis['notes'] = "Higher volatility, more fakeouts, shorter expiries recommended"
+    elif platform_key == "quotex":
+        analysis['risk_adjustment'] = +5
+        analysis['notes'] = "Cleaner trends, more predictable patterns"
+    else:  # binomo, deriv, etc.
+        platform_cfg = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
+        analysis['risk_adjustment'] = platform_cfg["confidence_bias"]
+        analysis['notes'] = "Balanced approach, moderate risk"
+    
+    return analysis
+
+def _get_platform_advice(self, platform, asset):
+    """Get platform-specific trading advice and strategy name"""
+    
+    platform_key = platform.lower().replace(' ', '_')
+    
+    platform_advice_map = {
+        "quotex": {
+            "strategy_name": "AI Trend Confirmation/Quantum Trend",
+            "general": "• Trust trend-following. Use 2-5 min expiries.\n• Clean technical patterns work reliably on Quotex.",
+        },
+        "pocket_option": {
+            "strategy_name": "Spike Fade Strategy/PO Mean Reversion",
+            "general": "• Mean reversion strategies prioritized. Prefer 30 seconds-1 minute expiries.\n• Be cautious of broker spikes/fakeouts; enter conservatively.",
+        },
+        "binomo": {
+            "strategy_name": "Hybrid/Support & Resistance",
+            "general": "• Balanced approach, 1-3 min expiries optimal.\n• Combine trend and reversal strategies; moderate risk is recommended.",
+        },
+        "deriv": {
+            "strategy_name": "AI Trend Confirmation/Stable Synthetic",
+            "general": "• High stability/trend trust. Use Deriv ticks/mins as advised.\n• Synthetics are best for systematic trend following.",
+        },
+        "olymp_trade": {
+            "strategy_name": "AI Trend Confirmation/Trend Stable",
+            "general": "• Trend reliability is good. Use medium 2-5 min expiries.\n• Focus on clean breakouts and sustained trends.",
+        },
+        "expert_option": {
+            "strategy_name": "Spike Fade Strategy/Reversal Extreme",
+            "general": "• EXTREME volatility/reversal bias. Use ultra-short 30 seconds-1 minute expiries.\n• High risk: prioritize mean reversion/spike fades.",
+        },
+        "iq_option": {
+            "strategy_name": "AI Trend Confirmation/Trend Stable",
+            "general": "• Balanced, relatively stable platform. Use 2-5 min expiries.\n• Works well with standard technical analysis.",
         }
+    }
+    
+    # Get general advice and default strategy name
+    advice = platform_advice_map.get(platform_key, platform_advice_map["quotex"])
+    
+    # Get specific strategy details from PO specialist for Pocket Option display
+    if platform_key == "pocket_option":
+        market_conditions = po_strategies.analyze_po_market_conditions(asset)
+        po_strategy = po_strategies.get_po_strategy(asset, market_conditions)
+        advice['strategy_name'] = po_strategy['name']
         
-        # Get general advice and default strategy name
-        advice = platform_advice_map.get(platform_key, platform_advice_map["quotex"])
-        
-        # Get specific strategy details from PO specialist for Pocket Option display
-        if platform_key == "pocket_option":
-            market_conditions = po_strategies.analyze_po_market_conditions(asset)
-            po_strategy = po_strategies.get_po_strategy(asset, market_conditions)
-            advice['strategy_name'] = po_strategy['name']
-            
-            # Add PO specific asset advice
-            if asset in ["BTC/USD", "ETH/USD"]:
-                advice['general'] = "• EXTREME CAUTION: Crypto is highly volatile on PO. Risk minimal size or AVOID."
-            elif asset == "GBP/JPY":
-                advice['general'] = "• HIGH RISK: Use only 30 seconds expiry and Spike Fade strategy."
-        
-        return advice
+        # Add PO specific asset advice
+        if asset in ["BTC/USD", "ETH/USD"]:
+            advice['general'] = "• EXTREME CAUTION: Crypto is highly volatile on PO. Risk minimal size or AVOID."
+        elif asset == "GBP/JPY":
+            advice['general'] = "• HIGH RISK: Use only 30 seconds expiry and Spike Fade strategy."
+    
+    return advice
 
 # Create enhanced OTC trading bot instance
 otc_bot = OTCTradingBot()
