@@ -4910,7 +4910,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             )
     
         def _show_signals_menu(self, chat_id, message_id=None):
-        """Show signals menu with all assets"""
+            """Show signals menu with all assets"""
         # Get user's platform preference
         platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
         platform_key = platform.lower().replace(' ', '_')
