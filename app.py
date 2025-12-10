@@ -371,7 +371,7 @@ class RealSignalVerifier:
             symbol_map = {
                 "EUR/USD": "EUR/USD", "GBP/USD": "GBP/USD", "USD/JPY": "USD/JPY",
                 "USD/CHF": "USD/CHF", "AUD/USD": "AUD/USD", "USD/CAD": "USD/CAD",
-                "BTC/USD": "BTC/USD", "ETH/USD": "BTC/USD", "XAU/USD": "XAU/USD",
+                "BTC/USD": "BTC/USD", "ETH/USD": "ETH/USD", "XAU/USD": "XAU/USD",
                 "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
                 "SPX500": "SPX", "NAS100": "NDX"
             }
@@ -1176,7 +1176,7 @@ class RealTimeVolatilityAnalyzer:
             symbol_map = {
                 "EUR/USD": "EUR/USD", "GBP/USD": "GBP/USD", "USD/JPY": "USD/JPY",
                 "USD/CHF": "USD/CHF", "AUD/USD": "AUD/USD", "USD/CAD": "USD/CAD",
-                "BTC/USD": "BTC/USD", "ETH/USD": "BTC/USD", "XAU/USD": "XAU/USD",
+                "BTC/USD": "BTC/USD", "ETH/USD": "ETH/USD", "XAU/USD": "XAU/USD",
                 "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
                 "SPX500": "SPX", "NAS100": "NDX"
             }
@@ -1227,7 +1227,7 @@ class RealTimeVolatilityAnalyzer:
         symbol_map = {
             "EUR/USD": "EUR/USD", "GBP/USD": "GBP/USD", "USD/JPY": "USD/JPY",
             "USD/CHF": "USD/CHF", "AUD/USD": "AUD/USD", "USD/CAD": "USD/CAD",
-            "BTC/USD": "BTC/USD", "ETH/USD": "BTC/USD", "XAU/USD": "XAU/USD",
+            "BTC/USD": "BTC/USD", "ETH/USD": "ETH/USD", "XAU/USD": "XAU/USD",
             "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
             "SPX500": "SPX", "NAS100": "NDX"
         }
@@ -2018,7 +2018,7 @@ class TwelveDataOTCIntegration:
         symbol_map = {
             "EUR/USD": "EUR/USD", "GBP/USD": "GBP/USD", "USD/JPY": "USD/JPY",
             "USD/CHF": "USD/CHF", "AUD/USD": "AUD/USD", "USD/CAD": "USD/CAD",
-            "BTC/USD": "BTC/USD", "ETH/USD": "BTC/USD", "XAU/USD": "XAU/USD",
+            "BTC/USD": "BTC/USD", "ETH/USD": "ETH/USD", "XAU/USD": "XAU/USD",
             "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
             "SPX500": "SPX", "NAS100": "NDX"
         }
@@ -4909,17 +4909,17 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
     
-    def _show_signals_menu(self, chat_id, message_id=None):
+        def _show_signals_menu(self, chat_id, message_id=None):
         """Show signals menu with all assets"""
         # Get user's platform preference
         platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
         platform_key = platform.lower().replace(' ', '_')
         platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
-        
+
         # Get final expiry display for the quick button
         default_expiry_base = platform_info['default_expiry']
         default_expiry_display = adjust_for_deriv(platform_info['name'], default_expiry_base)
-        
+
         keyboard = {
             "inline_keyboard": [
                 [{"text": f"⚡ QUICK SIGNAL (EUR/USD {default_expiry_display})", "callback_data": f"signal_EUR/USD_{default_expiry_base}"}],
@@ -4940,7 +4940,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-        
+
         text = f"""
 🎯 **ENHANCED OTC SIGNAL MENU** • V3.9
 
@@ -4968,7 +4968,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 ✅ Auto expiry detection available
 
 *Select an asset or use quick signal to start trading*"""
-        
+
         if message_id:
             self.edit_message_text(
                 chat_id, message_id,
@@ -4979,8 +4979,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-    
-    def _show_assets_menu(self, chat_id, message_id=None):
+
+def _show_assets_menu(self, chat_id, message_id=None):
         """Show all 35+ trading assets in organized categories (Includes Synthetics)"""
         keyboard = {
             "inline_keyboard": [
@@ -5676,11 +5676,6 @@ Complete strategy guide with enhanced AI analysis coming soon.
                 chat_id,
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
-        else:
-            self.send_message(
-                chat_id,
-                text, parse_mode="Markdown", reply_markup=keyboard
-            )
     
     def _show_ai_engine_detail(self, chat_id, message_id, engine):
         """Show detailed AI engine information"""
@@ -5719,7 +5714,7 @@ This engine powers the most reliable strategy in the system:
 **BEST FOR:**
 • AI Trend Confirmation strategy (Primary)
 • High-probability trend trading
-• Conservative risk approach
+• Conservative risk management
 • Multi-timeframe analysis
 • Calm and confident trading
 
@@ -7630,7 +7625,7 @@ We encountered an issue generating your signal. This is usually temporary.
 • Sustained Trend: {'Yes' if market_conditions['sustained_trend'] else 'No'}
 
 **AI RECOMMENDATION:**
-🎯 **OPTIMAL EXPIRY:** {final_expiry_display}
+🎯 **OPTIMAL EXPIRY:** {final_expiry_display} 
 💡 **REASON:** {reason}
 
 *Auto-selecting optimal expiry...*"""
@@ -7643,7 +7638,7 @@ We encountered an issue generating your signal. This is usually temporary.
             # Wait a moment then auto-select the expiry
             time.sleep(2)
             # Use the base expiry for the generation function
-            self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, base_expiry)
+            self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, base_expiry) 
             
         except Exception as e:
             logger.error(f"❌ Auto detect error: {e}")
@@ -8389,7 +8384,7 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance"],
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance"], 
         "signal_version": "V3.9_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
@@ -8553,7 +8548,7 @@ if __name__ == '__main__':
     logger.info("🚀 ACCURACY BOOSTERS: Consensus Voting (multiple AI engines), Real-time Volatility (dynamic adjustment), Session Boundaries (high-probability timing)")
     logger.info("🛡️ SAFETY SYSTEMS: Real Technical Analysis (SMA+RSI), Stop Loss Protection, Profit-Loss Tracking, Asset Filtering, Cooldown Periods")
     logger.info("🤖 AI TREND CONFIRMATION: The trader's best friend today - Analyzes 3 timeframes, enters only if all confirm same direction")
-    logger.info("🔥 AI TREND FILTER V2: Semi-strict filter integrated for final safety check (NEW!)")
+    logger.info("🔥 AI TREND FILTER V2: Semi-strict filter integrated for final safety check (NEW!)") 
     logger.info("💰 DYNAMIC POSITION SIZING: Implemented for Kelly-adjusted risk (NEW!)")
     logger.info("🎯 PREDICTIVE EXIT ENGINE: Implemented for SL/TP advice (NEW!)")
     logger.info("🔒 JURISDICTION COMPLIANCE: Basic check added to /start flow (NEW!)")
