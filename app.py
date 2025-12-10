@@ -22,6 +22,13 @@ def _wrap_key_from_args(prefix, *args):
     except Exception:
         return str(prefix)
 
+def _det_hash_to_range(key: str, low: float, high: float) -> float:
+    import hashlib, math
+    h = hashlib.sha256(key.encode('utf-8')).hexdigest()
+    val = int(h[:16], 16)
+    frac = (val % (10**8)) / float(10**8)
+    return low + (high - low) * frac
+
 def _removed_random_dot_uniform(a, b):
     try:
         a_f = float(a); b_f = float(b)
@@ -88,11 +95,7 @@ _removed_random_dot_random = _removed_random_dot_random
 
 # ======= OPTIMIZATION HELPERS (DETERMINISTIC, NO RANDOM) =======
 import hashlib, math
-def _det_hash_to_range(key: str, low: float, high: float) -> float:
-    h = hashlib.sha256(key.encode('utf-8')).hexdigest()
-    val = int(h[:16], 16)
-    frac = (val % (10**8)) / float(10**8)
-    return low + (high - low) * frac
+# Moved _det_hash_to_range definition up for clean reference in _removed_random_dot_uniform
 
 def deterministic_backtest_metrics(strategy: str, asset: str, period_days: int = 30):
     key = f"{strategy}|{asset}|{period_days}"
@@ -5419,78 +5422,78 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         keyboard = {
             "inline_keyboard": [
                 # NEW: AI TREND CONFIRMATION STRATEGY - First priority
-                [{"text": "🤖 AI TREND CONFIRMATION", "callback_data": "strategy_ai_trend_confirmation"}],
+                [{"text": "🤖 AI TREND CONFIRMATION", "callback_data": "strategy_AI Trend Confirmation"}],
                 
                 # NEW: AI TREND FILTER + BREAKOUT STRATEGY - Second priority
-                [{"text": "🎯 AI TREND FILTER + BREAKOUT", "callback_data": "strategy_ai_trend_filter_breakout"}],
+                [{"text": "🎯 AI TREND FILTER + BREAKOUT", "callback_data": "strategy_AI Trend Filter + Breakout"}],
                 
                 # NEW STRATEGY ADDED: SPIKE FADE
-                [{"text": "⚡ SPIKE FADE (PO)", "callback_data": "strategy_spike_fade"}],
+                [{"text": "⚡ SPIKE FADE (PO)", "callback_data": "strategy_Spike Fade Strategy"}],
 
                 # NEW STRATEGIES - NEXT ROWS
                 [
-                    {"text": "⚡ 30s SCALP", "callback_data": "strategy_30s_scalping"},
-                    {"text": "📈 2-MIN TREND", "callback_data": "strategy_2min_trend"}
+                    {"text": "⚡ 30s SCALP", "callback_data": "strategy_1-Minute Scalping"},
+                    {"text": "📈 2-MIN TREND", "callback_data": "strategy_5-Minute Trend"}
                 ],
                 [
-                    {"text": "🎯 S/R MASTER", "callback_data": "strategy_support_resistance"},
-                    {"text": "💎 PRICE ACTION", "callback_data": "strategy_price_action"}
+                    {"text": "🎯 S/R MASTER", "callback_data": "strategy_Support & Resistance"},
+                    {"text": "💎 PRICE ACTION", "callback_data": "strategy_Price Action Master"}
                 ],
                 [
-                    {"text": "📊 MA CROSS", "callback_data": "strategy_ma_crossovers"},
-                    {"text": "🤖 AI MOMENTUM", "callback_data": "strategy_ai_momentum"}
+                    {"text": "📊 MA CROSS", "callback_data": "strategy_MA Crossovers"},
+                    {"text": "🤖 AI MOMENTUM", "callback_data": "strategy_AI Momentum Scan"}
                 ],
                 [
-                    {"text": "🔮 QUANTUM AI", "callback_data": "strategy_quantum_ai"},
-                    {"text": "👥 AI CONSENSUS", "callback_data": "strategy_ai_consensus"}
+                    {"text": "🔮 QUANTUM AI", "callback_data": "strategy_Quantum AI Mode"},
+                    {"text": "👥 AI CONSENSUS", "callback_data": "strategy_AI Consensus"}
                 ],
                 # EXISTING STRATEGIES
                 [
-                    {"text": "🚀 QUANTUM TREND", "callback_data": "strategy_quantum_trend"},
-                    {"text": "⚡ MOMENTUM", "callback_data": "strategy_momentum_breakout"}
+                    {"text": "🚀 QUANTUM TREND", "callback_data": "strategy_Quantum Trend"},
+                    {"text": "⚡ MOMENTUM", "callback_data": "strategy_Momentum Breakout"}
                 ],
                 [
-                    {"text": "🤖 AI MOMENTUM", "callback_data": "strategy_ai_momentum_breakout"},
-                    {"text": "🔄 MEAN REVERSION", "callback_data": "strategy_mean_reversion"}
+                    {"text": "🤖 AI MOMENTUM", "callback_data": "strategy_AI Momentum Breakout"},
+                    {"text": "🔄 MEAN REVERSION", "callback_data": "strategy_Mean Reversion"}
                 ],
                 [
-                    {"text": "🎯 S/R", "callback_data": "strategy_support_resistance"},
-                    {"text": "📊 VOLATILITY", "callback_data": "strategy_volatility_squeeze"}
+                    {"text": "🎯 S/R", "callback_data": "strategy_Support/Resistance"},
+                    {"text": "📊 VOLATILITY", "callback_data": "strategy_Volatility Squeeze"}
                 ],
                 [
-                    {"text": "⏰ SESSION", "callback_data": "strategy_session_breakout"},
-                    {"text": "💧 LIQUIDITY", "callback_data": "strategy_liquidity_grab"}
+                    {"text": "⏰ SESSION", "callback_data": "strategy_Session Breakout"},
+                    {"text": "💧 LIQUIDITY", "callback_data": "strategy_Liquidity Grab"}
                 ],
                 [
-                    {"text": "📦 ORDER BLOCK", "callback_data": "strategy_order_block"},
-                    {"text": "🏢 MARKET MAKER", "callback_data": "strategy_market_maker"}
+                    {"text": "📦 ORDER BLOCK", "callback_data": "strategy_Order Block Strategy"},
+                    {"text": "🏢 MARKET MAKER", "callback_data": "strategy_Market Maker Move"}
                 ],
                 [
-                    {"text": "📐 HARMONIC", "callback_data": "strategy_harmonic_pattern"},
-                    {"text": "📐 FIBONACCI", "callback_data": "strategy_fibonacci"}
+                    {"text": "📐 HARMONIC", "callback_data": "strategy_Harmonic Pattern"},
+                    {"text": "📐 FIBONACCI", "callback_data": "strategy_Fibonacci Retracement"}
                 ],
                 [
-                    {"text": "⏰ MULTI-TF", "callback_data": "strategy_multi_tf"},
-                    {"text": "🔄 TIME SYNTHESIS", "callback_data": "strategy_timeframe_synthesis"}
+                    {"text": "⏰ MULTI-TF", "callback_data": "strategy_Multi-TF Convergence"},
+                    {"text": "🔄 TIME SYNTHESIS", "callback_data": "strategy_Timeframe Synthesis"}
                 ],
                 [
-                    {"text": "⏰ OVERLAP", "callback_data": "strategy_session_overlap"},
-                    {"text": "📰 NEWS", "callback_data": "strategy_news_impact"}
+                    {"text": "⏰ OVERLAP", "callback_data": "strategy_Session Overlap"},
+                    {"text": "📰 NEWS", "callback_data": "strategy_News Impact"}
                 ],
                 [
-                    {"text": "🔗 CORRELATION", "callback_data": "strategy_correlation_hedge"},
-                    {"text": "💡 SMART MONEY", "callback_data": "strategy_smart_money"}
+                    {"text": "🔗 CORRELATION", "callback_data": "strategy_Correlation Hedge"},
+                    {"text": "💡 SMART MONEY", "callback_data": "strategy_Smart Money Concepts"}
                 ],
                 [
-                    {"text": "🏗 STRUCTURE BREAK", "callback_data": "strategy_structure_break"},
-                    {"text": "⚡ IMPULSE", "callback_data": "strategy_impulse_momentum"}
+                    {"text": "🏗 STRUCTURE BREAK", "callback_data": "strategy_Market Structure Break"},
+                    {"text": "⚡ IMPULSE", "callback_data": "strategy_Impulse Momentum"}
                 ],
                 [
-                    {"text": "💰 FAIR VALUE", "callback_data": "strategy_fair_value"},
-                    {"text": "🌊 LIQUIDITY VOID", "callback_data": "strategy_liquidity_void"}
+                    {"text": "💰 FAIR VALUE", "callback_data": "strategy_Fair Value Gap"},
+                    {"text": "🌊 LIQUIDITY VOID", "callback_data": "strategy_Liquidity Void"}
                 ],
                 [
-                    {"text": "📈 DELTA", "callback_data": "strategy_delta_divergence"}
+                    {"text": "📈 DELTA", "callback_data": "strategy_Delta Divergence"}
                 ],
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
@@ -5551,8 +5554,12 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
     
     def _show_strategy_detail(self, chat_id, message_id, strategy):
         """Show detailed strategy information - UPDATED WITH NEW STRATEGIES"""
-    strategy_details = {
-        "ai_trend_confirmation": """
+        
+        # Normalize strategy key by removing spaces and lowercasing for dictionary lookup
+        key = strategy.lower().replace(' ', '_')
+
+        strategy_details = {
+            "ai_trend_confirmation": """
 🤖 **AI TREND CONFIRMATION STRATEGY**
 
 *AI analyzes 3 timeframes, generates probability-based trend, enters only if all confirm same direction*
@@ -5580,7 +5587,7 @@ Perfect for calm and confident trading📈
 - Increases accuracy significantly
 
 **STRATEGY OVERVIEW:**
-The trader's best friend today! AI analyzes multiple timeframes to confirm trend direction with high probability. Only enters when all timeframes align.
+The trader's best friend today! AI analyzes multiple timeframes to confirm trend direction with high confirmation. Only enters when all timeframes align.
 
 **HOW IT WORKS:**
 1. AI analyzes 3 different timeframes simultaneously
@@ -5653,7 +5660,7 @@ Low (Only enters with strong confirmation)
 
 *This strategy teaches you to trade like a professional*""", # END NEW STRATEGY DETAIL
 
-        "spike_fade": """
+        "spike_fade_strategy": """
 ⚡ **SPIKE FADE STRATEGY (POCKET OPTION SPECIALIST)**
 
 *Fade sharp spikes (reversal trading) in Pocket Option for quick profit.*
@@ -5691,26 +5698,26 @@ High (High risk, high reward - tight mental stop-loss is critical)
 
 *Use this strategy on Pocket Option for its mean-reversion nature! 🟠*""",
 
-        "30s_scalping": """
-⚡ **30-SECOND SCALPING STRATEGY**
+        "1-minute_scalping": """
+⚡ **1-MINUTE SCALPING STRATEGY**
 
 *Ultra-fast scalping for instant OTC profits*
 
 **STRATEGY OVERVIEW:**
-Designed for lightning-fast execution on 30-second timeframes. Captures micro price movements with ultra-tight risk management.
+Designed for lightning-fast execution on 1-minute timeframes. Captures micro price movements with ultra-tight risk management.
 
 **KEY FEATURES:**
-- 30-second timeframe analysis
+- 1-minute timeframe analysis
 - Ultra-tight stop losses (mental)
 - Instant profit taking
 - Maximum frequency opportunities
 - Real-time price data from TwelveData
 
 **HOW IT WORKS:**
-1. Monitors 30-second charts for immediate opportunities
+1. Monitors 1-minute charts for immediate opportunities
 2. Uses real-time price data for accurate entries
 3. Executes within seconds of signal generation
-4. Targets 30-second expiries (or 5 Deriv Ticks)
+4. Targets short expiries (1 minute or 10 Deriv Ticks)
 5. Manages risk with strict position sizing
 
 **BEST FOR:**
@@ -5722,29 +5729,29 @@ Designed for lightning-fast execution on 30-second timeframes. Captures micro pr
 **AI ENGINES USED:**
 - NeuralMomentum AI (Primary)
 - VolatilityMatrix AI
-- - PatternRecognition AI
+- PatternRecognition AI
 
 **EXPIRY RECOMMENDATION:**
-30 seconds (or 5 Deriv Ticks) for ultra-fast scalps""",
+30 seconds to 1 minute (or 5-10 Deriv Ticks) for ultra-fast scalps""",
 
-        "2min_trend": """
-📈 **2-MINUTE TREND STRATEGY**
+        "5-minute_trend": """
+📈 **5-MINUTE TREND STRATEGY**
 
-*Trend following on optimized 2-minute timeframe*
+*Trend following on optimized 5-minute timeframe*
 
 **STRATEGY OVERVIEW:**
-Captures emerging trends on the 2-minute chart with confirmation from higher timeframes. Balances speed with reliability.
+Captures emerging trends on the 5-minute chart with confirmation from higher timeframes. Balances speed with reliability.
 
 **KEY FEATURES:**
-- 2-minute primary timeframe
-- 5-minute and 15-minute confirmation
+- 5-minute primary timeframe
+- 15-minute and 30-minute confirmation
 - Trend strength measurement
 - Real market data integration
 - Optimal risk-reward ratios
 
 **HOW IT WORKS:**
-1. Identifies trend direction on 2-minute chart
-2. Confirms with 5-minute and 15-minute trends
+1. Identifies trend direction on 5-minute chart
+2. Confirms with 15-minute and 30-minute trends
 3. Enters on pullbacks in trend direction
 4. Uses multi-timeframe alignment
 5. Manages trades with trend following principles
@@ -5761,55 +5768,43 @@ Captures emerging trends on the 2-minute chart with confirmation from higher tim
 - SupportResistance AI
 
 **EXPIRY RECOMMENDATION:**
-2-5 minutes for trend development""",
+5-15 minutes for trend development""",
 
-        # Placeholder for other strategies (you would replace these with your actual strategy details)
+        # Placeholder for other strategies
         "quantum_trend": "Detailed analysis of Quantum Trend Strategy...",
         "momentum_breakout": "Detailed analysis of Momentum Breakout Strategy...",
         "ai_momentum_breakout": "Detailed analysis of AI Momentum Breakout Strategy...",
         "mean_reversion": "Detailed analysis of Mean Reversion Strategy...",
         "support_resistance": "Detailed analysis of Support & Resistance Strategy...",
-        "price_action": "Detailed analysis of Price Action Master Strategy...",
+        "support/resistance": "Detailed analysis of Support/Resistance Bounce Strategy...",
+        "price_action_master": "Detailed analysis of Price Action Master Strategy...",
         "ma_crossovers": "Detailed analysis of MA Crossovers Strategy...",
-        "ai_momentum": "Detailed analysis of AI Momentum Scan Strategy...",
-        "quantum_ai": "Detailed analysis of Quantum AI Mode Strategy...",
+        "ai_momentum_scan": "Detailed analysis of AI Momentum Scan Strategy...",
+        "quantum_ai_mode": "Detailed analysis of Quantum AI Mode Strategy...",
         "ai_consensus": "Detailed analysis of AI Consensus Strategy...",
         "volatility_squeeze": "Detailed analysis of Volatility Squeeze Strategy...",
         "session_breakout": "Detailed analysis of Session Breakout Strategy...",
         "liquidity_grab": "Detailed analysis of Liquidity Grab Strategy...",
-        "order_block": "Detailed analysis of Order Block Strategy...",
-        "market_maker": "Detailed analysis of Market Maker Move Strategy...",
+        "order_block_strategy": "Detailed analysis of Order Block Strategy...",
+        "market_maker_move": "Detailed analysis of Market Maker Move Strategy...",
         "harmonic_pattern": "Detailed analysis of Harmonic Pattern Strategy...",
-        "fibonacci": "Detailed analysis of Fibonacci Retracement Strategy...",
-        "multi_tf": "Detailed analysis of Multi-TF Convergence Strategy...",
+        "fibonacci_retracement": "Detailed analysis of Fibonacci Retracement Strategy...",
+        "multi-tf_convergence": "Detailed analysis of Multi-TF Convergence Strategy...",
         "timeframe_synthesis": "Detailed analysis of Timeframe Synthesis Strategy...",
         "session_overlap": "Detailed analysis of Session Overlap Strategy...",
         "news_impact": "Detailed analysis of News Impact Strategy...",
         "correlation_hedge": "Detailed analysis of Correlation Hedge Strategy...",
-        "smart_money": "Detailed analysis of Smart Money Concepts Strategy...",
-        "structure_break": "Detailed analysis of Market Structure Break Strategy...",
+        "smart_money_concepts": "Detailed analysis of Smart Money Concepts Strategy...",
+        "market_structure_break": "Detailed analysis of Market Structure Break Strategy...",
         "impulse_momentum": "Detailed analysis of Impulse Momentum Strategy...",
-        "fair_value": "Detailed analysis of Fair Value Gap Strategy...",
+        "fair_value_gap": "Detailed analysis of Fair Value Gap Strategy...",
         "liquidity_void": "Detailed analysis of Liquidity Void Strategy...",
         "delta_divergence": "Detailed analysis of Delta Divergence Strategy...",
         
     }
     
-    class OTCTradingBot:
-    def __init__(self):
-        # Initialize with a default strategy
-        self.strategy = "bullish_etf_arbitrage"
-    
-    def get_strategy_detail(self, strategy=None):
-        # Allow passing strategy as parameter or using instance strategy
-        strategy_to_use = strategy if strategy else self.strategy
-        
-        detail = strategy_details.get(strategy_to_use, f"""
-**{strategy_to_use.replace('_', ' ').title()} STRATEGY**
-Details for this strategy are not currently available.
-Please check back later or contact support for more information.
-        """)
-        return detail
+    detail = strategy_details.get(key, f"""
+**{strategy.replace('_', ' ').title()} STRATEGY**
 
 *Advanced OTC binary trading approach*
 
@@ -7082,7 +7077,7 @@ def _show_edu_technical(self, chat_id, message_id):
 **🎯 NEW: AI TREND FILTER + BREAKOUT ANALYSIS:**
 • AI determines objective direction (UP/DOWN/SIDEWAYS)
 • Trader uses this direction for filtering manual S/R entries
-• Focuss on clean breakouts with volume confirmation
+• Focusses on clean breakouts with volume confirmation
 • Blends AI certainty with human discipline
 
 **NEW: TWELVEDATA MARKET CONTEXT:**
@@ -7533,7 +7528,7 @@ def _show_admin_settings(self, chat_id, message_id):
     
     self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
-# --- NEW HELPER FUNCTION FOR LOADING MESSAGE (To replace redundant code blocks) ---
+# --- NEW HELPER FUNCTION FOR LOADING MESSAGE ---
 def _show_loading_message(self, chat_id, message_id, asset, expiry):
     """Show the "Generating signal..." loading message"""
     platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
@@ -7999,8 +7994,7 @@ def _handle_button_click(self, chat_id, message_id, data, callback_query=None):
 
         # STRATEGY DETAIL HANDLERS
         elif data.startswith("strategy_"):
-            strategy_key = data.replace("strategy_", "")
-            strategy_name = strategy_key.replace("_", " ")
+            strategy_name = data.replace("strategy_", "")
             self._show_strategy_detail(chat_id, message_id, strategy_name)
 
         # BACKTEST HANDLERS
