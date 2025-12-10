@@ -3148,50 +3148,47 @@ payment_system = ManualPaymentSystem()
 # ================================
 # SEMI-STRICT AI TREND FILTER V2
 # ================================
-def ai_trend_filter(direction, trend_direction, trend_strength, momentum, volatility, spike_detected):
-    """ 
-    Balanced trend filter. It only blocks extremely bad setups, but still allows reversals 
-    and spike-fades to work correctly.
-    
-    Note: In a real system, trend_direction, trend_strength, momentum, and spike_detected 
-    would be outputs of dedicated AI/TA modules. Here, we rely on approximations 
-    from the RealSignalVerifier and VolatilityAnalyzer.
+
+def ai_trend_filter(direction: str,
+                    trend_direction: str,
+                    trend_strength: float,
+                    momentum: float,
+                    volatility: float,
+                    spike_detected: bool = False,
+                    structure_score: float = None):
     """
-    
-    # 1️⃣ Extremely weak trend → block
-    if trend_strength < 30:
-        return False, "Weak Trend (<30%)"
-    
-    # 2️⃣ Opposite direction trades allowed ONLY if spike detected (reversal logic)
-    # Spike detection is a key part of the 'Spike Fade Strategy'
-    if direction != trend_direction:
-        # Check if trend is very strong (to allow a mean-reversion counter-trend)
+    Tuned AI Trend Filter - Flexible Mode (non-strict)
+    Returns (allowed: bool, reason: str)
+    """
+    try:
+        ts = max(0.0, min(100.0, float(trend_strength if trend_strength is not None else 0.0)))
+        mom = max(0.0, min(100.0, float(momentum if momentum is not None else 0.0)))
+        vol_raw = float(volatility if volatility is not None else 0.0)
+        vol = vol_raw if vol_raw <= 1.0 else vol_raw / 100.0
+        ss = 60.0 if structure_score is None else max(0.0, min(100.0, float(structure_score)))
+        VERY_LOW_TREND = 12.0
+        SOFT_TREND = 20.0
+        MOM_STRONG = 65.0
+        VOL_HIGH = 0.12
+        VOL_LOW = 0.035
         if spike_detected:
-            return True, "Spike Reversal Allowed"
-        else:
-             # Allow if high momentum for a quick reversal scalp
-            if momentum > 80:
-                 return True, "High Momentum Reversal Allowed"
-            else:
-                return False, "Direction Mismatch - No Spike/Momentum"
+            if ts >= SOFT_TREND and mom >= 60 and vol <= 0.08:
+                return True, f"Spike present but overridden by momentum {mom:.0f}% and trend {ts:.0f}%"
+            return False, "Spike detected — avoid breakout/momentum traps"
+        if ts <= VERY_LOW_TREND and vol >= VOL_HIGH and mom < 40:
+            return False, f"Weak trend ({ts:.0f}%), high volatility ({vol:.3f}), weak momentum ({mom:.0f}%)"
+        if ts < SOFT_TREND and mom >= MOM_STRONG and vol <= VOL_LOW and ss >= 55:
+            return True, f"Weak trend ({ts:.0f}%) but strong momentum ({mom:.0f}%) and low vol ({vol:.3f})"
+        if ts >= SOFT_TREND and (mom >= 45 or ss >= 60):
+            return True, f"Trend {ts:.0f}% with momentum {mom:.0f}% and structure {ss:.0f}%"
+        if vol <= VOL_LOW and mom >= 40 and ss >= 50:
+            return True, f"Low volatility ({vol:.3f}) supports taking setup despite trend {ts:.0f}%"
+        if ts >= 15 and mom >= 40:
+            return True, f"Minimal confirmations: trend {ts:.0f}%, momentum {mom:.0f}%"
+        return False, f"Weak trend ({ts:.0f}%) or insufficient confirmations (momentum {mom:.0f}%, vol {vol:.3f})"
+    except Exception as e:
+        return False, f"Filter error: {e}"
 
-    # 3️⃣ High volatility → do NOT block, just warn (adjust expiry instead)
-    if volatility > 85:
-        # Warning only, trade is allowed
-        return True, "High Volatility - Increase Expiry"
-    
-    # 4️⃣ Momentum very low → block
-    if momentum < 20:
-        return False, "Low Momentum (<20)"
-        
-    # If everything is good:
-    return True, "Trend Confirmed"
-
-# =============================================================================
-# ORIGINAL CODE - COMPLETELY PRESERVED
-# =============================================================================
-
-# Tier Management Functions - FIXED VERSION
 def get_user_tier(chat_id):
     """Get user's current tier"""
     # Check if user is admin first - this takes priority
@@ -4909,8 +4906,8 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
                 text, parse_mode="Markdown", reply_markup=keyboard
             )
     
-        def _show_signals_menu(self, chat_id, message_id=None):
-            """Show signals menu with all assets"""
+    def _show_signals_menu(self, chat_id, message_id=None):
+        """Show signals menu with all assets"""
         # Get user's platform preference
         platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
         platform_key = platform.lower().replace(' ', '_')
@@ -4942,32 +4939,41 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         }
         
         text = f"""
-🎯 **ENHANCED OTC SIGNAL MENU** • V3.9
+🎯 **ENHANCED OTC BINARY SIGNALS - ALL ASSETS**
 
-*Current Platform: {platform_info['emoji']} {platform_info['name']}*
-*Optimized for: {platform_info['behavior'].replace('_', ' ').title()}*
+*Platform: {platform_info['emoji']} {platform_info['name']}*
+
+*Generate AI-powered signals with market context analysis:*
 
 **QUICK SIGNALS:**
-• EUR/USD with optimal {default_expiry_display} expiry
-• Any asset with 5-minute enhanced analysis
-• Platform-optimized signals
+• EUR/USD {default_expiry_display} - Platform-optimized execution
+• Any asset 5min - Detailed multi-timeframe analysis
 
-**POPULAR ASSETS:**
-• EUR/USD - Most liquid, clean trends
-• GBP/USD - High volatility, good for PO
-• USD/JPY - Asian session favorite
-• BTC/USD - Crypto volatility
-• XAU/USD - Strong trending asset
-• US30 - Index momentum
+**POPULAR OTC ASSETS:**
+• Forex Majors (EUR/USD, GBP/USD, USD/JPY)
+• Cryptocurrencies (BTC/USD, ETH/USD)  
+• Commodities (XAU/USD, XAG/USD)
+• Indices (US30, SPX500, NAS100)
+• Deriv Synthetics (Volatility 10, Crash 500) (NEW!)
 
-**FEATURES:**
-✅ Platform-specific optimization
-✅ Real technical analysis (EMA, ATR, Momentum)
-✅ Multi-timeframe confirmation  
-✅ Risk management built-in
-✅ Auto expiry detection available
+**ENHANCED FEATURES:**
+• Multi-timeframe convergence
+• Liquidity flow analysis
+• Market regime detection
+• Adaptive strategy selection
+• Risk scoring
+• Smart filtering
+• **NEW:** Auto expiry detection
+• **NEW:** AI Momentum Breakout strategy
+• **NEW:** TwelveData market context
+• **NEW:** Intelligent probability system
+• **NEW:** Platform-specific optimization
+• **🎯 NEW:** Accuracy boosters active
+• **🚨 NEW:** Safety systems active
+• **🤖 NEW:** AI Trend Confirmation strategy
+• **🎯 NEW:** AI Trend Filter + Breakout strategy
 
-*Select an asset or use quick signal to start trading*"""
+*Select asset or quick signal*"""
         
         if message_id:
             self.edit_message_text(
@@ -7499,7 +7505,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             
             text = f"""
 {arrow_line}
-🎯 **QUANTUM SIGNAL ENGINE • V3.9 (Optimized)** 🚀
+🎯 **OTC BINARY SIGNAL V9.1.2** 🚀
 {arrow_line}
 
 {direction_emoji} **TRADE DIRECTION:** {direction_text}
@@ -8177,7 +8183,7 @@ def health():
         "otc_strategies": len(TRADING_STRATEGIES),
         "active_users": len(user_tiers),
         "platform_type": "OTC_BINARY_OPTIONS",
-        "signal_version": "V3.9_OTC",
+        "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8297,7 +8303,7 @@ def set_webhook():
             "otc_strategies": len(TRADING_STRATEGIES),
             "users": len(user_tiers),
             "enhanced_features": True,
-            "signal_version": "V3.9_OTC",
+            "signal_version": "V9.1.2_OTC",
             "auto_expiry_detection": True,
             "ai_momentum_breakout": True,
             "payment_system": "manual_admin",
@@ -8347,7 +8353,7 @@ def webhook():
             "update_id": update_id,
             "queue_size": update_queue.qsize(),
             "enhanced_processing": True,
-            "signal_version": "V3.9_OTC",
+            "signal_version": "V9.1.2_OTC",
             "auto_expiry_detection": True,
             "payment_system": "manual_admin",
             "education_system": True,
@@ -8385,7 +8391,7 @@ def debug():
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
         "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance"], 
-        "signal_version": "V3.9_OTC",
+        "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8422,7 +8428,7 @@ def stats():
         "enhanced_strategies": len(TRADING_STRATEGIES),
         "server_time": datetime.now().isoformat(),
         "enhanced_features": True,
-        "signal_version": "V3.9_OTC",
+        "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8514,7 +8520,7 @@ def diagnose_user(chat_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     
-    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V3.9 on port {port}")
+    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V9.1.2 on port {port}")
     logger.info(f"📊 OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | OTC Strategies: {len(TRADING_STRATEGIES)}")
     logger.info("🎯 OTC OPTIMIZED: TwelveData integration for market context only")
     logger.info("📈 REAL DATA USAGE: Market context for OTC pattern correlation")
