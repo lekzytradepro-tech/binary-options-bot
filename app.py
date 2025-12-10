@@ -5550,7 +5550,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
             )
     
     def _show_strategy_detail(self, chat_id, message_id, strategy):
-    """Show detailed strategy information - UPDATED WITH NEW STRATEGIES"""
+        """Show detailed strategy information - UPDATED WITH NEW STRATEGIES"""
     strategy_details = {
         "ai_trend_confirmation": """
 🤖 **AI TREND CONFIRMATION STRATEGY**
