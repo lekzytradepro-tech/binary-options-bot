@@ -5795,8 +5795,21 @@ Captures emerging trends on the 2-minute chart with confirmation from higher tim
         
     }
     
-    detail = strategy_details.get(strategy, f"""
-**{strategy.replace('_', ' ').title()} STRATEGY**
+    class OTCTradingBot:
+    def __init__(self):
+        # Initialize with a default strategy
+        self.strategy = "bullish_etf_arbitrage"
+    
+    def get_strategy_detail(self, strategy=None):
+        # Allow passing strategy as parameter or using instance strategy
+        strategy_to_use = strategy if strategy else self.strategy
+        
+        detail = strategy_details.get(strategy_to_use, f"""
+**{strategy_to_use.replace('_', ' ').title()} STRATEGY**
+Details for this strategy are not currently available.
+Please check back later or contact support for more information.
+        """)
+        return detail
 
 *Advanced OTC binary trading approach*
 
