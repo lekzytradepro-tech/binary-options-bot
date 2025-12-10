@@ -3099,7 +3099,7 @@ This upgrade fixes the random guessing issue. Signals now use REAL market analys
 class ManualPaymentSystem:
     """Simple manual payment system for admin upgrades"""
     
-    def __init__(selfself):
+    def __init__(self):
         self.pending_upgrades = {}
         self.payment_methods = {
             "crypto": {
