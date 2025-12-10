@@ -16,8 +16,12 @@ import schedule # Added for scheduler
 # =============================================================================
 
 def safe_get(analysis, key, default=None):
-    """Safely get value from analysis dict"""
+    """Safely get value from analysis dict, including type check."""
     try:
+        # CRITICAL FIX: Ensure analysis is a dictionary before using .get()
+        if not isinstance(analysis, dict):
+            return default
+            
         value = analysis.get(key)
         if value is None or str(value).strip() == '':
             return default
@@ -33,7 +37,7 @@ def get_platform_info(platform_name):
 def get_broadcast_keyboard():
     """Return inline keyboard for broadcast messages"""
     # Assuming the bot's direct link is known or can be pulled from an environment variable
-    bot_link = os.getenv("BOT_LINK", "https://t.me/QuantumEdgeProBot")
+    bot_link = os.getenv("BOT_LINK", "https://tme/QuantumEdgeProBot")
     return {
         "inline_keyboard": [[
             {
@@ -100,11 +104,24 @@ def format_short_signal(analysis):
         if not all([direction, asset, confidence]):
             return generate_dynamic_fallback("short")
         
-        platform_emoji = safe_get(analysis, 'platform_emoji', '📈')
+        # Dynamic expiry selection
         expiry = safe_get(analysis, 'expiry_display')
-        trend = safe_get(analysis, 'trend_state')
-        volatility = safe_get(analysis, 'volatility_state')
+        if not expiry:
+             # Fallback logic if display failed
+             expiry_base = safe_get(analysis, 'expiry') or truth_expiry_selector(safe_get(analysis, 'confidence', 70), safe_get(analysis, 'volatility', 0.003))
+             expiry = adjust_for_deriv(safe_get(analysis, 'platform', 'quotex'), expiry_base)
+        
+        # Dynamic platform detection
+        platform_emoji = safe_get(analysis, 'platform_emoji', '📈')
+        
+        # Dynamic trend/volatility calculation
+        trend = safe_get(analysis, 'trend_state', 'N/A')
+        volatility = safe_get(analysis, 'volatility_state', 'N/A')
+        
+        # Dynamic timestamp
         timestamp = safe_get(analysis, 'timestamp')
+        
+        # Dynamic signal ID
         signal_id = safe_get(analysis, 'signal_id', f"SIG{datetime.now().strftime('%H%M%S')}")
 
         
@@ -141,7 +158,7 @@ def format_full_signal(analysis):
         # DYNAMIC calculations for ALL fields
         platform_emoji = safe_get(analysis, 'platform_emoji', '📊')
         platform_name = safe_get(analysis, 'platform_name', 'OTC Trading')
-        expiry_display = safe_get(analysis, 'expiry_display')
+        expiry_display = safe_get(analysis, 'expiry_display', safe_get(analysis, 'expiry_recommendation', 'N/A'))
         
         trend_state = safe_get(analysis, 'trend_state', 'N/A')
         trend_strength = safe_get(analysis, 'trend_strength', 0)
@@ -4459,6 +4476,7 @@ def generate_complete_analysis(asset, direction, confidence, platform="quotex", 
     except Exception as e:
         logger.error(f"❌ Complete Analysis generation error: {e}")
         # Minimal Fallback for formatting
+        platform_cfg = PLATFORM_SETTINGS.get(platform.lower().replace(' ', '_'), PLATFORM_SETTINGS["quotex"])
         return {
             'direction': direction,
             'asset': asset,
@@ -5672,6 +5690,99 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • **🎯 NEW:** AI Trend Filter + Breakout strategy
 
 *Select asset or quick signal*"""
+        
+        if message_id:
+            self.edit_message_text(
+                chat_id, message_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+        else:
+            self.send_message(
+                chat_id,
+                text, parse_mode="Markdown", reply_markup=keyboard
+            )
+    
+    def _show_assets_menu(self, chat_id, message_id=None):
+        """Show all 35+ trading assets in organized categories (Includes Synthetics)"""
+        keyboard = {
+            "inline_keyboard": [
+                # FOREX MAJORS
+                [
+                    {"text": "💱 EUR/USD", "callback_data": "asset_EUR/USD"},
+                    {"text": "💱 GBP/USD", "callback_data": "asset_GBP/USD"},
+                    {"text": "💱 USD/JPY", "callback_data": "asset_USD/JPY"}
+                ],
+                [
+                    {"text": "💱 USD/CHF", "callback_data": "asset_USD/CHF"},
+                    {"text": "💱 AUD/USD", "callback_data": "asset_AUD/USD"},
+                    {"text": "💱 USD/CAD", "callback_data": "asset_USD/CAD"}
+                ],
+                # FOREX MINORS & CROSSES
+                [
+                    {"text": "💱 GBP/JPY", "callback_data": "asset_GBP/JPY"},
+                    {"text": "💱 EUR/JPY", "callback_data": "asset_EUR/JPY"},
+                    {"text": "💱 AUD/JPY", "callback_data": "asset_AUD/JPY"}
+                ],
+                # CRYPTOCURRENCIES
+                [
+                    {"text": "₿ BTC/USD", "callback_data": "asset_BTC/USD"},
+                    {"text": "₿ ETH/USD", "callback_data": "asset_ETH/USD"},
+                    {"text": "₿ XRP/USD", "callback_data": "asset_XRP/USD"}
+                ],
+                [
+                    {"text": "₿ ADA/USD", "callback_data": "asset_ADA/USD"},
+                    {"text": "₿ DOT/USD", "callback_data": "asset_DOT/USD"},
+                    {"text": "₿ LTC/USD", "callback_data": "asset_LTC/USD"}
+                ],
+                
+                # COMMODITIES
+                [
+                    {"text": "🟡 XAU/USD", "callback_data": "asset_XAU/USD"},
+                    {"text": "🟡 XAG/USD", "callback_data": "asset_XAG/USD"},
+                    {"text": "🛢 OIL/USD", "callback_data": "asset_OIL/USD"}
+                ],
+                
+                # INDICES
+                [
+                    {"text": "📈 US30", "callback_data": "asset_US30"},
+                    {"text": "📈 SPX500", "callback_data": "asset_SPX500"},
+                    {"text": "📈 NAS100", "callback_data": "asset_NAS100"}
+                ],
+                
+                # DERIV SYNTHETICS (NEW!)
+                [
+                    {"text": "⚪ Vola 10", "callback_data": "asset_Volatility 10"},
+                    {"text": "⚪ Crash 500", "callback_data": "asset_Crash 500"},
+                    {"text": "⚪ Boom 500", "callback_data": "asset_Boom 500"}
+                ],
+                [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
+            ]
+        }
+        
+        text = """
+📊 **OTC TRADING ASSETS - 35+ INSTRUMENTS**
+
+*Trade these OTC binary options:*
+
+💱 **FOREX MAJORS & MINORS (20 PAIRS)**
+• EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD, NZD/USD, EUR/GBP...
+
+💱 **EXOTIC PAIRS (6 PAIRS)**
+• USD/CNH, USD/SGD, USD/HKD, USD/MXN, USD/ZAR, USD/TRY
+
+₿ **CRYPTOCURRENCIES (8 PAIRS)**
+• BTC/USD, ETH/USD, XRP/USD, ADA/USD, DOT/USD, LTC/USD, LINK/USD, MATIC/USD
+
+🟡 **COMMODITIES (6 PAIRS)**
+• XAU/USD (Gold), XAG/USD (Silver), XPT/USD (Platinum), OIL/USD (Oil)...
+
+📈 **INDICES (6 INDICES)**
+• US30 (Dow Jones), SPX500 (S&P 500), NAS100 (Nasdaq), FTSE100 (UK)...
+
+⚪ **DERIV SYNTHETICS (9 INDICES)** (NEW!)
+• Volatility Indices, Boom & Crash Indices - Stable 24/7 trading on Deriv
+
+*Click any asset to generate enhanced signal*"""
         
         if message_id:
             self.edit_message_text(
@@ -6981,6 +7092,7 @@ Complete technical specifications and capabilities available.
 • Momentum Breakout (best with liquidity)
 • Quantum Trend with multi-TF
 • Liquidity Grab with order flow
+• Market Maker Move
 • Multi-TF Convergence
 • **Spike Fade Strategy** (BEST for quick reversals)
 • **AI Trend Filter + Breakout** (Structured trend entries)
@@ -7223,7 +7335,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • Real technical analysis verification
 
 **🤖 AI TREND CONFIRMATION RISK BENEFITS:**
-• Multiple timeframe confirmation reduces false signals
+• Multiple timeframe confirmation reduces risk
 • Probability-based entries increase win rate
 • Only enters when all timeframes align (reduces risk)
 • Tight stop-loss management
