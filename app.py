@@ -7833,132 +7833,86 @@ We encountered an issue generating your signal. This is usually temporary.
             ]
         }
 
-    def _format_pro_signal_v9(self, analysis):
-        """
-        Formats the PRO signal using the detailed analysis dictionary (Final, Clean, Dynamic)
-        """
-        direction = analysis['direction']
-        confidence = analysis['confidence']
-        expiry_display = analysis['expiry_display']
-        platform_info = get_platform_info(analysis['platform'])
+    def format_full_signal(analysis):
+    """Full detailed Pro signal - ALL DATA FROM ANALYSIS (FIXED)"""
+    try:
+        if not isinstance(analysis, dict) or 'direction' not in analysis:
+            return generate_dynamic_fallback("full")
         
-        risk_indicator = "🟢" if analysis['risk_score'] >= 70 else "🟡" if analysis['risk_score'] >= 55 else "🔴"
-        risk_recommendation = analysis.get('risk_recommendation', 'N/A')
-        safety_indicator = "🛡️" if "HIGH CONFIDENCE" in risk_recommendation else "⚠️"
+        # CORE VALUES - must exist
+        direction = safe_get(analysis, 'direction')
+        asset = safe_get(analysis, 'asset')
+        confidence = safe_get(analysis, 'confidence')
         
-        if direction == "CALL":
-            direction_emoji = "🔼📈🎯"
-            direction_text = "CALL (UP)"
-            arrow_line = "⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️"
-            trade_action = f"🔼 BUY CALL OPTION - PRICE UP"
-            beginner_entry = "🟢 **ENTRY RULE (BEGINNERS):**\n➡️ Wait for price to go **DOWN** a little (small red candle)\n➡️ Then enter **UP** (CALL)"
-        else:
-            direction_emoji = "🔽📉🎯"
-            direction_text = "PUT (DOWN)"
-            arrow_line = "⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
-            trade_action = f"🔽 BUY PUT OPTION - PRICE DOWN"
-            beginner_entry = "🟢 **ENTRY RULE (BEGINNERS):**\n➡️ Wait for price to go **UP** a little (small green candle)\n➡️ Then enter **DOWN** (PUT)"
+        if not all([direction, asset, confidence]):
+            return generate_dynamic_fallback("full")
         
-        enhanced_features = "🧠 **INTELLIGENT PROBABILITY:** Active (10-15% accuracy boost)\n"
-        enhanced_features += "🎯 **ACCURACY BOOSTERS:** Consensus Voting, Real-time Volatility, Session Boundaries\n"
-        enhanced_features += f"🚨 **SAFETY SYSTEM:** {safety_indicator} {risk_recommendation}\n"
+        # DYNAMIC calculations for ALL fields
+        platform_emoji = safe_get(analysis, 'platform_emoji', '📊')
+        platform_name = safe_get(analysis, 'platform_name', 'OTC Trading')
+        expiry_display = safe_get(analysis, 'expiry_display', safe_get(analysis, 'expiry_recommendation', 'N/A'))
+        entry_timing = safe_get(analysis, 'entry_timing', 'Entry in 30-45 seconds')
         
+        trend_state = safe_get(analysis, 'trend_state', 'N/A')
+        trend_strength = safe_get(analysis, 'trend_strength', 0)
         
-        text = f"""
+        volatility_score = safe_get(analysis, 'volatility_score', 0)
+        volatility_state = safe_get(analysis, 'volatility_state', 'N/A')
+        
+        momentum_level = safe_get(analysis, 'momentum_level', 'N/A')
+        strategy = safe_get(analysis, 'strategy_name', 'N/A')
+        strategy_win_rate = safe_get(analysis, 'strategy_win_rate', 'N/A')
+        
+        risk_score = safe_get(analysis, 'risk_score', 0)
+        risk_label = "Low Risk" if risk_score > 80 else "Medium Risk" if risk_score > 60 else "Higher Risk"
+        filters_passed = safe_get(analysis, 'filters_passed', 0)
+        filters_total = safe_get(analysis, 'filters_total', 5)
+        market_state = safe_get(analysis, 'market_state', 'N/A')
+        
+        timestamp = safe_get(analysis, 'timestamp', 'N/A')
+        analysis_time = safe_get(analysis, 'analysis_time', timestamp)
+        signal_id = safe_get(analysis, 'signal_id', f"SIG{datetime.now().strftime('%H%M%S')}")
+        
+        # Determine arrows based on direction
+        arrow_line = "⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️" if direction == "CALL" else "⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
+        
+        # DYNAMICALLY DETERMINE DATA SOURCE & ANALYSIS TYPE
+        data_source = safe_get(analysis, 'data_source', 'System Default')
+        analysis_quality = safe_get(analysis, 'analysis_quality', 'Fallback Analysis')
+        
+        # FINAL FORMAT - EVERYTHING DYNAMIC (REMOVED HARDCODED RISK SECTION)
+        return f"""
 {arrow_line}
-🎯 **OTC BINARY SIGNAL V9.1.2** 🚀
+{platform_emoji} *{platform_name} Signal {signal_id}*
 {arrow_line}
 
-{direction_emoji} **TRADE DIRECTION:** {direction_text}
-⚡ **ASSET:** {analysis['asset']}
-⏰ **EXPIRY:** {expiry_display} 
-📊 **CONFIDENCE LEVEL:** {confidence}%
+🎯 *Direction:* {direction.upper()}
+💱 *Asset:* {asset}
+⏰ *Expiry:* {expiry_display}
+🔥 *Confidence:* {confidence}%
+🎮 *Platform:* {platform_name}
+
+📊 *Trend:* {trend_state} ({trend_strength}%)
+📉 *Volatility:* {volatility_state} ({volatility_score}/100)
+⚡ *Momentum:* {momentum_level}
+🎯 *Strategy:* {strategy}
+🤖 *Success Rate:* {strategy_win_rate}
+
+🛡 *Risk:* {risk_label} ({risk_score}/100)
+🎯 *Filters:* {filters_passed}/{filters_total}
+🔍 *Market:* {market_state}
+
 ---
-{beginner_entry}
----
-🎮 **PLATFORM:** {platform_info['emoji']} {platform_info['name']} (Optimized)
-{enhanced_features}
-{risk_indicator} **RISK SCORE:** {analysis['risk_score']}/100
-✅ **FILTERS PASSED:** {analysis['filters_passed']}/{analysis['filters_total']}
-💡 **RECOMMENDATION:** {risk_recommendation}
-
-📈 **OTC ANALYSIS:**
-• OTC Pattern: {analysis.get('otc_pattern', 'Standard')}
-• Volatility: {analysis['volatility_state']} ({analysis['volatility_score']:.0f}/100)
-• Trend State: {analysis['trend_state']} ({analysis['trend_strength']:.0f}%)
-• Strategy: {analysis['strategy_name']}
-• **AI Trend Filter Status:** ✅ PASSED ({analysis.get('ai_trend_filter_reason', 'Minimal confirmations')})
-
-🤖 **AI ANALYSIS:**
-• Analysis Time: {analysis['analysis_time']} UTC
-• Data Source: {'TwelveData + OTC Patterns' if analysis.get('market_context_used') else 'OTC Pattern Recognition'}
-• Analysis Type: REAL TECHNICAL (SMA + RSI + Price Action)
-
-💰 **TRADING RECOMMENDATION:**
-{trade_action}
-• Expiry: {expiry_display}
-• Strategy: {analysis['strategy_name']}
-• Payout: {analysis.get('payout_range', '75-90%')}
----
-🛡️ **RISK & POSITION SIZING (NEW):**
-• Recommended Investment: **{analysis['investment_advice']}**
-• SL/TP Advice: {analysis['exit_predictions']['notes']} (R/R: {analysis['exit_predictions']['risk_reward_ratio']})
-• Max Risk: 2% of account
-• Stop Loss: {analysis['exit_predictions']['stop_loss']}
-• Take Profit: {analysis['exit_predictions']['take_profit']}
-
-⚡ **EXECUTION:**
-• Entry: {analysis['entry_timing']} (Use Beginner Rule!)
-• Investment: **{analysis['investment_advice']}**
-• Stop Loss: Mental (close if pattern invalidates)
-
-{arrow_line}
-*Signal valid for 2 minutes - OTC trading involves risk*
-{arrow_line}"""
-        return text
-
-    def _handle_auto_detect(self, chat_id, message_id, asset):
-        """NEW: Handle auto expiry detection"""
-        try:
-            platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
-            
-            base_expiry, reason, market_conditions, final_expiry_display = auto_expiry_detector.get_expiry_recommendation(asset, platform)
-            
-            self.auto_mode[chat_id] = True
-            
-            analysis_text = f"""
-🔄 **AUTO EXPIRY DETECTION ANALYSIS**
-
-*Analyzing {asset} market conditions for {platform.upper()}...*
-
-**MARKET ANALYSIS:**
-• Trend Strength: {market_conditions['trend_strength']}%
-• Momentum: {market_conditions['momentum']}%
-• Market Type: {'Ranging' if market_conditions['ranging_market'] else 'Trending'}
-• Volatility: {market_conditions['volatility']}
-• Sustained Trend: {'Yes' if market_conditions['sustained_trend'] else 'No'}
-
-**AI RECOMMENDATION:**
-🎯 **OPTIMAL EXPIRY:** {final_expiry_display} 
-💡 **REASON:** {reason}
-
-*Auto-selecting optimal expiry...*"""
-            
-            self.edit_message_text(
-                chat_id, message_id,
-                analysis_text, parse_mode="Markdown"
-            )
-            
-            time.sleep(2)
-            self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, base_expiry) 
-            
-        except Exception as e:
-            logger.error(f"❌ Auto detect error: {e}")
-            self.edit_message_text(
-                chat_id, message_id,
-                "❌ **AUTO DETECTION ERROR**\n\nPlease try manual mode or contact support.",
-                parse_mode="Markdown"
-            )
+🤖 **AI ANALYSIS DETAILS**
+• *Data Source:* {data_source}
+• *Analysis Type:* {analysis_quality}
+• *Analysis Time:* {analysis_time}
+• *Entry Timing:* {entry_timing}
+"""
+        
+    except Exception as e:
+        logger.error(f"Full format error: {str(e)[:50]}")
+        return generate_dynamic_fallback("full")
 
     def _handle_button_click(self, chat_id, message_id, data, callback_query=None):
         """Handle button clicks - UPDATED WITH PLATFORM SELECTION"""
