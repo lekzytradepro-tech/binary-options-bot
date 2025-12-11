@@ -7834,7 +7834,7 @@ We encountered an issue generating your signal. This is usually temporary.
         }
 
     def format_full_signal(analysis):
-    """Full detailed Pro signal - ALL DATA FROM ANALYSIS (FIXED)"""
+        """Full detailed Pro signal - ALL DATA FROM ANALYSIS (FIXED)"""
     try:
         if not isinstance(analysis, dict) or 'direction' not in analysis:
             return generate_dynamic_fallback("full")
