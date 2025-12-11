@@ -7834,7 +7834,7 @@ We encountered an issue generating your signal. This is usually temporary.
         }
 
     def format_full_signal(analysis):
-        """Full detailed Pro signal - ALL DATA FROM ANALYSIS (FIXED)"""
+    """Full detailed Pro signal - ALL DATA FROM ANALYSIS (FIXED)"""
     try:
         if not isinstance(analysis, dict) or 'direction' not in analysis:
             return generate_dynamic_fallback("full")
@@ -7865,6 +7865,7 @@ We encountered an issue generating your signal. This is usually temporary.
         
         risk_score = safe_get(analysis, 'risk_score', 0)
         risk_label = "Low Risk" if risk_score > 80 else "Medium Risk" if risk_score > 60 else "Higher Risk"
+        
         filters_passed = safe_get(analysis, 'filters_passed', 0)
         filters_total = safe_get(analysis, 'filters_total', 5)
         market_state = safe_get(analysis, 'market_state', 'N/A')
@@ -7874,13 +7875,13 @@ We encountered an issue generating your signal. This is usually temporary.
         signal_id = safe_get(analysis, 'signal_id', f"SIG{datetime.now().strftime('%H%M%S')}")
         
         # Determine arrows based on direction
-        arrow_line = "⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️" if direction == "CALL" else "⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
+        arrow_line = "⬆️" * 10 if direction == "CALL" else "⬇️" * 10
         
         # DYNAMICALLY DETERMINE DATA SOURCE & ANALYSIS TYPE
         data_source = safe_get(analysis, 'data_source', 'System Default')
         analysis_quality = safe_get(analysis, 'analysis_quality', 'Fallback Analysis')
         
-        # FINAL FORMAT - EVERYTHING DYNAMIC (REMOVED HARDCODED RISK SECTION)
+        # FINAL FORMAT
         return f"""
 {arrow_line}
 {platform_emoji} *{platform_name} Signal {signal_id}*
