@@ -198,7 +198,11 @@ def format_full_signal(analysis):
         # Determine arrows based on direction
         arrow_line = "⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️" if direction == "CALL" else "⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
         
-        # FINAL FORMAT - EVERYTHING DYNAMIC
+        # DYNAMICALLY DETERMINE DATA SOURCE & ANALYSIS TYPE
+        data_source = safe_get(analysis, 'data_source', 'System Default')
+        analysis_quality = safe_get(analysis, 'analysis_quality', 'Fallback Analysis')
+        
+        # FINAL FORMAT - EVERYTHING DYNAMIC (REMOVED HARDCODED RISK SECTION)
         return f"""
 {arrow_line}
 {platform_emoji} *{platform_name} Signal {signal_id}*
@@ -216,12 +220,16 @@ def format_full_signal(analysis):
 🎯 *Strategy:* {strategy}
 🤖 *Success Rate:* {strategy_win_rate}
 
-⏱ *Analysis Time:* {analysis_time}
-⌛ *Entry Timing:* {entry_timing}
-
 🛡 *Risk:* {risk_label} ({risk_score}/100)
 🎯 *Filters:* {filters_passed}/{filters_total}
 🔍 *Market:* {market_state}
+
+---
+🤖 **AI ANALYSIS DETAILS**
+• *Data Source:* {data_source}
+• *Analysis Type:* {analysis_quality}
+• *Analysis Time:* {analysis_time}
+• *Entry Timing:* {entry_timing}
 """
         
     except Exception as e:
