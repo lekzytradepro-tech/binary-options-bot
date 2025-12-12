@@ -2923,6 +2923,15 @@ class PerformanceAnalytics:
 class RiskManagementSystem:
     """Advanced risk management and scoring for OTC"""
     
+    def is_optimal_otc_session_time(self):
+        """Check if current time is optimal for OTC trading"""
+        current_hour = datetime.utcnow().hour
+        # OTC trading is more flexible but still better during active hours
+        return 6 <= current_hour < 22
+    
+    # FIX THE TYPO ERROR - ADD THIS LINE:
+    isoptimalotcsessiontime = is_optimal_otc_session_time
+    
     def calculate_risk_score(self, signal_data):
         """Calculate comprehensive risk score 0-100 (higher = better) for OTC"""
         score = 100
@@ -2944,6 +2953,7 @@ class RiskManagementSystem:
         if otc_pattern in strong_patterns:
             score += 5
         
+        # ✅ NOW THIS WILL WORK:
         if not self.is_optimal_otc_session_time():
             score -= 8
         
@@ -2976,6 +2986,7 @@ class RiskManagementSystem:
         if risk_score >= 50:
             filters_passed += 1
         
+        # ✅ NOW THIS WILL WORK:
         if self.is_optimal_otc_session_time():
             filters_passed += 1
         
