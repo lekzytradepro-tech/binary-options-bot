@@ -232,7 +232,7 @@ def format_full_signal(analysis):
 
 def format_broadcast_signal(analysis):
     """Broadcast signal - 100% dynamic, ZERO hardcoded analysis text (FIXED)"""
-    try
+    try:
         if not isinstance(analysis, dict) or 'direction' not in analysis:
             return generate_dynamic_fallback("broadcast")
         
