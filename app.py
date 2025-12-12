@@ -11,7 +11,6 @@ import json
 from flask import Flask, request, jsonify
 import schedule
 import hashlib, math
-import re
 
 # =============================================================================
 # Logging Configuration
@@ -157,7 +156,7 @@ def format_short_signal(analysis):
         return generate_dynamic_fallback("short")
 
 def format_full_signal(analysis):
-    """Full detailed Pro signal - ALL DATA FROM ANALYSIS (FIXED and CLEANED)"""
+    """Full detailed Pro signal - ALL DATA FROM ANALYSIS (MOBILE-FRIENDLY)"""
     try:
         if not isinstance(analysis, dict) or 'direction' not in analysis:
             return generate_dynamic_fallback("full")
@@ -186,12 +185,6 @@ def format_full_signal(analysis):
         strategy = safe_get(analysis, 'strategy_name', 'N/A')
         strategy_win_rate = safe_get(analysis, 'strategy_win_rate', 'N/A')
         
-        risk_score = safe_get(analysis, 'risk_score', 0)
-        risk_label = "Low Risk" if risk_score > 80 else "Medium Risk" if risk_score > 60 else "Higher Risk"
-        filters_passed = safe_get(analysis, 'filters_passed', 0)
-        filters_total = safe_get(analysis, 'filters_total', 5)
-        market_state = safe_get(analysis, 'market_state', 'N/A')
-        
         timestamp = safe_get(analysis, 'timestamp', 'N/A')
         analysis_time = safe_get(analysis, 'analysis_time', timestamp)
         signal_id = safe_get(analysis, 'signal_id', f"SIG{datetime.now().strftime('%H%M%S')}")
@@ -199,38 +192,38 @@ def format_full_signal(analysis):
         # Determine arrows based on direction
         arrow_line = "⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️" if direction == "CALL" else "⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
         
-        # DYNAMICALLY DETERMINE DATA SOURCE & ANALYSIS TYPE
-        data_source = safe_get(analysis, 'data_source', 'System Default')
-        analysis_quality = safe_get(analysis, 'analysis_quality', 'Fallback Analysis')
+        # Beginner entry rule for mobile-friendly view
+        if direction == "CALL":
+            beginner_entry = "🟢 **ENTRY RULE (BEGINNERS):**\n➡️ Wait for price to go **DOWN** a little (small red candle)\n➡️ Then enter **UP** (CALL)"
+        else:
+            beginner_entry = "🟢 **ENTRY RULE (BEGINNERS):**\n➡️ Wait for price to go **UP** a little (small green candle)\n➡️ Then enter **DOWN** (PUT)"
 
-        # FINAL FORMAT - EVERYTHING DYNAMIC (REMOVED HARDCODED RISK SECTION)
+        # FINAL FORMAT - EVERYTHING DYNAMIC (Mobile-Optimized and Simplified)
         return f"""
 {arrow_line}
-{platform_emoji} *{platform_name} Signal {signal_id}*
+🎯 **PRO AI SIGNAL {platform_emoji}**
 {arrow_line}
 
-🎯 *Direction:* {direction.upper()}
-💱 *Asset:* {asset}
-⏰ *Expiry:* {expiry_display}
+📈 **{asset}**
+{platform_emoji} *Direction:* {direction.upper()}
 🔥 *Confidence:* {confidence}%
+⏰ *Expiry:* {expiry_display}
 🎮 *Platform:* {platform_name}
 
+---
+{beginner_entry}
+---
+
+🤖 **MARKET ANALYSIS**
 📊 *Trend:* {trend_state} ({trend_strength}%)
 📉 *Volatility:* {volatility_state} ({volatility_score}/100)
 ⚡ *Momentum:* {momentum_level}
-🎯 *Strategy:* {strategy}
-🤖 *Success Rate:* {strategy_win_rate}
+🎯 *Strategy:* {strategy} ({strategy_win_rate} Success Rate)
 
-🛡 *Risk:* {risk_label} ({risk_score}/100)
-🎯 *Filters:* {filters_passed}/{filters_total}
-🔍 *Market:* {market_state}
+⏱ *Analysis Time:* {analysis_time} UTC
+⌛ *Expected Entry:* {entry_timing}
 
----
-🤖 **AI ANALYSIS DETAILS**
-• *Data Source:* {data_source}
-• *Analysis Type:* {analysis_quality}
-• *Analysis Time:* {analysis_time}
-• *Entry Timing:* {entry_timing}
+*Signal ID: {signal_id}*
 """
         
     except Exception as e:
@@ -239,7 +232,7 @@ def format_full_signal(analysis):
 
 def format_broadcast_signal(analysis):
     """Broadcast signal - 100% dynamic, ZERO hardcoded analysis text (FIXED)"""
-    try:
+    try
         if not isinstance(analysis, dict) or 'direction' not in analysis:
             return generate_dynamic_fallback("broadcast")
         
@@ -1116,7 +1109,7 @@ PLATFORM_SETTINGS = {
 class ProfitLossTracker:
     """Tracks results and adapts signals - STOPS LOSING STREAKS"""
     
-    def __init__(self__(self):
+    def __init__(self):
         self.trade_history = []
         self.asset_performance = {}
         self.max_consecutive_losses = 3
@@ -2350,7 +2343,7 @@ class EnhancedOTCAnalysis:
         
         return {
             'asset': asset,
-            'analysis_type': 'Fallback Analysis', # DYNAMICALLY UPDATED
+            'analysis_type': 'OTC_BINARY',
             'timestamp': datetime.now().isoformat(),
             'market_context_used': False,
             'otc_optimized': True,
@@ -2368,8 +2361,7 @@ class EnhancedOTCAnalysis:
             'entry_timing': 'Entry in 30-45 seconds',
             'trend_state': 'N/A',
             'volatility_state': 'N/A',
-            'signal_id': f"SIG{datetime.now().strftime('%H%M%S')}",
-            'data_source': 'System Default' # DYNAMICALLY UPDATED
+            'signal_id': f"SIG{datetime.now().strftime('%H%M%S')}"
         }
         
     def _generate_otc_analysis(self, asset, market_context, direction, confidence, strategy, platform):
@@ -2452,9 +2444,7 @@ class EnhancedOTCAnalysis:
             'otc_pattern': 'Quick momentum reversal',
             'entry_timing': 'Immediate execution',
             'analysis_notes': f'OTC scalping optimized for {platform}',
-             'trend_state': 'Volatile', 'volatility_state': 'High',
-             'data_source': 'Real-Time Price Action', # DYNAMICALLY UPDATED
-             'analysis_quality': 'Real-Time Analysis' # DYNAMICALLY UPDATED
+             'trend_state': 'Volatile', 'volatility_state': 'High'
         }
     
     def _otc_trend_analysis(self, asset, market_context, platform):
@@ -2465,9 +2455,7 @@ class EnhancedOTCAnalysis:
             'risk_level': 'Medium' if platform.lower().replace(' ', '_') in ["quotex", "deriv"] else 'Medium-High',
             'otc_pattern': 'Trend continuation',
             'analysis_notes': f'OTC trend following adapted for {platform}',
-            'trend_state': 'Trending', 'volatility_state': 'Medium',
-            'data_source': 'Multi-Timeframe EMA/Price', # DYNAMICALLY UPDATED
-            'analysis_quality': 'Trend Confirmation' # DYNAMICALLY UPDATED
+            'trend_state': 'Trending', 'volatility_state': 'Medium'
         }
     
     def _otc_sr_analysis(self, asset, market_context, platform):
@@ -2478,9 +2466,7 @@ class EnhancedOTCAnalysis:
             'risk_level': 'Medium',
             'otc_pattern': 'Key level reaction',
             'analysis_notes': f'OTC S/R optimized for {platform} volatility',
-            'trend_state': 'Ranging', 'volatility_state': 'Medium',
-            'data_source': 'Historical S/R & Price Action', # DYNAMICALLY UPDATED
-            'analysis_quality': 'Structural Analysis' # DYNAMICALLY UPDATED
+            'trend_state': 'Ranging', 'volatility_state': 'Medium'
         }
     
     def _otc_price_action_analysis(self, asset, market_context, platform):
@@ -2491,9 +2477,7 @@ class EnhancedOTCAnalysis:
             'risk_level': 'Medium',
             'otc_pattern': 'Pure pattern recognition',
             'analysis_notes': f'OTC price action adapted for {platform}',
-            'trend_state': 'Trending', 'volatility_state': 'Medium',
-            'data_source': 'Candlestick & Momentum', # DYNAMICALLY UPDATED
-            'analysis_quality': 'Pattern Recognition' # DYNAMICALLY UPDATED
+            'trend_state': 'Trending', 'volatility_state': 'Medium'
         }
     
     def _otc_ma_analysis(self, asset, market_context, platform):
@@ -2504,9 +2488,7 @@ class EnhancedOTCAnalysis:
             'risk_level': 'Medium',
             'otc_pattern': 'Moving average convergence',
             'analysis_notes': f'OTC MA crossovers optimized for {platform}',
-            'trend_state': 'Trending', 'volatility_state': 'Low',
-            'data_source': 'Moving Averages', # DYNAMICALLY UPDATED
-            'analysis_quality': 'Trend Confirmation' # DYNAMICALLY UPDATED
+            'trend_state': 'Trending', 'volatility_state': 'Low'
         }
     
     def _otc_momentum_analysis(self, asset, market_context, platform):
@@ -2517,9 +2499,7 @@ class EnhancedOTCAnalysis:
             'risk_level': 'Medium-High',
             'otc_pattern': 'Momentum acceleration',
             'analysis_notes': f'AI momentum scanning for {platform}',
-            'trend_state': 'Volatile', 'volatility_state': 'High',
-            'data_source': 'Momentum Indicators & Volume', # DYNAMICALLY UPDATED
-            'analysis_quality': 'Momentum Analysis' # DYNAMICALLY UPDATED
+            'trend_state': 'Volatile', 'volatility_state': 'High'
         }
     
     def _otc_quantum_analysis(self, asset, market_context, platform):
@@ -2530,9 +2510,7 @@ class EnhancedOTCAnalysis:
             'risk_level': 'Medium',
             'otc_pattern': 'Quantum pattern prediction',
             'analysis_notes': f'Advanced AI optimized for {platform}',
-            'trend_state': 'Balanced', 'volatility_state': 'Medium',
-            'data_source': 'Quantum Algorithm', # DYNAMICALLY UPDATED
-            'analysis_quality': 'Advanced AI Prediction' # DYNAMICALLY UPDATED
+            'trend_state': 'Balanced', 'volatility_state': 'Medium'
         }
     
     def _otc_consensus_analysis(self, asset, market_context, platform):
@@ -2543,9 +2521,7 @@ class EnhancedOTCAnalysis:
             'risk_level': 'Low-Medium',
             'otc_pattern': 'Multi-engine agreement',
             'analysis_notes': f'AI consensus adapted for {platform}',
-            'trend_state': 'Balanced', 'volatility_state': 'Low',
-            'data_source': 'Multiple AI Engines', # DYNAMICALLY UPDATED
-            'analysis_quality': 'Consensus Voting' # DYNAMICALLY UPDATED
+            'trend_state': 'Balanced', 'volatility_state': 'Low'
         }
     
     def _otc_ai_trend_confirmation(self, asset, market_context, platform):
@@ -2563,9 +2539,7 @@ class EnhancedOTCAnalysis:
             'entry_condition': 'All timeframes must confirm same direction',
             'risk_reward': '1:2 minimum',
             'confidence_threshold': '75% minimum',
-            'trend_state': 'Strong Uptrend/Downtrend', 'volatility_state': 'Medium',
-            'data_source': 'Multi-Timeframe Analysis', # DYNAMICALLY UPDATED
-            'analysis_quality': 'AI Trend Confirmation' # DYNAMICALLY UPDATED
+            'trend_state': 'Strong Uptrend/Downtrend', 'volatility_state': 'Medium'
         }
     
     def _otc_spike_fade_analysis(self, asset, market_context, platform):
@@ -2580,9 +2554,7 @@ class EnhancedOTCAnalysis:
             'win_rate': '68-75%',
             'best_for': 'Experienced traders with fast execution',
             'entry_condition': 'Sharp move against the main trend, hit a key S/R level',
-            'trend_state': 'Reversal', 'volatility_state': 'Very High',
-            'data_source': 'Volatility & S/R Analysis', # DYNAMICALLY UPDATED
-            'analysis_quality': 'Mean Reversion Analysis' # DYNAMICALLY UPDATED
+            'trend_state': 'Reversal', 'volatility_state': 'Very High'
         }
     
     def _otc_ai_trend_filter_breakout(self, asset, market_context, platform):
@@ -2599,9 +2571,7 @@ class EnhancedOTCAnalysis:
             'entry_condition': 'Confirmed candle close beyond manually marked S/R level',
             'risk_reward': '1:2 minimum',
             'confidence_threshold': '70% minimum',
-            'trend_state': 'Trending', 'volatility_state': 'Medium',
-            'data_source': 'AI Filter & Structural Analysis', # DYNAMICALLY UPDATED
-            'analysis_quality': 'Hybrid Structured Analysis' # DYNAMICALLY UPDATED
+            'trend_state': 'Trending', 'volatility_state': 'Medium'
         }
     
     def _default_otc_analysis(self, asset, market_context, platform):
@@ -2612,9 +2582,7 @@ class EnhancedOTCAnalysis:
             'risk_level': 'Medium',
             'otc_pattern': 'Standard OTC trend',
             'analysis_notes': f'General OTC binary options analysis for {platform}',
-            'trend_state': 'Ranging', 'volatility_state': 'Medium',
-            'data_source': 'Real Technical Analysis', # DYNAMICALLY UPDATED
-            'analysis_quality': 'General OTC Analysis' # DYNAMICALLY UPDATED
+            'trend_state': 'Ranging', 'volatility_state': 'Medium'
         }
 
 # =============================================================================
@@ -2984,11 +2952,6 @@ class RiskManagementSystem:
         score += platform_cfg.get('fakeout_adjustment', 0)
         
         return max(40, min(100, score))
-    
-    def is_optimal_otc_session_time(self):
-        """Check if current time is optimal for OTC trading"""
-        current_hour = datetime.utcnow().hour
-        return 6 <= current_hour < 22
     
     def get_risk_recommendation(self, risk_score):
         """Get OTC trading recommendation based on risk score"""
@@ -4007,7 +3970,7 @@ def generate_complete_analysis(asset, direction, confidence, engine_data=None, p
         if isinstance(strategy_info, dict):
             strategy_win_rate = strategy_info.get('success_rate')
         elif isinstance(strategy_info, str) and 'success_rate' in strategy_info.lower():
-            
+            import re
             match = re.search(r'(\d+-\d+%|\d+%)', strategy_info)
             strategy_win_rate = match.group(1) if match else None
         
@@ -4055,25 +4018,8 @@ def generate_complete_analysis(asset, direction, confidence, engine_data=None, p
         analysis['market_state'] = analysis.get('trend_state', 'Market Analysis')
         
         # ===== 11. ADDITIONAL DYNAMIC METRICS =====
-        # DYNAMICALLY set data source and quality based on what was used in OTCAnalysis
-        
-        # Set defaults in case OTCAnalysis didn't run properly (which should be caught by earlier fallback)
-        data_source = "Real Technical Analysis (SMA/RSI/PA)"
-        analysis_quality = "Real-Time Analysis"
-        
-        # If market context was used, refine the source description
-        if analysis.get('market_context_used', False):
-             data_source = "TwelveData + OTC Patterns"
-             analysis_quality = "Context-Validated Analysis"
-        
-        # If a specific strategy analysis ran, use its output (if available)
-        if isinstance(strategy_info, dict):
-             data_source = strategy_info.get('data_source', data_source)
-             analysis_quality = strategy_info.get('analysis_quality', analysis_quality)
-
-
-        analysis['analysis_quality'] = analysis_quality
-        analysis['data_source'] = data_source
+        analysis['analysis_quality'] = "Real-Time Analysis"
+        analysis['data_source'] = "Market Data Analysis"
         analysis['timeframe_used'] = "Multi-Timeframe Analysis"
         analysis['rsi'] = (engine_data.get_rsi() if (engine_data and hasattr(engine_data, 'get_rsi')) else 50.0)
         
@@ -7551,8 +7497,6 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 • AI Trend Confirmation: ✅ ACTIVE (NEW!)
 • AI Trend Filter + Breakout: ✅ ACTIVE (NEW!)
 • Spike Fade Strategy: ✅ ACTIVE (NEW!)
-• Accuracy Boosters: ✅ ACTIVE (NEW!)
-• Safety Systems: ✅ ACTIVE 🚨 (NEW!)
 
 **🎯 ENHANCED PERFORMANCE:**
 • Signal Accuracy: 78-85% (with AI Trend Confirmation)
@@ -7804,28 +7748,23 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             final_analysis['market_context_used'] = analysis_context.get('market_context_used', False)
             final_analysis['volatility_score'] = volatility_value_norm
             
-            # --- NEW: DYNAMIC POSITION SIZING ---
-            position_fraction = dynamic_position_sizer.calculate_position_size(chat_id, confidence, volatility_value_norm)
-            BASE_ACCOUNT_SIZE = 10000 
-            recommended_investment = BASE_ACCOUNT_SIZE * position_fraction
-            recommended_investment = min(1000, max(5, round(recommended_investment, 2)))
-            investment_advice = f"~${recommended_investment} ({position_fraction*100:.1f}% of capital)"
-            final_analysis['investment_advice'] = investment_advice
+            # --- REMOVED: DYNAMIC POSITION SIZING (AS REQUESTED) ---
+            # position_fraction = dynamic_position_sizer.calculate_position_size(chat_id, confidence, volatility_value_norm)
+            # BASE_ACCOUNT_SIZE = 10000 
+            # recommended_investment = BASE_ACCOUNT_SIZE * position_fraction
+            # recommended_investment = min(1000, max(5, round(recommended_investment, 2)))
+            # investment_advice = f"~${recommended_investment} ({position_fraction*100:.1f}% of capital)"
+            # final_analysis['investment_advice'] = investment_advice
 
-            # --- NEW: PREDICTIVE EXIT ENGINE ---
-            exit_predictions = predictive_exit_engine.predict_optimal_exits(
-                asset, direction, volatility_value_norm
-            )
-            final_analysis['exit_predictions'] = exit_predictions
+            # --- REMOVED: PREDICTIVE EXIT ENGINE (AS REQUESTED) ---
+            # exit_predictions = predictive_exit_engine.predict_optimal_exits(
+            #     asset, direction, volatility_value_norm
+            # )
+            # final_analysis['exit_predictions'] = exit_predictions
 
-            # --- FORMATTING AND SENDING (USES DYNAMIC FORMATTERS) ---
-            user_tier = get_user_tier(chat_id)
-            
-            # Use dynamic formatters: format_full_signal for Pro/Admin, format_short_signal for others.
-            if user_tier in ['pro', 'admin']:
-                message_text = format_full_signal(final_analysis)
-            else:
-                message_text = format_short_signal(final_analysis)
+            # --- FORMATTING AND SENDING (SIMPLIFIED FOR MOBILE VIEW) ---
+            # All users receive the premium, mobile-optimized signal format_full_signal.
+            message_text = format_full_signal(final_analysis) 
                 
             self.edit_message_text(
                 chat_id, message_id,
@@ -7879,8 +7818,8 @@ We encountered an issue generating your signal. This is usually temporary.
             ]
         }
 
-    # NOTE: The original _format_pro_signal_v9 is deleted as requested.
-    # The new logic uses format_full_signal defined globally.
+    # DELETED: _format_pro_signal_v9(self, analysis) as requested.
+    # Its logic has been merged and simplified into format_full_signal().
 
     def _handle_auto_detect(self, chat_id, message_id, asset):
         """NEW: Handle auto expiry detection"""
@@ -8413,7 +8352,7 @@ def home():
     return jsonify({
         "status": "running",
         "service": "enhanced-otc-binary-trading-pro", 
-        "version": "9.1.2_CLEANED",
+        "version": "9.1.2",
         "platform": "OTC_BINARY_OPTIONS",
         "features": [
             "35+_otc_assets", "23_ai_engines", "34_otc_strategies", "enhanced_otc_signals", 
@@ -8458,7 +8397,7 @@ def health():
         "otc_strategies": len(TRADING_STRATEGIES),
         "active_users": len(user_tiers),
         "platform_type": "OTC_BINARY_OPTIONS",
-        "signal_version": "V9.1.2_CLEANED",
+        "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8576,7 +8515,7 @@ def set_webhook():
             "otc_strategies": len(TRADING_STRATEGIES),
             "users": len(user_tiers),
             "enhanced_features": True,
-            "signal_version": "V9.1.2_CLEANED",
+            "signal_version": "V9.1.2_OTC",
             "auto_expiry_detection": True,
             "ai_momentum_breakout": True,
             "payment_system": "manual_admin",
@@ -8625,7 +8564,7 @@ def webhook():
             "update_id": update_id,
             "queue_size": update_queue.qsize(),
             "enhanced_processing": True,
-            "signal_version": "V9.1.2_CLEANED",
+            "signal_version": "V9.1.2_OTC",
             "auto_expiry_detection": True,
             "payment_system": "manual_admin",
             "education_system": True,
@@ -8663,7 +8602,7 @@ def debug():
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
         "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance"], 
-        "signal_version": "V9.1.2_CLEANED",
+        "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8674,8 +8613,8 @@ def debug():
         "30s_expiry_support": True,
         "multi_platform_balancing": True,
         "ai_trend_confirmation": True,
-        "ai_trend_filter_breakout": True,
         "spike_fade_strategy": True,
+        "ai_trend_filter_breakout": True,
         "accuracy_boosters": True,
         "safety_systems": True,
         "real_technical_analysis": True,
@@ -8700,7 +8639,7 @@ def stats():
         "enhanced_strategies": len(TRADING_STRATEGIES),
         "server_time": datetime.now().isoformat(),
         "enhanced_features": True,
-        "signal_version": "V9.1.2_CLEANED",
+        "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
         "payment_system": "manual_admin",
@@ -8788,7 +8727,7 @@ def diagnose_user(chat_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     
-    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V9.1.2_CLEANED on port {port}")
+    logger.info(f"🚀 Starting Enhanced OTC Binary Trading Pro V9.1.2 on port {port}")
     logger.info(f"📊 OTC Assets: {len(OTC_ASSETS)} | AI Engines: {len(AI_ENGINES)} | OTC Strategies: {len(TRADING_STRATEGIES)}")
     logger.info("🎯 OTC OPTIMIZED: TwelveData integration for market context only")
     logger.info("📈 REAL DATA USAGE: Market context for OTC pattern correlation")
