@@ -11,6 +11,7 @@ import json
 from flask import Flask, request, jsonify
 import schedule
 import hashlib, math
+import asyncio # <-- NEW: Added import for asynchronous behavior (even if running threads)
 
 # =============================================================================
 # Logging Configuration
@@ -3821,7 +3822,7 @@ def can_generate_signal(chat_id):
             user_data['date'] = today
             user_data['count'] = 0
         
-        user_data['count'] = user_data.get('count', 0) + 1
+        # Don't increment count for unlimited tiers in the check, let the launcher handle it
         return True, f"{USER_TIERS[tier]['name']}: Unlimited access"
     
     tier_info = USER_TIERS.get(tier, USER_TIERS['free_trial'])
@@ -3839,9 +3840,25 @@ def can_generate_signal(chat_id):
     if user_data.get('count', 0) >= tier_info['signals_daily']:
         return False, f"Daily limit reached ({tier_info['signals_daily']} signals)"
     
-    user_data['count'] = user_data.get('count', 0) + 1
+    # We INCREMENT THE COUNT IN THE LAUNCHER, not here in the check function itself.
+    # The launcher checks, increments, and then queues the async task.
     return True, f"{tier_info['name']}: {user_data['count']}/{tier_info['signals_daily']} signals"
 
+def increment_signal_count(chat_id):
+    """Safely increments the signal counter for a user after permission check."""
+    today = datetime.now().date().isoformat()
+    if chat_id not in user_tiers:
+        get_user_tier(chat_id) # Initialize if necessary
+    
+    user_data = user_tiers[chat_id]
+    
+    if user_data.get('date') != today:
+        user_data['date'] = today
+        user_data['count'] = 0
+    
+    user_data['count'] = user_data.get('count', 0) + 1
+    logger.info(f"Signal count incremented for {chat_id}: {user_data['count']}")
+    
 def get_user_stats(chat_id):
     """Get user statistics"""
     tier = get_user_tier(chat_id)
@@ -4745,6 +4762,17 @@ class OTCTradingBot:
             elif 'callback_query' in update_data:
                 self._process_callback_query(update_data['callback_query'])
                 
+            # --- NEW: Handle internal ASYNC signal request from the queue ---
+            elif 'internal_async_signal' in update_data:
+                signal_data = update_data['internal_async_signal']
+                self._generate_enhanced_otc_signal_async(
+                    signal_data['chat_id'],
+                    signal_data['message_id'],
+                    signal_data['asset'],
+                    signal_data['expiry'],
+                    signal_data['platform']
+                )
+                
         except Exception as e:
             logger.error(f"❌ Update processing error: {e}")
     
@@ -5524,10 +5552,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 • Messages Sent: {stats['total_messages_sent']}
 • Messages Failed: {stats['total_messages_failed']}
 • Success Rate: {stats['success_rate']}
-
-**Recent Broadcasts:**"""
-                
-                for i, broadcast in enumerate(stats['recent_broadcasts'], 1):
+             for i, broadcast in enumerate(stats['recent_broadcasts'], 1):
                     stats_text += f"\n{i}. {broadcast['timestamp']} - {broadcast['sent_to']} users"
                 
                 stats_text += f"\n\n**Total Users:** {len(user_tiers)}"
@@ -6160,7 +6185,7 @@ Low (Only enters with strong confirmation)
 ✨ **How it works (Hybrid Trading):**
 1️⃣ **AI Analysis**: The AI model analyzes volume, candlestick patterns, and volatility, providing a clear **UP** 📈, **DOWN** 📉, or **SIDEWAYS** ➖ direction.
 2️⃣ **Your Role**: The human trader marks key **Support** and **Resistance (S/R) levels** on their chart.
-3️⃣ **Entry Rule**: You enter ONLY when the price breaks a key S/R level in the AI-predicted direction, confirmed by a strong candle close.
+3️⃣ **Entry Rule**: You enter ONLY when the price breaks a key S/R level in the **AI-predicted direction**, confirmed by a strong candle close.
 
 💥 **Why it works:**
 • **Removes Chaos**: AI provides the objective direction, eliminating emotional "guesses."
@@ -6425,7 +6450,7 @@ Complete strategy guide with enhanced AI analysis coming soon.
 
 *Advanced AI analysis for OTC binary trading:*
 
-**🤖 NEW: REAL AI ENGINE (Multi-TF Core)**
+**🤖 NEW: REAL AI ENGINE (CORE) - Multi-TF Confluence**
 • RealAIEngine - Rule-based, indicator + multi-timeframe analysis (Core Signal Source)
 
 **🤖 NEW: TREND CONFIRMATION ENGINE:**
@@ -6939,7 +6964,7 @@ Complete technical specifications and capabilities available.
 • Safety systems (NEW!)
 • **7 Platform Support** (NEW!)
 
-*Contact admin for enhanced upgrade options*"""
+*Contact admin for custom enhanced settings*"""
         
         self.edit_message_text(
             chat_id, message_id,
@@ -8106,19 +8131,52 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
         self.edit_message_text(chat_id, message_id, text, parse_mode="Markdown", reply_markup=keyboard)
 
     def _generate_enhanced_otc_signal_v9(self, chat_id, message_id, asset, expiry):
-        """ENHANCED V9: Advanced validation for higher accuracy"""
+        """ENHANCED V9: Advanced validation for higher accuracy - NOW ASYNCHRONOUS LAUNCHER"""
         try:
             can_signal, message = can_generate_signal(chat_id)
             if not can_signal:
                 self.edit_message_text(chat_id, message_id, _format_limit_message(message), parse_mode="Markdown")
                 return
+
+            # Increment count immediately after passing the check
+            increment_signal_count(chat_id)
             
             platform = self.user_sessions.get(chat_id, {}).get("platform", "quotex")
-            platform_key = platform.lower().replace(' ', '_')
-            platform_info = PLATFORM_SETTINGS.get(platform_key, PLATFORM_SETTINGS["quotex"])
             
+            # Respond IMMEDIATELY to Telegram to prevent timeout
             self.edit_message_text(chat_id, message_id, _format_processing_message(asset, platform, expiry), parse_mode="Markdown")
             
+            # Launch the actual heavy lifting in the background thread/queue
+            # We pass chat_id, message_id, asset, expiry, and platform_key to the async worker.
+            update_queue.put({
+                'internal_async_signal': {
+                    'chat_id': chat_id,
+                    'message_id': message_id,
+                    'asset': asset,
+                    'expiry': expiry,
+                    'platform': platform
+                }
+            })
+            logger.info(f"🚀 Signal request for {asset} queued for async processing (ID: {message_id})")
+            
+        except Exception as e:
+            logger.error(f"❌ Enhanced OTC signal LAUNCHER error: {e}")
+            self.edit_message_text(
+                chat_id, message_id,
+                _format_exception_message(e), parse_mode="Markdown"
+            )
+
+    def _generate_enhanced_otc_signal_async(self, chat_id, message_id, asset, expiry, platform):
+        """
+        [NEW ASYNC WORKER] Performs the intensive Dual-Engine calculation and sends the final result.
+        This must run OFF the main request thread.
+        """
+        try:
+            # Re-check limits just before processing, though the launcher already checked
+            # We decrement the counter in the launcher, so no need to check here again.
+            
+            platform_key = platform.lower().replace(' ', '_')
+
             safe_signal_check, error = safe_signal_generator.generate_safe_signal(chat_id, asset, expiry, platform_key)
 
             if error != "OK":
@@ -8129,14 +8187,13 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 )
                 return
 
-            # --- NEW DUAL ENGINE INTEGRATION ---
-            # 1. Get the baseline result from RealSignalVerifier (which executes the QuantMarketEngine logic)
+            # --- DUAL ENGINE INTEGRATION ---
+            # 1. Get the baseline result from RealSignalVerifier (Quant Engine)
             quant_dir, quant_conf, quant_engine = self.real_verifier.get_real_direction(asset)
 
             # 2. Combine the Quant result with a fresh RealAIEngine analysis via DualEngineManager
-            dual = dual_engine_manager # Use the initialized global instance
+            dual = dual_engine_manager
             direction, confidence, dual_details, engine = dual.get_dual_direction(asset, quant_dir, quant_conf, quant_engine)
-            logger.info(f"DualEngine -> {asset} | dir:{direction} conf:{confidence} | details:{dual_details}")
             # --- END DUAL ENGINE INTEGRATION ---
             
             analysis_context = otc_analysis.analyze_otc_signal(asset, platform=platform_key)
@@ -8148,11 +8205,8 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 market_trend_direction = engine.get_trend()
                 truth_score_raw = engine.calculate_truth()
                 momentum_raw = engine.get_momentum()
-                # Use confidence derived from dual engine as trend strength for the filter
                 trend_strength = confidence 
-                # Normalize momentum for the filter (example scaling factor)
                 momentum_score = int(min(100, abs(momentum_raw) * 10000))
-                # Get real-time volatility score for the filter
                 _, volatility_value_norm = volatility_analyzer.get_volatility_adjustment(asset, confidence) 
                 volatility_value = volatility_value_norm / 100.0
             else:
@@ -8163,7 +8217,6 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
 
             spike_detected = platform_key == 'pocket_option' and (volatility_value_norm > 80 or analysis_context.get('otc_pattern') == "Spike Reversal Pattern")
 
-            # NOTE: We use the multi-TF derived confidence (trend_strength) for the AI filter
             allowed, reason = ai_trend_filter(
                 direction=direction,
                 trend_direction=market_trend_direction,
@@ -8221,11 +8274,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             final_analysis['market_context_used'] = analysis_context.get('market_context_used', False)
             final_analysis['volatility_score'] = volatility_value_norm
             
-            # --- REMOVED: DYNAMIC POSITION SIZING (AS REQUESTED) ---
-            # --- REMOVED: PREDICTIVE EXIT ENGINE (AS REQUESTED) ---
-
-            # --- FORMATTING AND SENDING (SIMPLIFIED FOR MOBILE VIEW) ---
-            # All users receive the premium, mobile-optimized signal format_full_signal.
+            # --- FORMATTING AND SENDING ---
             message_text = format_full_signal(final_analysis) 
                 
             self.edit_message_text(
@@ -8236,6 +8285,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             if os.getenv("SHOULD_BROADCAST", "False").lower() == "true":
                 broadcast_system.send_channel_signal(final_analysis)
             
+            # Update history AFTER successful processing
             trade_data = {
                 'asset': asset,
                 'direction': direction,
@@ -8250,7 +8300,7 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
             performance_analytics.update_trade_history(chat_id, trade_data)
             
         except Exception as e:
-            logger.error(f"❌ Enhanced OTC signal generation error: {e}")
+            logger.error(f"❌ Enhanced OTC signal ASYNC WORKER error: {e}")
             error_details = f"""
 ❌ **SIGNAL GENERATION ERROR**
 
@@ -8279,9 +8329,6 @@ We encountered an issue generating your signal. This is usually temporary.
                 [{"text": "🔙 MAIN MENU", "callback_data": "menu_main"}]
             ]
         }
-
-    # DELETED: _format_pro_signal_v9(self, analysis) as requested.
-    # Its logic has been merged and simplified into format_full_signal().
 
     def _handle_auto_detect(self, chat_id, message_id, asset):
         """NEW: Handle auto expiry detection"""
@@ -8315,7 +8362,7 @@ We encountered an issue generating your signal. This is usually temporary.
                 analysis_text, parse_mode="Markdown"
             )
             
-            time.sleep(2)
+            # Immediate launch of async process
             self._generate_enhanced_otc_signal_v9(chat_id, message_id, asset, base_expiry) 
             
         except Exception as e:
@@ -8838,7 +8885,8 @@ def home():
             "7_platform_support", "deriv_tick_expiries", "asset_ranking_system",
             "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance",
             "real_ai_engine_core", # New core engine
-            "dual_engine_manager" # Dual engine integration
+            "dual_engine_manager", # Dual engine integration
+            "async_signal_processing" # NEW: Async Fix
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -8894,7 +8942,8 @@ def health():
         "predictive_exit_engine": True,
         "jurisdiction_compliance": True,
         "real_ai_engine_core": True, # New core engine
-        "dual_engine_manager": True # Dual engine integration
+        "dual_engine_manager": True, # Dual engine integration
+        "async_signal_processing": True # NEW: Async Fix
     })
 
 @app.route('/broadcast/safety', methods=['POST'])
@@ -9006,7 +9055,8 @@ def set_webhook():
             "predictive_exit_engine": True,
             "jurisdiction_compliance": True,
             "real_ai_engine_core": True, # New core engine
-            "dual_engine_manager": True # Dual engine integration
+            "dual_engine_manager": True, # Dual engine integration
+            "async_signal_processing": True # NEW: Async Fix
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -9056,7 +9106,8 @@ def webhook():
             "predictive_exit_engine": True,
             "jurisdiction_compliance": True,
             "real_ai_engine_core": True, # New core engine
-            "dual_engine_manager": True # Dual engine integration
+            "dual_engine_manager": True, # Dual engine integration
+            "async_signal_processing": True # NEW: Async Fix
         })
         
     except Exception as e:
@@ -9074,7 +9125,7 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance", "real_ai_engine_core", "dual_engine_manager"], 
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance", "real_ai_engine_core", "dual_engine_manager", "async_signal_processing"], 
         "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
@@ -9097,7 +9148,8 @@ def debug():
         "predictive_exit_engine": True,
         "jurisdiction_compliance": True,
         "real_ai_engine_core": True, # New core engine
-        "dual_engine_manager": True # Dual engine integration
+        "dual_engine_manager": True, # Dual engine integration
+        "async_signal_processing": True # NEW: Async Fix
     })
 
 @app.route('/stats')
@@ -9139,7 +9191,8 @@ def stats():
         "predictive_exit_engine": True,
         "jurisdiction_compliance": True,
         "real_ai_engine_core": True, # New core engine
-        "dual_engine_manager": True # Dual engine integration
+        "dual_engine_manager": True, # Dual engine integration
+        "async_signal_processing": True # NEW: Async Fix
     })
 
 # =============================================================================
@@ -9244,5 +9297,6 @@ if __name__ == '__main__':
     logger.info("🔒 JURISDICTION COMPLIANCE: Basic check added to /start flow (NEW!)")
     logger.info("⭐ REAL AI ENGINE CORE: Multi-timeframe analysis integrated as core signal source (NEW!)") # New core engine log
     logger.info("⭐ DUAL ENGINE MANAGER: Combining Quant and AI signals for enhanced accuracy (NEW!)") # Dual engine log
+    logger.info("✅ ASYNC SIGNAL PROCESSING: Core signal generation moved off main thread for stability (CRITICAL FIX!)") # Async Fix Log
 
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)   
