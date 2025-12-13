@@ -5705,6 +5705,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🏦 **ENHANCED OTC BINARY TRADING PRO** 🤖
 
 *Advanced Over-The-Counter Binary Options Platform*
+"""
 
 🎯 **ENHANCED OTC SIGNALS** - Multi-timeframe & market context analysis
 📊 **35+ TRADING ASSETS** - Forex, Crypto, Commodities, Indices, Synthetics (NEW!)
