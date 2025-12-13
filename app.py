@@ -5701,8 +5701,9 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
         can_trade, trade_reason = profit_loss_tracker.should_user_trade(chat_id)
         safety_status = "🟢 SAFE TO TRADE" if can_trade else f"🔴 {trade_reason}"
         
-        text = f"""
-🏦 **ENHANCED OTC BINARY TRADING PRO** 🤖
+        print("🏦 **ENHANCED OTC BINARY TRADING PRO** 🤖")
+# or
+title = "🏦 **ENHANCED OTC BINARY TRADING PRO** 🤖"
 
 *Advanced Over-The-Counter Binary Options Platform*
 """
