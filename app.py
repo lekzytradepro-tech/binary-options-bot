@@ -1186,6 +1186,106 @@ def truth_expiry_selector(truth_score, volatility_normalized):
     return "5"
 
 # =============================================================================
+# ⭐ NEW: DUAL ENGINE MANAGER (INTEGRATED)
+# =============================================================================
+class DualEngineManager:
+    """
+    Manages and combines signals from the RealAIEngine (multi-TF, indicator-based)
+    and the QuantMarketEngine (truth-score based) for a consolidated, highly
+    accurate signal.
+    """
+    def __init__(self):
+        # We re-initialize the RealAIEngine here to use its analysis method directly
+        self.ai = RealAIEngine()
+        
+    def _get_twelvedata_symbol(self, asset):
+        """Map OTC asset to TwelveData symbol"""
+        symbol_map = {
+            "EUR/USD": "EUR/USD", "GBP/USD": "GBP/USD", "USD/JPY": "USD/JPY",
+            "USD/CHF": "USD/CHF", "AUD/USD": "AUD/USD", "USD/CAD": "USD/CAD",
+            "BTC/USD": "BTC/USD", "ETH/USD": "ETH/USD", "XAU/USD": "XAU/USD",
+            "XAG/USD": "XAG/USD", "OIL/USD": "USOIL", "US30": "DJI",
+            "SPX500": "SPX", "NAS100": "NDX"
+        }
+        return symbol_map.get(asset, asset.replace("/", ""))
+
+    def get_dual_direction(self, asset, quant_dir, quant_conf, quant_engine):
+        """
+        Combines signals from RealAIEngine and QuantMarketEngine.
+        Weights: RealAIEngine (AI) 0.5, QuantMarketEngine (Quant) 0.5
+        """
+        symbol = self._get_twelvedata_symbol(asset)
+        
+        # --- 1. Get RealAIEngine Analysis ---
+        try:
+            global twelvedata_otc
+            # Fetch fresh data for RealAIEngine to ensure maximum recency
+            df_1m_raw = twelvedata_otc.make_request('time_series', {'symbol': symbol, 'interval': '1min', 'outputsize': 150})
+            df_5m_raw = twelvedata_otc.make_request('time_series', {'symbol': symbol, 'interval': '5min', 'outputsize': 150})
+            df_15m_raw = twelvedata_otc.make_request('time_series', {'symbol': symbol, 'interval': '15min', 'outputsize': 150})
+            
+            tf_dfs = {
+                '1min': _convert_twelvedata_to_df(df_1m_raw),
+                '5min': _convert_twelvedata_to_df(df_5m_raw),
+                '15min': _convert_twelvedata_to_df(df_15m_raw)
+            }
+            
+            ai_dir, ai_conf, ai_reasons, ai_details = self.ai.analyze(tf_dfs)
+            
+        except Exception as e:
+            logger.error(f"DualEngine: RealAIEngine analysis failed for {asset}: {e}")
+            # Fallback to the already computed Quant result if AI fails
+            ai_dir, ai_conf, ai_reasons, ai_details = quant_dir, quant_conf, ["AI Engine Failure (Fallback to Quant)"], {}
+        
+        # --- 2. Combine Scores ---
+        # NOTE: QuantMarketEngine signal is already pre-filtered/adjusted via RealSignalVerifier.
+        # We need to compute an *unfiltered* version of the AI confidence for pure weighting,
+        # but for simplicity and to match the intent of the old AI confidence, we use the returned one.
+
+        # Weights: AI 0.5, Quant 0.5
+        # The AI component (RealAIEngine) should represent the multi-TF technical consensus.
+        # The Quant component (QuantMarketEngine via RSF) should represent the quick, truth-based filter.
+        
+        # Determine the score contributed by each engine towards CALL and PUT
+        ai_call_score = 0.5 * ai_conf if ai_dir == 'CALL' else 0
+        ai_put_score = 0.5 * ai_conf if ai_dir == 'PUT' else 0
+        
+        quant_call_score = 0.5 * quant_conf if quant_dir == 'CALL' else 0
+        quant_put_score = 0.5 * quant_conf if quant_dir == 'PUT' else 0
+        
+        score_call = ai_call_score + quant_call_score
+        score_put  = ai_put_score + quant_put_score
+        
+        # Final Direction: Higher score wins
+        final_dir = 'CALL' if score_call > score_put else 'PUT'
+        
+        # Final Confidence: Sum of the winning engine's weighted confidence
+        if final_dir == 'CALL':
+             # The confidence is the score for the winning direction
+             final_conf_raw = score_call
+        else:
+             final_conf_raw = score_put
+        
+        # The confidence should be a percentage, so scale the raw score (max possible is 0.5*95 + 0.5*95 = 95)
+        # So, the final_conf_raw is essentially the confidence percentage already.
+        final_conf = int(max(55, min(95, round(final_conf_raw))))
+        
+        # If the engines disagree strongly, reduce confidence
+        if final_dir == 'CALL' and score_put > 0.5 * score_call:
+            final_conf = max(55, final_conf - 5)
+        elif final_dir == 'PUT' and score_call > 0.5 * score_put:
+            final_conf = max(55, final_conf - 5)
+            
+        details = {
+            'ai': {'dir': ai_dir, 'conf': ai_conf, 'reasons': ai_reasons}, 
+            'quant': {'dir': quant_dir, 'conf': quant_conf}
+        }
+        
+        logger.info(f"DualEngine: {asset} -> Final Dir: {final_dir} Conf: {final_conf}% | AI: {ai_dir} {ai_conf}% | Quant: {quant_dir} {quant_conf}%")
+        
+        return final_dir, final_conf, details, quant_engine
+
+# =============================================================================
 # ORIGINAL CODE - COMPLETELY PRESERVED AND INTEGRATED BELOW
 # =============================================================================
 
@@ -2395,6 +2495,8 @@ class IntelligentSignalGenerator:
     
     def generate_intelligent_signal(self, asset, strategy=None, platform="quotex"):
         """Generate signal with platform-specific intelligence"""
+        # Note: This is now replaced by DualEngineManager in the handler, but this function
+        # remains for its platform-specific adjustments.
         direction, confidence = platform_generator.generate_platform_signal(asset, platform)
         
         platform_key = platform.lower().replace(' ', '_')
@@ -4971,6 +5073,7 @@ This bot provides educational signals for OTC binary options trading. OTC tradin
 🚨 **SAFETY SYSTEMS:** REAL ANALYSIS, STOP LOSS, PROFIT TRACKING (NEW!)
 🤖 **AI TREND CONFIRMATION:** ACTIVE (NEW!)
 • **AI Trend Filter + Breakout:** ✅ ACTIVE (NEW!)
+• **RealAIEngine (Core):** ✅ ACTIVE (NEW!)
 
 **ENHANCED OTC FEATURES:**
 • QuantumTrend AI: ✅ Active
@@ -8026,26 +8129,30 @@ Over-The-Counter binary options are contracts where you predict if an asset's pr
                 )
                 return
 
-            direction, confidence = intelligent_generator.generate_intelligent_signal(
-                asset, platform=platform_key
-            )
-            
-            # This calls RealSignalVerifier which returns the QuantMarketEngine object
-            _, _, engine = real_verifier.get_real_direction(asset)
+            # --- NEW DUAL ENGINE INTEGRATION ---
+            # 1. Get the baseline result from RealSignalVerifier (which executes the QuantMarketEngine logic)
+            quant_dir, quant_conf, quant_engine = self.real_verifier.get_real_direction(asset)
+
+            # 2. Combine the Quant result with a fresh RealAIEngine analysis via DualEngineManager
+            dual = dual_engine_manager # Use the initialized global instance
+            direction, confidence, dual_details, engine = dual.get_dual_direction(asset, quant_dir, quant_conf, quant_engine)
+            logger.info(f"DualEngine -> {asset} | dir:{direction} conf:{confidence} | details:{dual_details}")
+            # --- END DUAL ENGINE INTEGRATION ---
             
             analysis_context = otc_analysis.analyze_otc_signal(asset, platform=platform_key)
             
             # --- EXTRACT/CALCULATE PARAMETERS FOR AI TREND FILTER ---
             volatility_value_norm = 50.0
             
-            if engine and engine.is_valid():
+            if engine and hasattr(engine, 'is_valid') and callable(engine.is_valid) and engine.is_valid():
                 market_trend_direction = engine.get_trend()
                 truth_score_raw = engine.calculate_truth()
                 momentum_raw = engine.get_momentum()
-                # Use confidence from RealAIEngine which is based on multi-TF technicals
+                # Use confidence derived from dual engine as trend strength for the filter
                 trend_strength = confidence 
                 # Normalize momentum for the filter (example scaling factor)
                 momentum_score = int(min(100, abs(momentum_raw) * 10000))
+                # Get real-time volatility score for the filter
                 _, volatility_value_norm = volatility_analyzer.get_volatility_adjustment(asset, confidence) 
                 volatility_value = volatility_value_norm / 100.0
             else:
@@ -8678,6 +8785,9 @@ smart_notifications = SmartNotifications()
 payment_system = ManualPaymentSystem()
 ai_trend_confirmation = AITrendConfirmationEngine()
 
+# NEW: Initialize DualEngineManager
+dual_engine_manager = DualEngineManager()
+
 # Create enhanced OTC trading bot instance
 otc_bot = OTCTradingBot()
 
@@ -8727,7 +8837,8 @@ def home():
             "ai_trend_filter_breakout_strategy",
             "7_platform_support", "deriv_tick_expiries", "asset_ranking_system",
             "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance",
-            "real_ai_engine_core" # New core engine
+            "real_ai_engine_core", # New core engine
+            "dual_engine_manager" # Dual engine integration
         ],
         "queue_size": update_queue.qsize(),
         "total_users": len(user_tiers)
@@ -8782,7 +8893,8 @@ def health():
         "dynamic_position_sizing": True,
         "predictive_exit_engine": True,
         "jurisdiction_compliance": True,
-        "real_ai_engine_core": True # New core engine
+        "real_ai_engine_core": True, # New core engine
+        "dual_engine_manager": True # Dual engine integration
     })
 
 @app.route('/broadcast/safety', methods=['POST'])
@@ -8893,7 +9005,8 @@ def set_webhook():
             "dynamic_position_sizing": True,
             "predictive_exit_engine": True,
             "jurisdiction_compliance": True,
-            "real_ai_engine_core": True # New core engine
+            "real_ai_engine_core": True, # New core engine
+            "dual_engine_manager": True # Dual engine integration
         }
         
         logger.info(f"🌐 Enhanced OTC Trading Webhook set: {webhook_url}")
@@ -8942,7 +9055,8 @@ def webhook():
             "dynamic_position_sizing": True,
             "predictive_exit_engine": True,
             "jurisdiction_compliance": True,
-            "real_ai_engine_core": True # New core engine
+            "real_ai_engine_core": True, # New core engine
+            "dual_engine_manager": True # Dual engine integration
         })
         
     except Exception as e:
@@ -8960,7 +9074,7 @@ def debug():
         "active_users": len(user_tiers),
         "user_tiers": user_tiers,
         "enhanced_bot_ready": True,
-        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance", "real_ai_engine_core"], 
+        "advanced_features": ["multi_timeframe", "liquidity_analysis", "regime_detection", "auto_expiry", "ai_momentum_breakout", "manual_payments", "education", "twelvedata_context", "otc_optimized", "intelligent_probability", "30s_expiry", "multi_platform", "ai_trend_confirmation", "spike_fade_strategy", "accuracy_boosters", "safety_systems", "real_technical_analysis", "broadcast_system", "pocket_option_specialist", "ai_trend_filter_v2", "ai_trend_filter_breakout_strategy", "7_platform_support", "deriv_tick_expiries", "asset_ranking_system", "dynamic_position_sizing", "predictive_exit_engine", "jurisdiction_compliance", "real_ai_engine_core", "dual_engine_manager"], 
         "signal_version": "V9.1.2_OTC",
         "auto_expiry_detection": True,
         "ai_momentum_breakout": True,
@@ -8982,7 +9096,8 @@ def debug():
         "dynamic_position_sizing": True,
         "predictive_exit_engine": True,
         "jurisdiction_compliance": True,
-        "real_ai_engine_core": True # New core engine
+        "real_ai_engine_core": True, # New core engine
+        "dual_engine_manager": True # Dual engine integration
     })
 
 @app.route('/stats')
@@ -9023,7 +9138,8 @@ def stats():
         "dynamic_position_sizing": True,
         "predictive_exit_engine": True,
         "jurisdiction_compliance": True,
-        "real_ai_engine_core": True # New core engine
+        "real_ai_engine_core": True, # New core engine
+        "dual_engine_manager": True # Dual engine integration
     })
 
 # =============================================================================
@@ -9127,5 +9243,6 @@ if __name__ == '__main__':
     logger.info("🎯 PREDICTIVE EXIT ENGINE: Implemented for SL/TP advice (NEW!)")
     logger.info("🔒 JURISDICTION COMPLIANCE: Basic check added to /start flow (NEW!)")
     logger.info("⭐ REAL AI ENGINE CORE: Multi-timeframe analysis integrated as core signal source (NEW!)") # New core engine log
+    logger.info("⭐ DUAL ENGINE MANAGER: Combining Quant and AI signals for enhanced accuracy (NEW!)") # Dual engine log
 
     app.run(host='0.0.0.0', port=port, debug=False)
